@@ -45,7 +45,7 @@ object MatchRepository {
 
     suspend fun matches(competition: String): List<Match> {
         val list = if (hasKey) {
-            api.matches(competition).matches
+            api.matches(competition).matches ?: emptyList()
         } else {
             DemoData.matches(competition)
         }

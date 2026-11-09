@@ -58,7 +58,14 @@ class MatchesViewModel : ViewModel() {
         Competition("PD", "La Liga"),
         Competition("SA", "Serie A"),
         Competition("BL1", "Bundesliga"),
-        Competition("FL1", "Ligue 1")
+        Competition("FL1", "Ligue 1"),
+        Competition("ELC", "Championship"),
+        Competition("DED", "Eredivisie"),
+        Competition("PPL", "Primeira Liga"),
+        Competition("BSA", "Brasileirão"),
+        Competition("CLI", "Copa Libertadores"),
+        Competition("WC", "World Cup"),
+        Competition("EC", "Euro")
         // Botola Pro joins here once we upgrade to API-Football
     )
 
@@ -133,7 +140,20 @@ fun MatchesScreen(onMatchClick: (Long) -> Unit, vm: MatchesViewModel = viewModel
                 }
             }
 
-            is MatchesUiState.Ready -> LazyColumn(Modifier.fillMaxSize()) {
+            is MatchesUiState.Ready -> if (s.matches.isEmpty()) {
+                Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        stringResource(R.string.no_matches),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(24.dp)
+                    )
+                }
+            } else LazyColumn(Modifier.fillMaxSize()) {
                 items(s.matches, key = { it.id }) { m ->
                     MatchRow(m) { onMatchClick(m.id) }
                     HorizontalDivider(

@@ -5,6 +5,7 @@
     <string name="demo_notice">Mode démo : obtenez une clé gratuite sur football-data.org puis ajoutez cette ligne dans local.properties : FOOTBALL_DATA_TOKEN=votre_clé</string>
     <string name="retry">Réessayer</string>
     <string name="error_generic">Impossible de charger les données.</string>
+    <string name="no_matches">Aucun match à afficher pour cette compétition pour le moment.</string>
     <string name="match_not_found">Match introuvable.</string>
     <string name="watch_ad_title">Envie du direct ?</string>
     <string name="watch_ad">Regarder une courte pub pour débloquer</string>

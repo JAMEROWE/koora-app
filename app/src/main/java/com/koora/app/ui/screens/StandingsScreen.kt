@@ -38,13 +38,19 @@ import com.koora.app.data.TableRow
 import kotlinx.coroutines.launch
 
 class StandingsViewModel : ViewModel() {
+    // Only competitions that expose a league table (tournaments like
+    // World Cup / Euro / Libertadores return 404 for standings).
     val competitions = listOf(
         Competition("FL1", "Ligue 1"),
         Competition("PL", "Premier League"),
         Competition("PD", "La Liga"),
         Competition("SA", "Serie A"),
         Competition("BL1", "Bundesliga"),
-        Competition("CL", "Champions League")
+        Competition("CL", "Champions League"),
+        Competition("ELC", "Championship"),
+        Competition("DED", "Eredivisie"),
+        Competition("PPL", "Primeira Liga"),
+        Competition("BSA", "Brasileirão")
     )
 
     var selected by mutableStateOf(competitions.first())

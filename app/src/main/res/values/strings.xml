@@ -5,6 +5,7 @@
     <string name="demo_notice">Demo mode: get a free key at football-data.org and add this line to local.properties: FOOTBALL_DATA_TOKEN=your_key</string>
     <string name="retry">Retry</string>
     <string name="error_generic">Couldn\'t load data.</string>
+    <string name="no_matches">No matches to show for this competition yet.</string>
     <string name="match_not_found">Match not found.</string>
     <string name="watch_ad_title">Want live updates?</string>
     <string name="watch_ad">Watch a short ad to unlock</string>

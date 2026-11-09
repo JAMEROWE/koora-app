@@ -5,6 +5,7 @@
     <string name="demo_notice">وضع تجريبي: احصل على مفتاح مجاني من football-data.org ثم أضف هذا السطر في local.properties: FOOTBALL_DATA_TOKEN=مفتاحك</string>
     <string name="retry">إعادة المحاولة</string>
     <string name="error_generic">تعذر تحميل البيانات.</string>
+    <string name="no_matches">لا توجد مباريات لعرضها لهذه المسابقة حالياً.</string>
     <string name="match_not_found">المباراة غير موجودة.</string>
     <string name="watch_ad_title">تريد التحديث المباشر؟</string>
     <string name="watch_ad">شاهد إعلانًا قصيرًا للفتح</string>
