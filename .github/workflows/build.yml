@@ -95,9 +95,9 @@ jobs:
         run: |
           VERSION=$(grep -o 'versionName = "[^"]*"' app/build.gradle.kts | cut -d '"' -f2)
           TAG="v$VERSION"
-          cp app/build/outputs/apk/release/app-release.apk "Koora-$VERSION.apk"
-          gh release create "$TAG" "Koora-$VERSION.apk" \
+          cp app/build/outputs/apk/release/app-release.apk "Koora-v$VERSION.apk"
+          gh release create "$TAG" "Koora-v$VERSION.apk" \
             --title "Koora $TAG" \
             --notes "Download Koora-$VERSION.apk below and open it on your phone to install or update." \
-          || gh release upload "$TAG" "Koora-$VERSION.apk" --clobber
-          rm -f "Koora-$VERSION.apk"
+          || gh release upload "$TAG" "Koora-v$VERSION.apk" --clobber
+          rm -f "Koora-v$VERSION.apk"
