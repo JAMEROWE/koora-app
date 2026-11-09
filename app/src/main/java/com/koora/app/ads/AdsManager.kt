@@ -34,7 +34,8 @@ object AdsManager {
 
     /** Preload the interstitial. Call again after each show/dismiss. */
     fun load(context: Context) {
-        InterstitialAd.load(
+        try {
+            InterstitialAd.load(
             context,
             BuildConfig.AD_UNIT_INTERSTITIAL,
             AdRequest.Builder().build(),
@@ -58,6 +59,11 @@ object AdsManager {
                 }
             }
         )
+        } catch (_: Exception) {
+            // Devices without Google Play services (some Huawei/Xiaomi builds):
+            // no ads, never a crash.
+            interstitial = null
+        }
     }
 
     /** Count one app session — used to skip the interstitial in the first session. */

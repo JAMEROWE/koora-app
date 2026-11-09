@@ -1,5 +1,6 @@
 package com.koora.app.data
 
+import androidx.annotation.VisibleForTesting
 import com.koora.app.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -30,7 +31,11 @@ object MatchRepository {
     var cacheCode: String = ""
         private set
 
-    val hasKey: Boolean get() = BuildConfig.FOOTBALL_DATA_TOKEN.isNotBlank()
+    /** Test hook: force demo mode so internal launch tests never touch the network. */
+    @VisibleForTesting
+    internal var forceDemoForTest: Boolean = false
+
+    val hasKey: Boolean get() = !forceDemoForTest && BuildConfig.FOOTBALL_DATA_TOKEN.isNotBlank()
 
     private data class Entry(val at: Long, val value: Any?)
 

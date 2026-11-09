@@ -39,11 +39,23 @@ jobs:
             echo "No token secret set -> DEMO data mode"
           fi
 
-      - name: Build debug APK (up to 3 attempts)
+      - name: Internal launch test (Robolectric boots the app headlessly)
+        run: |
+          if ./gradlew testDebugUnitTest --no-daemon --stacktrace; then
+            echo "LAUNCH TEST PASSED"
+          else
+            echo "=== STARTUP CRASH DETECTED — the app would not open on a phone ==="
+            for f in app/build/test-results/testDebugUnitTest/*.xml; do
+              grep -o 'message="[^"]*"' "$f" | head -5 || true
+            done
+            exit 1
+          fi
+
+      - name: Build signed release APK (up to 3 attempts)
         run: |
           for i in 1 2 3; do
             echo "=== Build attempt $i ==="
-            if ./gradlew assembleDebug --no-daemon --stacktrace; then
+            if ./gradlew assembleRelease --no-daemon --stacktrace; then
               echo "BUILD_OK"
               exit 0
             fi
@@ -57,5 +69,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Koora-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/release/app-release.apk
           retention-days: 30

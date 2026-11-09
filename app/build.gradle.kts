@@ -20,8 +20,8 @@ android {
         applicationId = "com.koora.app"
         minSdk = 24
         targetSdk = 36 // Google Play: new apps must target API 36 since Aug 31, 2026
-        versionCode = 5
-        versionName = "1.4.0"
+        versionCode = 6
+        versionName = "1.4.1"
         buildConfigField(
             "String",
             "FOOTBALL_DATA_TOKEN",
@@ -46,14 +46,46 @@ android {
         )
     }
 
+    signingConfigs {
+        create("release") {
+            // Stable self-signed key committed to the repo so EVERY build
+            // (local or GitHub Actions) signs with the SAME signature —
+            // new versions install over old ones without uninstalling.
+            val ks = rootProject.file("keystore/koora-release.keystore")
+            if (ks.exists()) {
+                storeFile = ks
+                storePassword = "KooraRelease2026"
+                keyAlias = "koora"
+                keyPassword = "KooraRelease2026"
+            }
+        }
+    }
+
+    testOptions {
+        unitTests {
+            // Robolectric needs the merged resources/manifest on the JVM
+            isIncludeAndroidResources = true
+        }
+    }
+
+    lint {
+        // Lint-vital is a Play-prep step; enable it together with the R8 rules
+        // before the Play release. Keeps CI release builds fast and deterministic.
+        checkReleaseBuilds = false
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // R8/minify stays OFF for now — it needs ProGuard rules for
+            // Retrofit/Gson/ads. Re-enable together with those rules before
+            // the Play Store release.
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
@@ -87,4 +119,14 @@ dependencies {
     implementation(libs.play.services.ads)
     implementation(libs.user.messaging.platform)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    // Internal testing: Robolectric boots the REAL app (Activity + Compose UI)
+    // on the JVM in CI — if startup ever crashes, the build fails.
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.junit)
+    testImplementation(libs.espresso.core)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

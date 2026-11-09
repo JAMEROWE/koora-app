@@ -1,3 +1,10 @@
 <resources>
-    <style name="Theme.Koora" parent="android:Theme.Material.Light.NoActionBar" />
+    <!--
+      AppCompat parent is REQUIRED: MainActivity extends AppCompatActivity
+      (needed for the per-app language switcher). The previous framework
+      Material theme crashed the app instantly on every launch with
+      "You need to use a Theme.AppCompat theme (or descendant) with this
+      activity." Locked forever by the Robolectric launch test.
+    -->
+    <style name="Theme.Koora" parent="Theme.AppCompat.DayNight.NoActionBar" />
 </resources>

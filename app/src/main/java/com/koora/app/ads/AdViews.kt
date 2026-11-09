@@ -41,10 +41,15 @@ fun AdBanner(modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .height(50.dp),
         factory = { ctx ->
-            AdView(ctx).apply {
-                setAdSize(AdSize.BANNER)
-                setAdUnitId(BuildConfig.AD_UNIT_BANNER)
-                loadAd(AdRequest.Builder().build())
+            runCatching {
+                AdView(ctx).apply {
+                    setAdSize(AdSize.BANNER)
+                    setAdUnitId(BuildConfig.AD_UNIT_BANNER)
+                    loadAd(AdRequest.Builder().build())
+                }
+            }.getOrElse {
+                // Ads must never crash the app (no Play services, test JVM, ...)
+                android.view.View(ctx).apply { visibility = android.view.View.GONE }
             }
         }
     )
@@ -63,6 +68,7 @@ fun NativeAdCard(modifier: Modifier = Modifier) {
     AndroidView(
         modifier = modifier.fillMaxWidth(),
         factory = { ctx ->
+            runCatching<android.view.View> {
             val root = NativeAdView(ctx)
             val box = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
@@ -126,6 +132,10 @@ fun NativeAdCard(modifier: Modifier = Modifier) {
                 .build()
             loader.loadAd(AdRequest.Builder().build())
             root
+            }.getOrElse {
+                // Ads must never crash the app (no Play services, test JVM, ...)
+                android.view.View(ctx).apply { visibility = android.view.View.GONE }
+            }
         },
         update = { view ->
             view.visibility = if (adFilled) View.VISIBLE else View.GONE
