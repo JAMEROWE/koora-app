@@ -16,15 +16,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdListener
+import com.google.android.gms.ads.AdLoader
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.nativead.AdLoader
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdOptions
 import com.google.android.gms.ads.nativead.NativeAdView
 import com.koora.app.BuildConfig
+import androidx.compose.ui.graphics.toArgb
 
 /*
  * Compose wrappers for the always-on, passive ad surfaces:
@@ -40,7 +41,9 @@ fun AdBanner(modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .height(50.dp),
         factory = { ctx ->
-            AdView(ctx, BuildConfig.AD_UNIT_BANNER, AdSize.BANNER).apply {
+            AdView(ctx).apply {
+                setAdSize(AdSize.BANNER)
+                setAdUnitId(BuildConfig.AD_UNIT_BANNER)
                 loadAd(AdRequest.Builder().build())
             }
         }
@@ -69,24 +72,24 @@ fun NativeAdCard(modifier: Modifier = Modifier) {
             val badge = TextView(ctx).apply {
                 text = "Ad"
                 textSize = 11f
-                setTextColor(metaColor)
+                setTextColor(metaColor.toArgb())
                 setPadding(0, 0, 0, 10)
             }
             val headline = TextView(ctx).apply {
                 textSize = 15f
-                setTextColor(headlineColor)
+                setTextColor(headlineColor.toArgb())
                 paint.isFakeBoldText = true
                 maxLines = 2
             }
             val body = TextView(ctx).apply {
                 textSize = 13f
-                setTextColor(metaColor)
+                setTextColor(metaColor.toArgb())
                 maxLines = 2
                 setPadding(0, 8, 0, 0)
             }
             val cta = TextView(ctx).apply {
                 textSize = 14f
-                setTextColor(accentColor)
+                setTextColor(accentColor.toArgb())
                 paint.isFakeBoldText = true
                 setPadding(0, 12, 0, 0)
             }

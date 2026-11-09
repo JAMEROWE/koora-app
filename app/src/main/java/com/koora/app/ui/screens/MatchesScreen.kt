@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
@@ -187,7 +188,7 @@ fun MatchesScreen(onMatchClick: (Long) -> Unit, vm: MatchesViewModel = viewModel
                     )
                 }
             } else LazyColumn(Modifier.fillMaxSize()) {
-                androidx.compose.foundation.lazy.itemsIndexed(s.matches) { index, m ->
+                itemsIndexed(s.matches) { index, m ->
                     // FotMob-style native ad card after the first few rows
                     if (index == 5) {
                         NativeAdCard()

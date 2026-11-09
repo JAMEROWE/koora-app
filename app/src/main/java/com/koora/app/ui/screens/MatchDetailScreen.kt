@@ -3,7 +3,7 @@ package com.koora.app.ui.screens
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.net.URLEncoder
+import java.net.URLEncoder
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
