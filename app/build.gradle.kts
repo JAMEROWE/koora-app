@@ -20,8 +20,8 @@ android {
         applicationId = "com.koora.app"
         minSdk = 24
         targetSdk = 36 // Google Play: new apps must target API 36 since Aug 31, 2026
-        versionCode = 7
-        versionName = "1.4.2"
+        versionCode = 8
+        versionName = "1.5.0"
         buildConfigField(
             "String",
             "FOOTBALL_DATA_TOKEN",
@@ -43,6 +43,20 @@ android {
             "String",
             "AD_UNIT_INTERSTITIAL",
             "\"${localProps.getProperty("AD_UNIT_INTERSTITIAL") ?: "ca-app-pub-3940256099942544/1033173712"}\""
+        )
+        // api-football.com free key (100 req/day, events+lineups+stats).
+        // Empty -> deep stats stay hidden on real data (demo mode shows a sample).
+        buildConfigField(
+            "String",
+            "API_FOOTBALL_KEY",
+            "\"${localProps.getProperty("API_FOOTBALL_KEY") ?: ""}\""
+        )
+        // Optional: free YouTube Data API key -> exact per-match highlight video.
+        // Empty -> official league channels' RSS feeds are used (no key needed).
+        buildConfigField(
+            "String",
+            "YOUTUBE_API_KEY",
+            "\"${localProps.getProperty("YOUTUBE_API_KEY") ?: ""}\""
         )
     }
 
