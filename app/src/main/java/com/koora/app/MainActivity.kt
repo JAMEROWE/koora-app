@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
 
     private fun requestGdprConsent() {
         try {
-            val info = UserMessagingPlatform.getConsentInfoForApp(this)
+            val info = UserMessagingPlatform.getConsentInformation(this)
             val alreadyObtained =
                 info.consentStatus == ConsentInformation.ConsentStatus.OBTAINED
             if (alreadyObtained && !info.isConsentFormAvailable) return
