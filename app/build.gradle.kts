@@ -20,12 +20,29 @@ android {
         applicationId = "com.koora.app"
         minSdk = 24
         targetSdk = 36 // Google Play: new apps must target API 36 since Aug 31, 2026
-        versionCode = 4
-        versionName = "1.3.0"
+        versionCode = 5
+        versionName = "1.4.0"
         buildConfigField(
             "String",
             "FOOTBALL_DATA_TOKEN",
             "\"${localProps.getProperty("FOOTBALL_DATA_TOKEN") ?: ""}\""
+        )
+        // Ad unit IDs default to Google's PUBLIC TEST units. Set real ones in
+        // local.properties (or a GitHub secret -> local.properties) later — zero code change.
+        buildConfigField(
+            "String",
+            "AD_UNIT_BANNER",
+            "\"${localProps.getProperty("AD_UNIT_BANNER") ?: "ca-app-pub-3940256099942544/6300978111"}\""
+        )
+        buildConfigField(
+            "String",
+            "AD_UNIT_NATIVE",
+            "\"${localProps.getProperty("AD_UNIT_NATIVE") ?: "ca-app-pub-3940256099942544/2247696110"}\""
+        )
+        buildConfigField(
+            "String",
+            "AD_UNIT_INTERSTITIAL",
+            "\"${localProps.getProperty("AD_UNIT_INTERSTITIAL") ?: "ca-app-pub-3940256099942544/1033173712"}\""
         )
     }
 
@@ -52,6 +69,7 @@ android {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)

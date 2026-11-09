@@ -1,6 +1,9 @@
 package com.koora.app.ui.screens
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import android.net.URLEncoder
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,7 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,11 +26,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,12 +54,19 @@ import com.koora.app.ads.AdsManager
 import com.koora.app.data.Match
 import com.koora.app.data.MatchRepository
 import com.koora.app.ui.dateLabel
+import com.koora.app.ui.isLive
 import com.koora.app.ui.scoreLabel
 import com.koora.app.ui.statusLabel
 import com.koora.app.ui.theme.LiveRed
 import com.koora.app.ui.theme.PitchGreen
 import kotlinx.coroutines.launch
 
+/*
+ * Match detail — v1.4: stats are FREE for everyone (no ad gate).
+ * Monetization rides along passively: one capped interstitial fires on
+ * entry to a LIVE match (see AdsManager.maybeShowInterstitial).
+ * Finished matches offer the official video highlights on YouTube.
+ */
 sealed interface StatsUiState {
     data object Idle : StatsUiState
     data object Loading : StatsUiState
@@ -66,9 +78,8 @@ class MatchDetailViewModel : ViewModel() {
     var stats by mutableStateOf<StatsUiState>(StatsUiState.Idle)
         private set
 
-    /** Called once the user earns the unlock (rewarded ad). */
     fun loadStats(matchId: Long) {
-        if (stats is StatsUiState.Loading || stats is StatsUiState.Ready) return
+        if (stats !is StatsUiState.Idle) return
         stats = StatsUiState.Loading
         viewModelScope.launch {
             stats = try {
@@ -90,9 +101,18 @@ fun MatchDetailScreen(
     vm: MatchDetailViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    var unlocked by remember { mutableStateOf(false) }
     val match = remember(matchId) {
         MatchRepository.cache.firstOrNull { it.id == matchId }
+    }
+
+    // Stats load automatically — free, no ad gate
+    LaunchedEffect(matchId) { vm.loadStats(matchId) }
+
+    // The ONE capped interstitial: only on live matches, only per AdsManager rules
+    LaunchedEffect(matchId) {
+        val live = match != null && isLive(match)
+        val activity = context as? Activity
+        if (live && activity != null) AdsManager.maybeShowInterstitial(activity)
     }
 
     Scaffold(
@@ -160,58 +180,33 @@ fun MatchDetailScreen(
                     }
                 }
 
-                Spacer(Modifier.height(32.dp))
-
-                if (unlocked) {
-                    StatsContent(match, vm.stats)
-                } else {
-                    LockedStatsCard(
-                        onUnlocked = {
-                            unlocked = true
-                            vm.loadStats(matchId)
-                        },
-                        // Ad-free / ad-not-ready path still unlocks to keep the flow testable
-                        onFallbackUnlock = {
-                            unlocked = true
-                            vm.loadStats(matchId)
-                        }
-                    )
+                // Official video highlights (YouTube) for finished matches
+                if (match.status == "FINISHED") {
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedButton(onClick = { openHighlights(context, match) }) {
+                        Icon(Icons.Filled.PlayCircle, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.highlights_button))
+                    }
                 }
+
+                Spacer(Modifier.height(28.dp))
+                StatsContent(match, vm.stats)
                 Spacer(Modifier.height(24.dp))
             }
         }
     }
 }
 
-@Composable
-private fun LockedStatsCard(onUnlocked: () -> Unit, onFallbackUnlock: () -> Unit) {
-    val context = LocalContext.current
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                stringResource(R.string.watch_ad_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.stats_locked_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = {
-                val activity = context as? Activity
-                if (activity != null) {
-                    AdsManager.show(activity) { onUnlocked() }
-                } else {
-                    onFallbackUnlock()
-                }
-            }) {
-                Text(stringResource(R.string.watch_ad))
-            }
-        }
+private fun openHighlights(context: android.content.Context, match: Match) {
+    try {
+        val query = URLEncoder.encode(
+            "${match.homeTeam.name} vs ${match.awayTeam.name} highlights",
+            "UTF-8"
+        )
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=$query")))
+    } catch (_: Exception) {
+        // no browser / bad URL -> ignore
     }
 }
 

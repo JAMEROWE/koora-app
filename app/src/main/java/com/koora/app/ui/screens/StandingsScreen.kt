@@ -33,8 +33,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.koora.app.R
+import com.koora.app.ads.AdBanner
 import com.koora.app.data.MatchRepository
 import com.koora.app.data.TableRow
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 class StandingsViewModel : ViewModel() {
@@ -91,39 +95,56 @@ fun StandingsScreen(vm: StandingsViewModel = viewModel()) {
             }
         }
 
-        val table = vm.rows
-        val err = vm.error
-        when {
-            err != null -> Box(
-                Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(stringResource(R.string.error_generic))
-                    Spacer(Modifier.height(12.dp))
-                    Button(onClick = { vm.load(vm.selected) }) {
-                        Text(stringResource(R.string.retry))
+        val ts = MatchRepository.lastUpdated("standings:${vm.selected.code}")
+        if (ts > 0L) {
+            Text(
+                stringResource(R.string.updated_at, hhmm(ts)),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            )
+        }
+
+        Box(Modifier.weight(1f)) {
+            val table = vm.rows
+            val err = vm.error
+            when {
+                err != null -> Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(stringResource(R.string.error_generic))
+                        Spacer(Modifier.height(12.dp))
+                        Button(onClick = { vm.load(vm.selected) }) {
+                            Text(stringResource(R.string.retry))
+                        }
+                    }
+                }
+
+                table == null -> Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) { CircularProgressIndicator() }
+
+                else -> LazyColumn(Modifier.fillMaxSize()) {
+                    item { TableHeader() }
+                    items(table, key = { it.position }) { row ->
+                        TableLine(row)
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
                     }
                 }
             }
-
-            table == null -> Box(
-                Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) { CircularProgressIndicator() }
-
-            else -> LazyColumn(Modifier.fillMaxSize()) {
-                item { TableHeader() }
-                items(table, key = { it.position }) { row ->
-                    TableLine(row)
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                    )
-                }
-            }
         }
+
+        AdBanner()
     }
 }
+
+private fun hhmm(epochMs: Long): String =
+    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(epochMs))
 
 @Composable
 private fun tableCell(text: String, modifier: Modifier = Modifier, bold: Boolean = false) {

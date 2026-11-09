@@ -1,5 +1,6 @@
 package com.koora.app.ui.screens
 
+import android.app.Application
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,10 +12,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
@@ -26,15 +31,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.koora.app.R
+import com.koora.app.ads.NativeAdCard
+import com.koora.app.data.FavoritesStore
 import com.koora.app.data.Match
 import com.koora.app.data.MatchRepository
 import com.koora.app.ui.isLive
@@ -45,42 +53,51 @@ import kotlinx.coroutines.launch
 
 data class Competition(val code: String, val label: String)
 
+/** The 13 real competitions (shared by Matches + Live screens). */
+val ALL_COMPETITIONS = listOf(
+    Competition("CL", "Champions League"),
+    Competition("PL", "Premier League"),
+    Competition("PD", "La Liga"),
+    Competition("SA", "Serie A"),
+    Competition("BL1", "Bundesliga"),
+    Competition("FL1", "Ligue 1"),
+    Competition("ELC", "Championship"),
+    Competition("DED", "Eredivisie"),
+    Competition("PPL", "Primeira Liga"),
+    Competition("BSA", "Brasileirão"),
+    Competition("CLI", "Copa Libertadores"),
+    Competition("WC", "World Cup"),
+    Competition("EC", "Euro")
+    // Botola Pro joins here once we upgrade to API-Football
+)
+
 sealed interface MatchesUiState {
     data object Loading : MatchesUiState
     data class Error(val message: String) : MatchesUiState
     data class Ready(val competition: Competition, val matches: List<Match>) : MatchesUiState
 }
 
-class MatchesViewModel : ViewModel() {
-    val competitions = listOf(
-        Competition("CL", "Champions League"),
-        Competition("PL", "Premier League"),
-        Competition("PD", "La Liga"),
-        Competition("SA", "Serie A"),
-        Competition("BL1", "Bundesliga"),
-        Competition("FL1", "Ligue 1"),
-        Competition("ELC", "Championship"),
-        Competition("DED", "Eredivisie"),
-        Competition("PPL", "Primeira Liga"),
-        Competition("BSA", "Brasileirão"),
-        Competition("CLI", "Copa Libertadores"),
-        Competition("WC", "World Cup"),
-        Competition("EC", "Euro")
-        // Botola Pro joins here once we upgrade to API-Football
-    )
+class MatchesViewModel(app: Application) : AndroidViewModel(app) {
+    val competitions = listOf(Competition("FAV", "★")) + ALL_COMPETITIONS
 
-    var selected by mutableStateOf(competitions.first())
+    var selected by mutableStateOf(competitions[1])
         private set
     var state by mutableStateOf<MatchesUiState>(MatchesUiState.Loading)
         private set
 
     init {
-        load(competitions.first())
+        load(competitions[1])
     }
 
     fun load(c: Competition) {
         selected = c
         state = MatchesUiState.Loading
+        if (c.code == "FAV") {
+            val favs = FavoritesStore.all(getApplication())
+                .map { FavoritesStore.toMatch(it) }
+            state = MatchesUiState.Ready(c, favs)
+            return
+        }
         viewModelScope.launch {
             state = try {
                 MatchesUiState.Ready(c, MatchRepository.matches(c.code))
@@ -89,10 +106,20 @@ class MatchesViewModel : ViewModel() {
             }
         }
     }
+
+    /** Re-read favorites after a star toggle while the Favorites tab is open. */
+    fun refreshFavorites() {
+        if (selected.code == "FAV") {
+            val favs = FavoritesStore.all(getApplication())
+                .map { FavoritesStore.toMatch(it) }
+            state = MatchesUiState.Ready(selected, favs)
+        }
+    }
 }
 
 @Composable
 fun MatchesScreen(onMatchClick: (Long) -> Unit, vm: MatchesViewModel = viewModel()) {
+    val context = LocalContext.current
     Column(Modifier.fillMaxSize()) {
         if (!MatchRepository.hasKey) {
             Text(
@@ -110,7 +137,11 @@ fun MatchesScreen(onMatchClick: (Long) -> Unit, vm: MatchesViewModel = viewModel
                 Tab(
                     selected = c.code == vm.selected.code,
                     onClick = { vm.load(c) },
-                    text = { Text(c.label) }
+                    text = {
+                        Text(
+                            if (c.code == "FAV") stringResource(R.string.fav_tab) else c.label
+                        )
+                    }
                 )
             }
         }
@@ -146,7 +177,9 @@ fun MatchesScreen(onMatchClick: (Long) -> Unit, vm: MatchesViewModel = viewModel
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        stringResource(R.string.no_matches),
+                        stringResource(
+                            if (s.competition.code == "FAV") R.string.fav_empty else R.string.no_matches
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -154,8 +187,23 @@ fun MatchesScreen(onMatchClick: (Long) -> Unit, vm: MatchesViewModel = viewModel
                     )
                 }
             } else LazyColumn(Modifier.fillMaxSize()) {
-                items(s.matches, key = { it.id }) { m ->
-                    MatchRow(m) { onMatchClick(m.id) }
+                androidx.compose.foundation.lazy.itemsIndexed(s.matches) { index, m ->
+                    // FotMob-style native ad card after the first few rows
+                    if (index == 5) {
+                        NativeAdCard()
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        )
+                    }
+                    MatchRow(
+                        m = m,
+                        isFavorite = FavoritesStore.isFavorite(context, m.id),
+                        onToggleFavorite = {
+                            FavoritesStore.toggle(context, m)
+                            vm.refreshFavorites()
+                        },
+                        onClick = { onMatchClick(m.id) }
+                    )
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                     )
@@ -166,17 +214,22 @@ fun MatchesScreen(onMatchClick: (Long) -> Unit, vm: MatchesViewModel = viewModel
 }
 
 @Composable
-private fun MatchRow(m: Match, onClick: () -> Unit) {
+private fun MatchRow(
+    m: Match,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
+    onClick: () -> Unit
+) {
     Row(
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             m.homeTeam.name,
-            Modifier.weight(1.2f),
+            Modifier.weight(1.1f),
             textAlign = TextAlign.End,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -184,7 +237,7 @@ private fun MatchRow(m: Match, onClick: () -> Unit) {
         )
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.width(96.dp)
+            modifier = Modifier.width(88.dp)
         ) {
             Text(
                 scoreLabel(m),
@@ -199,10 +252,20 @@ private fun MatchRow(m: Match, onClick: () -> Unit) {
         }
         Text(
             m.awayTeam.name,
-            Modifier.weight(1.2f),
+            Modifier.weight(1.1f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodyLarge
         )
+        IconToggleButton(
+            checked = isFavorite,
+            onCheckedChange = { onToggleFavorite() }
+        ) {
+            Icon(
+                if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                contentDescription = null,
+                tint = if (isFavorite) Color(0xFFF5B301) else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
