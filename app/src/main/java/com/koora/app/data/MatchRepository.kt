@@ -64,4 +64,36 @@ object MatchRepository {
             DemoData.standings()
         }
     }
+
+    /** Previous meetings between the two teams of a match (most recent last from API). */
+    suspend fun head2head(matchId: Long): List<Match> {
+        return if (hasKey) {
+            api.head2head(matchId).matches ?: emptyList()
+        } else {
+            emptyList()
+        }
+    }
+
+    /**
+     * Recent results for a team, as 'W'/'D'/'L' (most recent first, up to [count]).
+     * Computed locally from the competition matches already in [cache] — no extra API call.
+     */
+    fun teamForm(matches: List<Match>, teamId: Long, count: Int = 5): List<Char> {
+        return matches
+            .filter { it.status == "FINISHED" && (it.homeTeam.id == teamId || it.awayTeam.id == teamId) }
+            .sortedByDescending { it.utcDate }
+            .take(count)
+            .mapNotNull { m ->
+                val home = m.score.fullTime?.home
+                val away = m.score.fullTime?.away
+                if (home == null || away == null) return@mapNotNull null
+                val forTeam = if (m.homeTeam.id == teamId) home else away
+                val against = if (m.homeTeam.id == teamId) away else home
+                when {
+                    forTeam > against -> 'W'
+                    forTeam < against -> 'L'
+                    else -> 'D'
+                }
+            }
+    }
 }

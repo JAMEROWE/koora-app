@@ -51,6 +51,12 @@ data class TableRow(
 
 data class StandingsResponse(val standings: List<Standing> = emptyList())
 
+data class H2HResultSet(val count: Int = 0)
+data class Head2HeadResponse(
+    val resultSet: H2HResultSet = H2HResultSet(),
+    val matches: List<Match> = emptyList()
+)
+
 interface FootballDataApi {
 
     @GET("v4/competitions/{code}/matches")
@@ -61,4 +67,10 @@ interface FootballDataApi {
 
     @GET("v4/competitions/{code}/standings")
     suspend fun standings(@Path("code") competition: String): StandingsResponse
+
+    @GET("v4/matches/{id}/head2head")
+    suspend fun head2head(
+        @Path("id") matchId: Long,
+        @Query("limit") limit: Int = 10
+    ): Head2HeadResponse
 }
