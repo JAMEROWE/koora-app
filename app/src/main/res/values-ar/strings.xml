@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">كورة</string>
+    <string name="tab_matches">المباريات</string>
+    <string name="tab_standings">الترتيب</string>
+    <string name="demo_notice">وضع تجريبي: احصل على مفتاح مجاني من football-data.org ثم أضف هذا السطر في local.properties: FOOTBALL_DATA_TOKEN=مفتاحك</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="error_generic">تعذر تحميل البيانات.</string>
+    <string name="match_not_found">المباراة غير موجودة.</string>
+    <string name="watch_ad_title">تريد التحديث المباشر؟</string>
+    <string name="watch_ad">شاهد إعلانًا قصيرًا للفتح</string>
+    <string name="unlocked_demo">تم الفتح (تجريبي) — التحديث دقيقة بدقيقة يصل مع ترقية API-Football.</string>
+    <string name="coming_soon">النتائج الحية دقيقة بدقيقة تصل مع ترقية API-Football.</string>
+    <string name="col_team">الفريق</string>
+    <string name="col_played">ل</string>
+    <string name="col_won">ف</string>
+    <string name="col_draw">ت</string>
+    <string name="col_lost">خ</string>
+    <string name="col_points">نقاط</string>
+</resources>

@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">Koora</string>
+    <string name="tab_matches">Matchs</string>
+    <string name="tab_standings">Classement</string>
+    <string name="demo_notice">Mode démo : obtenez une clé gratuite sur football-data.org puis ajoutez cette ligne dans local.properties : FOOTBALL_DATA_TOKEN=votre_clé</string>
+    <string name="retry">Réessayer</string>
+    <string name="error_generic">Impossible de charger les données.</string>
+    <string name="match_not_found">Match introuvable.</string>
+    <string name="watch_ad_title">Envie du direct ?</string>
+    <string name="watch_ad">Regarder une courte pub pour débloquer</string>
+    <string name="unlocked_demo">Débloqué (démo) — le direct minute par minute arrive avec la mise à niveau API-Football.</string>
+    <string name="coming_soon">Le direct minute par minute arrive avec la mise à niveau API-Football.</string>
+    <string name="col_team">Équipe</string>
+    <string name="col_played">J</string>
+    <string name="col_won">G</string>
+    <string name="col_draw">N</string>
+    <string name="col_lost">P</string>
+    <string name="col_points">Pts</string>
+</resources>
