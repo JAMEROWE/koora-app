@@ -11,6 +11,4 @@ captures/
 externalNativeBuild/
 .cxx/
 
-# Exception: the stable signing keystore ships with the repo so CI signs
 # every build with the SAME key (updates install over each other).
-!keystore/koora-release.keystore

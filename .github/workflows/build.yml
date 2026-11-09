@@ -39,6 +39,18 @@ jobs:
             echo "No token secret set -> DEMO data mode"
           fi
 
+      - name: Restore stable signing keystore (from encrypted secret)
+        env:
+          KEY: ${{ secrets.KOORA_KEYSTORE }}
+        run: |
+          mkdir -p keystore
+          if [ -n "$KEY" ]; then
+            echo "$KEY" | base64 -d > keystore/koora-release.keystore
+            echo "Keystore restored — every build keeps the SAME signature"
+          else
+            echo "WARNING: KOORA_KEYSTORE secret missing -> unsigned APK"
+          fi
+
       - name: Internal launch test (Robolectric boots the app headlessly)
         run: |
           if ./gradlew testDebugUnitTest --no-daemon --stacktrace; then
