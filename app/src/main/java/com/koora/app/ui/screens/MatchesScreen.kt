@@ -54,6 +54,10 @@ sealed interface MatchesUiState {
 class MatchesViewModel : ViewModel() {
     val competitions = listOf(
         Competition("CL", "Champions League"),
+        Competition("PL", "Premier League"),
+        Competition("PD", "La Liga"),
+        Competition("SA", "Serie A"),
+        Competition("BL1", "Bundesliga"),
         Competition("FL1", "Ligue 1")
         // Botola Pro joins here once we upgrade to API-Football
     )

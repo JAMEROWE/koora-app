@@ -40,6 +40,10 @@ import kotlinx.coroutines.launch
 class StandingsViewModel : ViewModel() {
     val competitions = listOf(
         Competition("FL1", "Ligue 1"),
+        Competition("PL", "Premier League"),
+        Competition("PD", "La Liga"),
+        Competition("SA", "Serie A"),
+        Competition("BL1", "Bundesliga"),
         Competition("CL", "Champions League")
     )
 
