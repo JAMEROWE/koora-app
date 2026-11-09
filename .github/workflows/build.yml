@@ -39,8 +39,19 @@ jobs:
             echo "No token secret set -> DEMO data mode"
           fi
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: Build debug APK (up to 3 attempts)
+        run: |
+          for i in 1 2 3; do
+            echo "=== Build attempt $i ==="
+            if ./gradlew assembleDebug --no-daemon --stacktrace; then
+              echo "BUILD_OK"
+              exit 0
+            fi
+            echo "Attempt $i failed (often a temporary download issue). Retrying in 30s..."
+            sleep 30
+          done
+          echo "All 3 build attempts failed."
+          exit 1
 
       - name: Upload APK (download it from the run page)
         uses: actions/upload-artifact@v4
