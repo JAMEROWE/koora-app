@@ -11,6 +11,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # allows publishing the APK to the Releases page
 
     steps:
       - name: Checkout code
@@ -83,3 +85,17 @@ jobs:
           name: Koora-APK
           path: app/build/outputs/apk/release/app-release.apk
           retention-days: 30
+
+      # Every build publishes/refreshes the APK on the public Releases page:
+      # https://github.com/JAMEROWE/koora-app/releases — a stable link that
+      # always serves the newest built version, no login needed.
+      - name: Publish APK to the Releases page
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(grep -o 'versionName = "[^"]*"' app/build.gradle.kts | cut -d '"' -f2)
+          TAG="v$VERSION"
+          gh release create "$TAG" app/build/outputs/apk/release/app-release.apk \
+            --title "Koora $TAG" \
+            --notes "Download Koora-$VERSION.apk below and open it on your phone to install or update." \
+          || gh release upload "$TAG" app/build/outputs/apk/release/app-release.apk --clobber
