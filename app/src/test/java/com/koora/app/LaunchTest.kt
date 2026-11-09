@@ -28,6 +28,17 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = LaunchTest.NoAdsApp::class)
 class LaunchTest {
 
+    companion object {
+        init {
+            // Runs at CLASS LOAD — before any JUnit rule, @Before, or activity
+            // launch. Critical: viewModelScope uses Dispatchers.Main.immediate,
+            // so the first data load starts synchronously inside onCreate —
+            // later @Before would be TOO LATE on CI (which has a real API
+            // token baked in) and the test would hit the live API.
+            MatchRepository.forceDemoForTest = true
+        }
+    }
+
     /** Application stub: no AdMob init (no Google Play services on the JVM). */
     class NoAdsApp : android.app.Application()
 
