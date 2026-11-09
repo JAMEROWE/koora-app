@@ -1,0 +1,1116 @@
+{
+ "header": {
+  "competitions": [
+   {
+    "competitors": [
+     {
+      "homeAway": "home",
+      "team": {
+       "id": "169",
+       "displayName": "Stade Rennais"
+      }
+     },
+     {
+      "homeAway": "away",
+      "team": {
+       "id": "166",
+       "displayName": "Lille"
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "keyEvents": [
+  {
+   "type": {
+    "id": "80",
+    "text": "Kickoff",
+    "type": "kickoff"
+   },
+   "clock": {
+    "displayValue": ""
+   },
+   "team": null,
+   "athletesInvolved": [],
+   "text": null
+  },
+  {
+   "type": {
+    "id": "70",
+    "text": "Goal",
+    "type": "goal"
+   },
+   "clock": {
+    "displayValue": "24'"
+   },
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "athletesInvolved": [],
+   "text": "Goal! Rennes 0, Lille 1. Soriba Diaoune (Lille) left footed shot from outside the box to the bottom left corner."
+  },
+  {
+   "type": {
+    "id": "70",
+    "text": "Goal",
+    "type": "goal"
+   },
+   "clock": {
+    "displayValue": "31'"
+   },
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "athletesInvolved": [],
+   "text": "Goal! Rennes 1, Lille 1. Boulaye Dia (Rennes) right footed shot from very close range to the top right corner. Assisted by Abdelhamid Aït Boudlal following a corner."
+  },
+  {
+   "type": {
+    "id": "81",
+    "text": "Halftime",
+    "type": "halftime"
+   },
+   "clock": {
+    "displayValue": "45'+2'"
+   },
+   "team": null,
+   "athletesInvolved": [],
+   "text": null
+  },
+  {
+   "type": {
+    "id": "82",
+    "text": "Start 2nd Half",
+    "type": "start-2nd-half"
+   },
+   "clock": {
+    "displayValue": "45'"
+   },
+   "team": null,
+   "athletesInvolved": [],
+   "text": null
+  },
+  {
+   "type": {
+    "id": "129",
+    "text": "Start Delay",
+    "type": "start-delay"
+   },
+   "clock": {
+    "displayValue": "48'"
+   },
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "athletesInvolved": [],
+   "text": null
+  },
+  {
+   "type": {
+    "id": "129",
+    "text": "Start Delay",
+    "type": "start-delay"
+   },
+   "clock": {
+    "displayValue": "48'"
+   },
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "athletesInvolved": [],
+   "text": "Delay in match because of an injury Tanguy Nianzou (Lille)."
+  },
+  {
+   "type": {
+    "id": "130",
+    "text": "End Delay",
+    "type": "end-delay"
+   },
+   "clock": {
+    "displayValue": "49'"
+   },
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "athletesInvolved": [],
+   "text": "Delay over. They are ready to continue."
+  },
+  {
+   "type": {
+    "id": "130",
+    "text": "End Delay",
+    "type": "end-delay"
+   },
+   "clock": {
+    "displayValue": "49'"
+   },
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "athletesInvolved": [],
+   "text": null
+  },
+  {
+   "type": {
+    "id": "94",
+    "text": "Yellow Card",
+    "type": "yellow-card"
+   },
+   "clock": {
+    "displayValue": "55'"
+   },
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "athletesInvolved": [],
+   "text": "Calvin Verdonk (Lille) is shown the yellow card."
+  },
+  {
+   "type": {
+    "id": "129",
+    "text": "Start Delay",
+    "type": "start-delay"
+   },
+   "clock": {
+    "displayValue": "56'"
+   },
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "athletesInvolved": [],
+   "text": "Delay in match because of an injury Mahdi Camara (Rennes)."
+  },
+  {
+   "type": {
+    "id": "129",
+    "text": "Start Delay",
+    "type": "start-delay"
+   },
+   "clock": {
+    "displayValue": "56'"
+   },
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "athletesInvolved": [],
+   "text": null
+  },
+  {
+   "type": {
+    "id": "130",
+    "text": "End Delay",
+    "type": "end-delay"
+   },
+   "clock": {
+    "displayValue": "57'"
+   },
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "athletesInvolved": [],
+   "text": "Delay over. They are ready to continue."
+  },
+  {
+   "type": {
+    "id": "130",
+    "text": "End Delay",
+    "type": "end-delay"
+   },
+   "clock": {
+    "displayValue": "57'"
+   },
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "athletesInvolved": [],
+   "text": null
+  },
+  {
+   "type": {
+    "id": "76",
+    "text": "Substitution",
+    "type": "substitution"
+   },
+   "clock": {
+    "displayValue": "62'"
+   },
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "athletesInvolved": [],
+   "text": "Substitution, Lille. Romain Perraud replaces Calvin Verdonk."
+  },
+  {
+   "type": {
+    "id": "76",
+    "text": "Substitution",
+    "type": "substitution"
+   },
+   "clock": {
+    "displayValue": "62'"
+   },
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "athletesInvolved": [],
+   "text": "Substitution, Lille. Maurits Kjærgaard replaces Nabil Bentaleb."
+  },
+  {
+   "type": {
+    "id": "76",
+    "text": "Substitution",
+    "type": "substitution"
+   },
+   "clock": {
+    "displayValue": "63'"
+   },
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "athletesInvolved": [],
+   "text": "Substitution, Rennes. Mousa Al Tamari replaces Eliezer Mayenda."
+  },
+  {
+   "type": {
+    "id": "70",
+    "text": "Goal",
+    "type": "goal"
+   },
+   "clock": {
+    "displayValue": "68'"
+   },
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "athletesInvolved": [],
+   "text": "Goal! Rennes 1, Lille 2. Nathan Ngoy (Lille) left footed shot from outside the box to the bottom left corner. Assisted by Soriba Diaoune."
+  },
+  {
+   "type": {
+    "id": "94",
+    "text": "Yellow Card",
+    "type": "yellow-card"
+   },
+   "clock": {
+    "displayValue": "73'"
+   },
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "athletesInvolved": [],
+   "text": "Maurits Kjærgaard (Lille) is shown the yellow card for a bad foul."
+  },
+  {
+   "type": {
+    "id": "76",
+    "text": "Substitution",
+    "type": "substitution"
+   },
+   "clock": {
+    "displayValue": "73'"
+   },
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "athletesInvolved": [],
+   "text": "Substitution, Lille. Dilane Bakwa replaces Ethan Mbappé."
+  },
+  {
+   "type": {
+    "id": "76",
+    "text": "Substitution",
+    "type": "substitution"
+   },
+   "clock": {
+    "displayValue": "74'"
+   },
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "athletesInvolved": [],
+   "text": "Substitution, Rennes. Issa Soumaré replaces Boulaye Dia."
+  },
+  {
+   "type": {
+    "id": "76",
+    "text": "Substitution",
+    "type": "substitution"
+   },
+   "clock": {
+    "displayValue": "75'"
+   },
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "athletesInvolved": [],
+   "text": "Substitution, Rennes. Djaoui Cissé replaces Mahdi Camara."
+  },
+  {
+   "type": {
+    "id": "76",
+    "text": "Substitution",
+    "type": "substitution"
+   },
+   "clock": {
+    "displayValue": "75'"
+   },
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "athletesInvolved": [],
+   "text": "Substitution, Rennes. Ludovic Blas replaces Adrien Thomasson."
+  },
+  {
+   "type": {
+    "id": "94",
+    "text": "Yellow Card",
+    "type": "yellow-card"
+   },
+   "clock": {
+    "displayValue": "77'"
+   },
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "athletesInvolved": [],
+   "text": "Nathan Ngoy (Lille) is shown the yellow card for a bad foul."
+  },
+  {
+   "type": {
+    "id": "129",
+    "text": "Start Delay",
+    "type": "start-delay"
+   },
+   "clock": {
+    "displayValue": "82'"
+   },
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "athletesInvolved": [],
+   "text": null
+  },
+  {
+   "type": {
+    "id": "130",
+    "text": "End Delay",
+    "type": "end-delay"
+   },
+   "clock": {
+    "displayValue": "82'"
+   },
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "athletesInvolved": [],
+   "text": null
+  },
+  {
+   "type": {
+    "id": "76",
+    "text": "Substitution",
+    "type": "substitution"
+   },
+   "clock": {
+    "displayValue": "82'"
+   },
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "athletesInvolved": [],
+   "text": "Substitution, Rennes. Sebastian Szymanski replaces Gonçalo Oliveira."
+  },
+  {
+   "type": {
+    "id": "76",
+    "text": "Substitution",
+    "type": "substitution"
+   },
+   "clock": {
+    "displayValue": "83'"
+   },
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "athletesInvolved": [],
+   "text": "Substitution, Lille. Isaac Cossier replaces Ngal'ayel Mukau."
+  },
+  {
+   "type": {
+    "id": "76",
+    "text": "Substitution",
+    "type": "substitution"
+   },
+   "clock": {
+    "displayValue": "83'"
+   },
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "athletesInvolved": [],
+   "text": "Substitution, Lille. Olivier Giroud replaces Hákon Haraldsson."
+  },
+  {
+   "type": {
+    "id": "129",
+    "text": "Start Delay",
+    "type": "start-delay"
+   },
+   "clock": {
+    "displayValue": "90'+3'"
+   },
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "athletesInvolved": [],
+   "text": null
+  },
+  {
+   "type": {
+    "id": "130",
+    "text": "End Delay",
+    "type": "end-delay"
+   },
+   "clock": {
+    "displayValue": "90'+3'"
+   },
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "athletesInvolved": [],
+   "text": null
+  },
+  {
+   "type": {
+    "id": "83",
+    "text": "End Regular Time",
+    "type": "end-regular-time"
+   },
+   "clock": {
+    "displayValue": "90'+4'"
+   },
+   "team": null,
+   "athletesInvolved": [],
+   "text": "Second Half ends, Rennes 1, Lille 2."
+  }
+ ],
+ "rosters": [
+  {
+   "homeAway": "home",
+   "team": {
+    "id": "169",
+    "displayName": "Stade Rennais"
+   },
+   "formation": "3-5-2",
+   "coach": null,
+   "roster": [
+    {
+     "jersey": "30",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Brice Samba"
+     }
+    },
+    {
+     "jersey": "4",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Charlie Cresswell"
+     }
+    },
+    {
+     "jersey": "5",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Gonçalo Oliveira"
+     }
+    },
+    {
+     "jersey": "48",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Abdelhamid Aït Boudlal"
+     }
+    },
+    {
+     "jersey": "45",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Mahdi Camara"
+     }
+    },
+    {
+     "jersey": "28",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Adrien Thomasson"
+     }
+    },
+    {
+     "jersey": "21",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Valentin Rongier"
+     }
+    },
+    {
+     "jersey": "18",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Mahamadou Nagida"
+     }
+    },
+    {
+     "jersey": "14",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Bryan Reynolds"
+     }
+    },
+    {
+     "jersey": "12",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Eliezer Mayenda"
+     }
+    },
+    {
+     "jersey": "22",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Boulaye Dia"
+     }
+    },
+    {
+     "jersey": "11",
+     "starter": false,
+     "subbedIn": true,
+     "athlete": {
+      "displayName": "Mousa Al-Tamari"
+     }
+    },
+    {
+     "jersey": "90",
+     "starter": false,
+     "subbedIn": true,
+     "athlete": {
+      "displayName": "Issa Soumaré"
+     }
+    },
+    {
+     "jersey": "10",
+     "starter": false,
+     "subbedIn": true,
+     "athlete": {
+      "displayName": "Ludovic Blas"
+     }
+    },
+    {
+     "jersey": "95",
+     "starter": false,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Przemyslaw Frankowski"
+     }
+    },
+    {
+     "jersey": "6",
+     "starter": false,
+     "subbedIn": true,
+     "athlete": {
+      "displayName": "Djaoui Cissé"
+     }
+    },
+    {
+     "jersey": "26",
+     "starter": false,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Quentin Merlin"
+     }
+    },
+    {
+     "jersey": "24",
+     "starter": false,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Anthony Rouault"
+     }
+    },
+    {
+     "jersey": "17",
+     "starter": false,
+     "subbedIn": true,
+     "athlete": {
+      "displayName": "Sebastian Szymanski"
+     }
+    },
+    {
+     "jersey": "16",
+     "starter": false,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Nicolas Lemaitre"
+     }
+    }
+   ]
+  },
+  {
+   "homeAway": "away",
+   "team": {
+    "id": "166",
+    "displayName": "Lille"
+   },
+   "formation": "4-3-3",
+   "coach": null,
+   "roster": [
+    {
+     "jersey": "1",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Berke Özer"
+     }
+    },
+    {
+     "jersey": "4",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Alexsandro"
+     }
+    },
+    {
+     "jersey": "23",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Tanguy Nianzou"
+     }
+    },
+    {
+     "jersey": "24",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Calvin Verdonk"
+     }
+    },
+    {
+     "jersey": "3",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Nathan Ngoy"
+     }
+    },
+    {
+     "jersey": "6",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Nabil Bentaleb"
+     }
+    },
+    {
+     "jersey": "21",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Benjamin André"
+     }
+    },
+    {
+     "jersey": "17",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Ngal'ayel Mukau"
+     }
+    },
+    {
+     "jersey": "10",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Hákon Haraldsson"
+     }
+    },
+    {
+     "jersey": "35",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Soriba Diaoune"
+     }
+    },
+    {
+     "jersey": "8",
+     "starter": true,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Ethan Mbappé"
+     }
+    },
+    {
+     "jersey": "9",
+     "starter": false,
+     "subbedIn": true,
+     "athlete": {
+      "displayName": "Olivier Giroud"
+     }
+    },
+    {
+     "jersey": "38",
+     "starter": false,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Maxima Goffi"
+     }
+    },
+    {
+     "jersey": "26",
+     "starter": false,
+     "subbedIn": true,
+     "athlete": {
+      "displayName": "Isaac Cossier"
+     }
+    },
+    {
+     "jersey": "7",
+     "starter": false,
+     "subbedIn": true,
+     "athlete": {
+      "displayName": "Dilane Bakwa"
+     }
+    },
+    {
+     "jersey": "14",
+     "starter": false,
+     "subbedIn": true,
+     "athlete": {
+      "displayName": "Maurits Kjaergaard"
+     }
+    },
+    {
+     "jersey": "15",
+     "starter": false,
+     "subbedIn": true,
+     "athlete": {
+      "displayName": "Romain Perraud"
+     }
+    },
+    {
+     "jersey": "11",
+     "starter": false,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Osame Sahraoui"
+     }
+    },
+    {
+     "jersey": "12",
+     "starter": false,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Orlando Gill"
+     }
+    },
+    {
+     "jersey": "28",
+     "starter": false,
+     "subbedIn": false,
+     "athlete": {
+      "displayName": "Gaetan Perrin"
+     }
+    }
+   ]
+  }
+ ],
+ "boxscore": {
+  "teams": [
+   {
+    "homeAway": "home",
+    "team": {
+     "id": "169",
+     "displayName": "Stade Rennais"
+    },
+    "statistics": [
+     {
+      "name": "foulsCommitted",
+      "displayValue": "7"
+     },
+     {
+      "name": "yellowCards",
+      "displayValue": "0"
+     },
+     {
+      "name": "redCards",
+      "displayValue": "0"
+     },
+     {
+      "name": "offsides",
+      "displayValue": "2"
+     },
+     {
+      "name": "wonCorners",
+      "displayValue": "7"
+     },
+     {
+      "name": "saves",
+      "displayValue": "1"
+     },
+     {
+      "name": "possessionPct",
+      "displayValue": "55.5"
+     },
+     {
+      "name": "totalShots",
+      "displayValue": "15"
+     },
+     {
+      "name": "shotsOnTarget",
+      "displayValue": "2"
+     },
+     {
+      "name": "shotPct",
+      "displayValue": "0.1"
+     },
+     {
+      "name": "penaltyKickGoals",
+      "displayValue": "0"
+     },
+     {
+      "name": "penaltyKickShots",
+      "displayValue": "0"
+     },
+     {
+      "name": "accuratePasses",
+      "displayValue": "487"
+     },
+     {
+      "name": "totalPasses",
+      "displayValue": "562"
+     },
+     {
+      "name": "passPct",
+      "displayValue": "0.9"
+     },
+     {
+      "name": "accurateCrosses",
+      "displayValue": "10"
+     },
+     {
+      "name": "totalCrosses",
+      "displayValue": "30"
+     },
+     {
+      "name": "crossPct",
+      "displayValue": "0.3"
+     },
+     {
+      "name": "totalLongBalls",
+      "displayValue": "52"
+     },
+     {
+      "name": "accurateLongBalls",
+      "displayValue": "34"
+     },
+     {
+      "name": "longballPct",
+      "displayValue": "0.7"
+     },
+     {
+      "name": "blockedShots",
+      "displayValue": "6"
+     },
+     {
+      "name": "effectiveTackles",
+      "displayValue": "9"
+     },
+     {
+      "name": "totalTackles",
+      "displayValue": "15"
+     },
+     {
+      "name": "tacklePct",
+      "displayValue": "0.6"
+     },
+     {
+      "name": "interceptions",
+      "displayValue": "13"
+     },
+     {
+      "name": "effectiveClearance",
+      "displayValue": "15"
+     },
+     {
+      "name": "totalClearance",
+      "displayValue": "15"
+     }
+    ]
+   },
+   {
+    "homeAway": "away",
+    "team": {
+     "id": "166",
+     "displayName": "Lille"
+    },
+    "statistics": [
+     {
+      "name": "foulsCommitted",
+      "displayValue": "15"
+     },
+     {
+      "name": "yellowCards",
+      "displayValue": "3"
+     },
+     {
+      "name": "redCards",
+      "displayValue": "0"
+     },
+     {
+      "name": "offsides",
+      "displayValue": "0"
+     },
+     {
+      "name": "wonCorners",
+      "displayValue": "2"
+     },
+     {
+      "name": "saves",
+      "displayValue": "1"
+     },
+     {
+      "name": "possessionPct",
+      "displayValue": "44.5"
+     },
+     {
+      "name": "totalShots",
+      "displayValue": "8"
+     },
+     {
+      "name": "shotsOnTarget",
+      "displayValue": "3"
+     },
+     {
+      "name": "shotPct",
+      "displayValue": "0.4"
+     },
+     {
+      "name": "penaltyKickGoals",
+      "displayValue": "0"
+     },
+     {
+      "name": "penaltyKickShots",
+      "displayValue": "0"
+     },
+     {
+      "name": "accuratePasses",
+      "displayValue": "387"
+     },
+     {
+      "name": "totalPasses",
+      "displayValue": "468"
+     },
+     {
+      "name": "passPct",
+      "displayValue": "0.8"
+     },
+     {
+      "name": "accurateCrosses",
+      "displayValue": "0"
+     },
+     {
+      "name": "totalCrosses",
+      "displayValue": "4"
+     },
+     {
+      "name": "crossPct",
+      "displayValue": "0.0"
+     },
+     {
+      "name": "totalLongBalls",
+      "displayValue": "44"
+     },
+     {
+      "name": "accurateLongBalls",
+      "displayValue": "10"
+     },
+     {
+      "name": "longballPct",
+      "displayValue": "0.2"
+     },
+     {
+      "name": "blockedShots",
+      "displayValue": "1"
+     },
+     {
+      "name": "effectiveTackles",
+      "displayValue": "10"
+     },
+     {
+      "name": "totalTackles",
+      "displayValue": "15"
+     },
+     {
+      "name": "tacklePct",
+      "displayValue": "0.7"
+     },
+     {
+      "name": "interceptions",
+      "displayValue": "10"
+     },
+     {
+      "name": "effectiveClearance",
+      "displayValue": "37"
+     },
+     {
+      "name": "totalClearance",
+      "displayValue": "37"
+     }
+    ]
+   }
+  ]
+ }
+}

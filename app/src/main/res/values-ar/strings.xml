@@ -48,7 +48,7 @@
     <string name="settings_favorites">المفضلة</string>
     <string name="settings_about">حول التطبيق</string>
     <string name="about_version">الإصدار %1$s</string>
-    <string name="about_data">النتائج: football-data.org • الأخبار: مصادر رسمية • الملخصات: يوتيوب</string>
+    <string name="about_data">النتائج: football-data.org • إحصائيات المباريات: ESPN • الأخبار: مصادر رسمية • الملخصات: يوتيوب</string>
     <string name="col_team">الفريق</string>
     <string name="col_played">ل</string>
     <string name="col_won">ف</string>

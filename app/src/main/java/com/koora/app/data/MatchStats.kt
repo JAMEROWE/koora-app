@@ -1,5 +1,6 @@
 package com.koora.app.data
 
+import androidx.annotation.VisibleForTesting
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
 import com.koora.app.BuildConfig
@@ -17,22 +18,31 @@ import java.net.URL
  * PER-MATCH DEEP STATS: events (goals / yellow & red cards / subs),
  * official lineups and match statistics.
  *
+ * Providers, in priority order:
+ *
+ * 1. API-Football (api-sports.io) — used ONLY when a key is present
+ *    (local.properties / GitHub secret API_FOOTBALL_KEY). Free plan =
+ *    100 requests/day; $19/mo removes the cap with zero code change.
+ *
+ * 2. ESPN open match data (v1.5.1, default, NO KEY NEEDED):
+ *    site.api.espn.com/apis/site/v2/sports/soccer/{slug}/scoreboard
+ *    + /summary?event={id} give the full boxscore: keyEvents (goals,
+ *    yellow & red cards, substitutions), rosters (formation + starters
+ *    + bench) and statistics (possession, shots, corners, fouls,
+ *    cards, saves). Verified live 2026-11-09 for all competitions the
+ *    app covers. Responses arrive gzipped; we sniff the gzip magic and
+ *    inflate when present.
+ *
  * football-data.org's FREE tier does NOT include events or lineups
- * (verified live on 2026-11-09: the /v4/matches/{id} response returns
- * both null). This data comes from API-Football (api-sports.io), whose
- * FREE plan includes ALL endpoints with a 100 requests/day quota
- * (reset at 00:00 UTC). We only call it when a user opens a match
- * detail screen and we cache the result in memory, so a small user
- * base stays far below the quota. When the app outgrows it, the $19/mo
- * plan removes the cap — zero code change (same key, same code).
+ * (verified live: the /v4/matches/{id} response returns both null),
+ * which is why this repository exists at all.
  *
- * Mapping: football-data and API-Football use different match ids, so
- * we resolve the API-Football fixture by date + league + team-name
- * fuzzy match, then fetch the full fixture (events + lineups +
- * statistics arrive in ONE response for ?id=).
+ * Mapping: football-data and the provider use different match ids, so
+ * we resolve the fixture by date + team-name fuzzy match, then read
+ * the full summary (events + lineups + statistics in ONE response).
  *
- * Key wiring: local.properties / GitHub secret API_FOOTBALL_KEY.
- * No key -> sections hidden on real data, demo sample in demo mode.
+ * Caching: finished matches are cached in memory forever (repeat
+ * views cost zero requests). Live matches refresh every 60 s.
  */
 
 data class StatsEvent(
@@ -76,9 +86,30 @@ object MatchStatsRepository {
         "CL" to 2     // UEFA Champions League
     )
 
+    // football-data competition code -> ESPN soccer slug (no key needed)
+    internal val espnLeagueMap = mapOf(
+        "CL" to "uefa.champions",
+        "PL" to "eng.1",
+        "PD" to "esp.1",
+        "SA" to "ita.1",
+        "BL1" to "ger.1",
+        "FL1" to "fra.1",
+        "ELC" to "eng.2",
+        "DED" to "ned.1",
+        "PPL" to "por.1",
+        "BSA" to "bra.1",
+        "CLI" to "conmebol.libertadores",
+        "WC" to "fifa.world",
+        "EC" to "uefa.euro"
+    )
+
     private val hasKey: Boolean get() = BuildConfig.API_FOOTBALL_KEY.isNotBlank()
-    private val mem = mutableMapOf<Long, MatchStats?>()
     private val gson = Gson()
+
+    // match id -> (stats, fetched-at epoch ms)
+    private val mem = mutableMapOf<Long, Pair<MatchStats?, Long>>()
+
+    private const val LIVE_TTL_MS = 60_000L
 
     // ------------------------------------------------------------------
     // Demo sample — Raja 2-1 Wydad flavored, shown in demo mode so the
@@ -124,22 +155,42 @@ object MatchStatsRepository {
         )
     )
 
-    /** Entry point. demo=true -> sample data. No key -> null (sections hidden). */
+    /**
+     * Entry point. demo=true -> sample data (CI only).
+     * Real data: API-Football when a key exists, else ESPN. Null -> sections hidden.
+     */
     suspend fun statsFor(match: Match, compCode: String, demo: Boolean): MatchStats? =
         withContext(Dispatchers.IO) {
             if (demo) return@withContext demo(match)
-            if (!hasKey) return@withContext null
-            synchronized(mem) { mem[match.id] }?.let { return@withContext it }
+            synchronized(mem) {
+                mem[match.id]?.let { (v, at) ->
+                    val live = match.status == "IN_PLAY" || match.status == "PAUSED"
+                    if (!live || System.currentTimeMillis() - at <= LIVE_TTL_MS) {
+                        return@withContext v
+                    }
+                }
+            }
             val resolved = runCatching { resolve(match, compCode) }.getOrNull()
-            synchronized(mem) { mem[match.id] = resolved }
+            synchronized(mem) { mem[match.id] = Pair(resolved, System.currentTimeMillis()) }
             resolved
         }
 
     // ------------------------------------------------------------------
-    // API-Football (api-sports.io v3)
+    // Provider dispatch
     // ------------------------------------------------------------------
 
     private fun resolve(match: Match, compCode: String): MatchStats? {
+        if (hasKey) {
+            runCatching { afResolve(match, compCode) }.getOrNull()?.let { return it }
+        }
+        return espnResolve(match, compCode)
+    }
+
+    // ------------------------------------------------------------------
+    // API-Football (api-sports.io v3) — only when a key is configured
+    // ------------------------------------------------------------------
+
+    private fun afResolve(match: Match, compCode: String): MatchStats? {
         val league = leagueMap[compCode.trim().uppercase()] ?: return null
         val date = match.utcDate.take(10)
         val season = seasonOf(date)
@@ -269,6 +320,212 @@ object MatchStatsRepository {
             .filter { it.isNotEmpty() && it !in stopTokens }
             .joinToString(" ")
 
+    // ------------------------------------------------------------------
+    // ESPN open match data (v1.5.1) — default provider, no key needed
+    // ------------------------------------------------------------------
+
+    private fun espnResolve(match: Match, compCode: String): MatchStats? {
+        val slug = espnLeagueMap[compCode.trim().uppercase()] ?: return null
+        val date = match.utcDate.take(10).replace("-", "")
+
+        val sb = espnCall("sports/soccer/$slug/scoreboard?dates=$date", EspnScoreboard::class.java)
+        val event = sb.events.firstOrNull { e ->
+            val comps = e.competitions.firstOrNull()?.competitors ?: emptyList()
+            val h = comps.firstOrNull { it.homeAway == "home" }?.team
+            val a = comps.firstOrNull { it.homeAway == "away" }?.team
+            h != null && a != null &&
+                nameMatches(h.displayName ?: "", match.homeTeam.name) &&
+                nameMatches(a.displayName ?: "", match.awayTeam.name)
+        } ?: return null
+
+        val sum = espnCall("sports/soccer/$slug/summary?event=${event.id}", EspnSummary::class.java)
+        return espnToStats(sum, match)
+    }
+
+    /** ESPN replies gzipped even without asking; sniff the gzip magic and inflate. */
+    private fun <T> espnCall(path: String, clazz: Class<T>): T {
+        val conn = URL("https://site.api.espn.com/apis/site/v2/$path").openConnection()
+            as HttpURLConnection
+        conn.connectTimeout = 10_000
+        conn.readTimeout = 15_000
+        conn.setRequestProperty("Accept-Encoding", "gzip")
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android)")
+        try {
+            val raw = conn.inputStream.use { it.readBytes() }
+            val gz = raw.size > 2 && raw[0] == 0x1f.toByte() && raw[1] == 0x8b.toByte()
+            val text = if (gz)
+                java.util.zip.GZIPInputStream(raw.inputStream()).use { it.readBytes() }
+                    .decodeToString()
+            else raw.decodeToString()
+            return gson.fromJson(text, clazz)
+                ?: throw IllegalStateException("ESPN returned an empty body")
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    @VisibleForTesting
+    internal fun espnToStats(s: EspnSummary, match: Match): MatchStats {
+        val comps = s.header?.competitions?.firstOrNull()?.competitors ?: emptyList()
+        val homeId = comps.firstOrNull { it.homeAway == "home" }?.team?.id ?: ""
+
+        val events = s.keyEvents.mapNotNull { e ->
+            val text = e.type?.text ?: return@mapNotNull null
+            val type = (e.type.type ?: "").lowercase()
+            val tn = text.lowercase()
+            // Primary: ESPN's machine type ("goal", "own-goal", "penalty-scored",
+            // "yellow-card", "red-card", "substitution"). Fallback: event text.
+            val kind = when {
+                type.contains("sub") -> "sub"
+                type.contains("second") || type.contains("red") -> "red"
+                type.contains("yellow") -> "yellow"
+                type.contains("goal") ||
+                    (type.contains("penalty") && type.contains("scored")) -> "goal"
+                tn.contains("second yellow") || tn.contains("red card") ||
+                    tn.contains("sent off") -> "red"
+                tn.contains("yellow") -> "yellow"
+                tn.contains("goal") ||
+                    (tn.contains("penalty") &&
+                        (tn.contains("converted") || tn.contains("scored"))) -> "goal"
+                tn.contains("substitut") || tn.contains(" replaces ") -> "sub"
+                else -> return@mapNotNull null
+            }
+            if ("missed" in tn || "saved" in tn) return@mapNotNull null
+            val minute = (e.clock?.displayValue ?: "").replace("'", "")
+            if (minute.isBlank()) return@mapNotNull null
+            val detail = when {
+                "own goal" in tn || type == "own-goal" -> "Own goal"
+                "penalty" in tn -> "Penalty"
+                else -> ""
+            }
+            val (player, other) = espnEventPeople(kind, e)
+            if (kind == "sub" && player.isBlank()) return@mapNotNull null
+            StatsEvent(
+                minute = minute,
+                side = if (e.team?.id == homeId) 0 else 1,
+                kind = kind,
+                detail = detail,
+                player = player,
+                other = other
+            )
+        }
+
+        val lineups = s.rosters
+            .sortedByDescending { it.homeAway == "home" }
+            .mapNotNull { r ->
+                val starters = r.roster.filter { it.starter == true }
+                    .mapNotNull { p ->
+                        p.athlete?.displayName?.let {
+                            StatsPlayer(p.jersey?.takeUnless { it.isBlank() }, it)
+                        }
+                    }
+                if (starters.size < 7) return@mapNotNull null   // XI not announced yet
+                StatsLineup(
+                    team = r.team?.displayName ?: "",
+                    formation = r.formation?.takeUnless { it.isBlank() },
+                    coach = r.coach?.fullName,
+                    starters = starters.take(11),
+                    subsCount = r.roster.count { it.starter != true }
+                )
+            }
+            .filter { it.team.isNotBlank() }
+
+        val boxHome = s.boxscore?.teams?.firstOrNull { it.homeAway == "home" }
+        val boxAway = s.boxscore?.teams?.firstOrNull { it.homeAway == "away" }
+        val bars = mutableListOf<StatsBar>()
+        if (boxHome != null && boxAway != null) {
+            val hs = boxHome.statistics.associate { s -> Pair(s.name ?: "", s.displayValue ?: "") }
+            val aws = boxAway.statistics.associate { s -> Pair(s.name ?: "", s.displayValue ?: "") }
+            espnBarNames.forEach { (espnName, label) ->
+                val hv = hs[espnName] ?: return@forEach
+                val av = aws[espnName] ?: return@forEach
+                if (hv.isBlank() || av.isBlank()) return@forEach
+                val (hd, ad) = if (label == "possession") possessionPair(hv, av) else Pair(hv, av)
+                bars.add(StatsBar(label, hd, ad, fraction(hv, av)))
+            }
+        }
+
+        return MatchStats(
+            homeShort = match.homeTeam.tla ?: match.homeTeam.shortName ?: match.homeTeam.name,
+            awayShort = match.awayTeam.tla ?: match.awayTeam.shortName ?: match.awayTeam.name,
+            events = events,
+            lineups = lineups,
+            bars = bars
+        )
+    }
+
+    /** (in, out) for subs from "X replaces Y", scorer/card player from the event text. */
+    @VisibleForTesting
+    internal fun espnEventPeople(kind: String, e: EspnKey): Pair<String, String?> {
+        val involved = e.athletesInvolved?.mapNotNull { it.displayName } ?: emptyList()
+        val text = e.text ?: ""
+        return when (kind) {
+            "sub" -> {
+                val seg = text.substringAfter(". ").trim().removeSuffix(".")
+                if (seg.contains(" replaces ")) {
+                    Pair(
+                        seg.substringBefore(" replaces ").trim(),
+                        seg.substringAfter(" replaces ").trim()
+                    )
+                } else Pair(involved.firstOrNull() ?: "", involved.getOrNull(1))
+            }
+            else -> {
+                val name = nameFromChunk(text)
+                if (name.isBlank()) Pair(involved.firstOrNull() ?: "", involved.getOrNull(1))
+                else Pair(name, involved.getOrNull(1))
+            }
+        }
+    }
+
+    /**
+     * Pulls the player name out of an ESPN event text:
+     * "Calvin Verdonk (Lille) is shown the yellow card." -> "Calvin Verdonk"
+     * "Goal! Rennes 0, Lille 1. S. Diaoune (Lille) left footed..." -> "S. Diaoune"
+     * "Own Goal by H. Mouaddib (Rennes)." / "Penalty by M. Perez (Lille)" too.
+     * The leading score line ("Rennes 0, Lille 1. ") is stripped by regex so
+     * player initials like "S." never get confused with sentence breaks.
+     */
+    @VisibleForTesting
+    internal fun nameFromChunk(text: String): String {
+        val body = text.trim()
+            .removePrefix("Goal! ")
+            .removePrefix("Own Goal by ")
+            .removePrefix("Penalty by ")
+        // score line "Rennes 0, Lille 1. " -> digits, comma, TEAM NAME, digits, period
+        val name = body.replace(Regex(".*\\d+,\\s*\\D*?\\d+\\.\\s*"), "")
+            .substringBefore(" (")
+            .trim()
+        if (!body.contains(" (")) return ""
+        if (Regex("\\d").containsMatchIn(name)) {
+            // leftover score fragment -> useless, let callers fall back to the roster
+            return name.substringAfterLast(". ", "")
+        }
+        return name
+    }
+
+    /** possessionPct has no % sign; make the two sides sum to 100. */
+    private fun possessionPair(hv: String, av: String): Pair<String, String> {
+        val h = hv.toDoubleOrNull() ?: return Pair("$hv%", "$av%")
+        val a = av.toDoubleOrNull() ?: return Pair("$hv%", "$av%")
+        val hi = Math.round(h).toInt()
+        val ai0 = Math.round(a).toInt()
+        val ai = if (hi + ai0 == 100) ai0 else 100 - hi
+        return Pair("$hi%", "$ai%")
+    }
+
+    // ESPN stat name -> app label key (insertion order = display order)
+    private val espnBarNames = linkedMapOf(
+        "possessionPct" to "possession",
+        "totalShots" to "shots",
+        "shotsOnTarget" to "shots_on",
+        "wonCorners" to "corners",
+        "foulsCommitted" to "fouls",
+        "yellowCards" to "yellow",
+        "redCards" to "red",
+        "offsides" to "offsides",
+        "saves" to "saves"
+    )
+
     // ---------------- API-Football JSON (Gson) ----------------
 
     private data class AfResponse(val response: List<AfFixtureNode> = emptyList())
@@ -304,4 +561,55 @@ object MatchStatsRepository {
         val lineups: List<AfLineupNode>? = null,
         val statistics: List<AfStatNode>? = null
     )
+
+    // ---------------- ESPN JSON (Gson, internal for unit tests) ----------------
+
+    internal data class EspnScoreboard(val events: List<EspnEvent> = emptyList())
+    internal data class EspnEvent(
+        val id: String? = null,
+        val competitions: List<EspnComp> = emptyList()
+    )
+    internal data class EspnComp(val competitors: List<EspnCompetitor> = emptyList())
+    internal data class EspnCompetitor(
+        val homeAway: String? = null,
+        val team: EspnTeamRef? = null
+    )
+    internal data class EspnTeamRef(val id: String? = null, val displayName: String? = null)
+    internal data class EspnSummary(
+        val header: EspnHeader? = null,
+        val keyEvents: List<EspnKey> = emptyList(),
+        val rosters: List<EspnRoster> = emptyList(),
+        val boxscore: EspnBox? = null
+    )
+    internal data class EspnHeader(val competitions: List<EspnComp> = emptyList())
+    internal data class EspnType(val text: String? = null, val type: String? = null)
+    internal data class EspnClock(val displayValue: String? = null)
+    internal data class EspnAthleteRef(val displayName: String? = null)
+    internal data class EspnKey(
+        val type: EspnType? = null,
+        val clock: EspnClock? = null,
+        val team: EspnTeamRef? = null,
+        val athletesInvolved: List<EspnAthleteRef>? = null,
+        val text: String? = null
+    )
+    internal data class EspnCoachRef(val fullName: String? = null)
+    internal data class EspnPlayerRef(
+        val jersey: String? = null,
+        val starter: Boolean? = null,
+        val athlete: EspnAthleteRef? = null
+    )
+    internal data class EspnRoster(
+        val homeAway: String? = null,
+        val team: EspnTeamRef? = null,
+        val formation: String? = null,
+        val coach: EspnCoachRef? = null,
+        val roster: List<EspnPlayerRef> = emptyList()
+    )
+    internal data class EspnStat(val name: String? = null, val displayValue: String? = null)
+    internal data class EspnBoxTeam(
+        val homeAway: String? = null,
+        val team: EspnTeamRef? = null,
+        val statistics: List<EspnStat> = emptyList()
+    )
+    internal data class EspnBox(val teams: List<EspnBoxTeam> = emptyList())
 }

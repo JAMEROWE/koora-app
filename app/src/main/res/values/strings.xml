@@ -48,7 +48,7 @@
     <string name="settings_favorites">Favorites</string>
     <string name="settings_about">About</string>
     <string name="about_version">Version %1$s</string>
-    <string name="about_data">Scores: football-data.org • News: official media feeds • Highlights: YouTube</string>
+    <string name="about_data">Scores: football-data.org • Match stats: ESPN • News: official media feeds • Highlights: YouTube</string>
     <string name="col_team">Team</string>
     <string name="col_played">P</string>
     <string name="col_won">W</string>
