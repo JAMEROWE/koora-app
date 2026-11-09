@@ -1,21 +1,27 @@
 package com.koora.app.ui.screens
 
 import android.app.Activity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.SportsSoccer
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -50,6 +56,10 @@ import com.koora.app.R
 import com.koora.app.ads.AdsManager
 import com.koora.app.data.Match
 import com.koora.app.data.MatchRepository
+import com.koora.app.data.MatchStats
+import com.koora.app.data.MatchStatsRepository
+import com.koora.app.data.StatsBar
+import com.koora.app.data.StatsEvent
 import com.koora.app.ui.dateLabel
 import com.koora.app.ui.isLive
 import com.koora.app.ui.scoreLabel
@@ -75,6 +85,8 @@ sealed interface StatsUiState {
 class MatchDetailViewModel : ViewModel() {
     var stats by mutableStateOf<StatsUiState>(StatsUiState.Idle)
         private set
+    var deepStats by mutableStateOf<MatchStats?>(null)
+        private set
 
     fun loadStats(matchId: Long) {
         if (stats !is StatsUiState.Idle) return
@@ -87,6 +99,16 @@ class MatchDetailViewModel : ViewModel() {
             } catch (e: Exception) {
                 StatsUiState.Empty
             }
+        }
+    }
+
+    /** Deep stats (events / lineups / bars). demo=true -> sample data. */
+    fun loadDeepStats(match: Match, compCode: String, demo: Boolean) {
+        if (deepStats != null) return
+        viewModelScope.launch {
+            deepStats = runCatching {
+                MatchStatsRepository.statsFor(match, compCode, demo)
+            }.getOrNull()
         }
     }
 }
@@ -106,6 +128,11 @@ fun MatchDetailScreen(
 
     // Stats load automatically — free, no ad gate
     LaunchedEffect(matchId) { vm.loadStats(matchId) }
+
+    // Deep stats (events, lineups, bars) — demo sample or API-Football
+    LaunchedEffect(matchId) {
+        match?.let { vm.loadDeepStats(it, MatchRepository.cacheCode, !MatchRepository.hasKey) }
+    }
 
     // The ONE capped interstitial: only on live matches, only per AdsManager rules
     LaunchedEffect(matchId) {
@@ -193,6 +220,23 @@ fun MatchDetailScreen(
 
                 Spacer(Modifier.height(28.dp))
                 StatsContent(match, vm.stats)
+
+                // Deep stats v1.5.0 — events, bars, lineups (hidden when no data)
+                vm.deepStats?.let { ds ->
+                    if (ds.events.isNotEmpty()) {
+                        Spacer(Modifier.height(20.dp))
+                        EventsCard(match, ds)
+                    }
+                    if (ds.bars.isNotEmpty()) {
+                        Spacer(Modifier.height(16.dp))
+                        StatsBarsCard(ds)
+                    }
+                    if (ds.lineups.isNotEmpty()) {
+                        Spacer(Modifier.height(16.dp))
+                        LineupsCard(ds)
+                    }
+                }
+
                 Spacer(Modifier.height(24.dp))
             }
         }
@@ -412,6 +456,255 @@ private fun FormRow(teamName: String, form: List<Char>) {
             }
             if (form.isEmpty()) {
                 Text("–", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Deep stats cards (v1.5.0): events timeline, stat bars, lineups
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun EventsCard(match: Match, ds: MatchStats) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                stringResource(R.string.stats_events),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(8.dp))
+            ds.events.forEach { e -> EventRow(match, e) }
+        }
+    }
+}
+
+@Composable
+private fun EventRow(match: Match, e: StatsEvent) {
+    val teamLabel = if (e.side == 0)
+        (match.homeTeam.tla ?: match.homeTeam.shortName ?: match.homeTeam.name)
+    else
+        (match.awayTeam.tla ?: match.awayTeam.shortName ?: match.awayTeam.name)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            e.minute,
+            Modifier.width(44.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        when (e.kind) {
+            "yellow" -> CardChip(Color(0xFFF2C94C))
+            "red" -> CardChip(Color(0xFFEB5757))
+            "sub" -> Icon(
+                Icons.Filled.SwapVert, contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            else -> Icon(
+                Icons.Filled.SportsSoccer, contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                e.player,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (e.detail.isNotBlank()) {
+                Text(
+                    e.detail,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+            e.other?.let {
+                Text(
+                    if (e.kind == "sub") "→ $it" else "($it)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        Surface(
+            shape = RoundedCornerShape(6.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Text(
+                teamLabel,
+                Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+private fun CardChip(color: Color) {
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = color,
+        modifier = Modifier.size(14.dp)
+    ) {}
+}
+
+@Composable
+private fun StatsBarsCard(ds: MatchStats) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                stringResource(R.string.stats_match),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(12.dp))
+            ds.bars.forEach { b ->
+                Column(Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            b.home,
+                            Modifier.width(36.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.End
+                        )
+                        Text(
+                            localStatLabel(b.label),
+                            Modifier
+                                .weight(1f)
+                                .padding(horizontal = 8.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
+                        )
+                        Text(
+                            b.away,
+                            Modifier.width(36.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    SplitBar(b.homeFraction)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun localStatLabel(label: String): String = when (label.lowercase()) {
+    "ball possession", "possession" -> stringResource(R.string.stats_possession)
+    "total shots", "shots" -> stringResource(R.string.stats_shots)
+    "shots on goal", "shots on target", "shots_on" -> stringResource(R.string.stats_shots_on)
+    "corner kicks", "corners" -> stringResource(R.string.stats_corners)
+    "fouls" -> stringResource(R.string.stats_fouls)
+    "yellow cards", "yellow" -> stringResource(R.string.stats_yellow)
+    "red cards", "red" -> stringResource(R.string.stats_red)
+    "offsides" -> stringResource(R.string.stats_offsides)
+    "goalkeeper saves", "saves" -> stringResource(R.string.stats_saves)
+    else -> label
+}
+
+@Composable
+private fun SplitBar(homeFraction: Float?) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(6.dp)
+    ) {
+        if (homeFraction != null) {
+            val w = homeFraction.coerceIn(0.02f, 0.98f)
+            Box(Modifier.weight(w).fillMaxHeight().background(PitchGreen))
+            Box(Modifier.weight(1f - w).fillMaxHeight().background(Color(0xFF8A9A93)))
+        } else {
+            Box(
+                Modifier.weight(1f).fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.outlineVariant)
+            )
+        }
+    }
+}
+
+@Composable
+private fun LineupsCard(ds: MatchStats) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                stringResource(R.string.stats_lineups),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth()) {
+                ds.lineups.forEachIndexed { i, lu ->
+                    if (i > 0) Spacer(Modifier.width(16.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            lu.team,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        lu.formation?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        lu.coach?.let {
+                            Text(
+                                "${stringResource(R.string.stats_coach)}: $it",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        lu.starters.forEach { p ->
+                            Row(Modifier.padding(vertical = 2.dp)) {
+                                Text(
+                                    p.number ?: "·",
+                                    Modifier.width(20.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    p.name,
+                                    Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        Text(
+                            stringResource(R.string.stats_subs, lu.subsCount),
+                            Modifier.padding(top = 6.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }

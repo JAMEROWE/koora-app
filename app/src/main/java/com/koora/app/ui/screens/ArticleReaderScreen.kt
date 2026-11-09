@@ -128,7 +128,8 @@ fun ArticleReader(title: String, url: String, onClose: () -> Unit) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
                     factory = { ctx ->
-                        WebView(ctx).apply {
+                        runCatching {
+                            WebView(ctx).apply {
                             layoutParams = ViewGroup.LayoutParams(
                                 ViewGroup.LayoutParams.MATCH_PARENT,
                                 ViewGroup.LayoutParams.MATCH_PARENT
@@ -172,6 +173,11 @@ fun ArticleReader(title: String, url: String, onClose: () -> Unit) {
                             }
                             loadUrl(url)
                             webView = this
+                            }
+                        }.getOrElse {
+                            // WebView unavailable (rare) -> error pane, never a crash
+                            failed = true
+                            android.view.View(ctx).apply { visibility = android.view.View.GONE }
                         }
                     }
                 )

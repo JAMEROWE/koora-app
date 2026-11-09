@@ -30,15 +30,26 @@ jobs:
       # Optional: add your football-data.org key as a repo Secret named
       # FOOTBALL_DATA_TOKEN to get real matches inside the built APK.
       # Without the secret the APK runs in demo mode.
-      - name: Apply API key secret (if present)
+      - name: Apply API key secrets (if present)
         env:
           TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
+          AFKEY: ${{ secrets.API_FOOTBALL_KEY }}
+          YTKEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: |
+          rm -f local.properties
           if [ -n "$TOKEN" ]; then
-            echo "FOOTBALL_DATA_TOKEN=$TOKEN" > local.properties
-            echo "API key applied: REAL data mode"
+            echo "FOOTBALL_DATA_TOKEN=$TOKEN" >> local.properties
+            echo "API key applied: REAL match data"
           else
-            echo "No token secret set -> DEMO data mode"
+            echo "No FOOTBALL_DATA_TOKEN secret -> DEMO match data"
+          fi
+          if [ -n "$AFKEY" ]; then
+            echo "API_FOOTBALL_KEY=$AFKEY" >> local.properties
+            echo "API-Football key applied: events + lineups + stats ON"
+          fi
+          if [ -n "$YTKEY" ]; then
+            echo "YOUTUBE_API_KEY=$YTKEY" >> local.properties
+            echo "YouTube API key applied: exact highlight videos"
           fi
 
       - name: Restore stable signing keystore (from encrypted secret)
