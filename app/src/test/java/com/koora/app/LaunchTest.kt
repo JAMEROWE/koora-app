@@ -1,6 +1,7 @@
 package com.koora.app
 
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -47,7 +48,12 @@ class LaunchTest {
         rule.onNodeWithText(rule.activity.getString(R.string.tab_matches)).assertExists()
         rule.onNodeWithText(rule.activity.getString(R.string.tab_settings)).assertExists()
 
-        // The match list actually composed with demo fixtures
+        // The match list loads in a coroutine — waiting is mandatory here:
+        // CI machines are fast and can reach "idle" while the list is still
+        // Loading, which made this test flaky (run 42600042530).
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithText("Raja Club Athletic").fetchSemanticsNodes().isNotEmpty()
+        }
         rule.onNodeWithText("Raja Club Athletic").assertExists()
         rule.onNodeWithText("Real Madrid").assertExists()
     }
@@ -57,9 +63,11 @@ class LaunchTest {
         rule.waitForIdle()
 
         rule.onNodeWithText(rule.activity.getString(R.string.tab_standings)).performClick()
-        rule.waitForIdle()
 
-        // Demo standings table composed end-to-end
+        // Same anti-flake rule: wait for the table coroutine, don't guess.
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithText("Paris Saint-Germain").fetchSemanticsNodes().isNotEmpty()
+        }
         rule.onNodeWithText("Paris Saint-Germain").assertExists()
     }
 }
