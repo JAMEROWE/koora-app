@@ -25,6 +25,10 @@
     <string name="highlights_button">شاهد ملخص المباراة</string>
     <string name="news_empty">لا توجد أخبار حالياً. اضغط التحديث لإعادة المحاولة.</string>
     <string name="news_refresh">تحديث الأخبار</string>
+    <string name="reader_close">إغلاق</string>
+    <string name="reader_error">تعذّر تحميل هذا المقال. تحقق من الاتصال ثم أعد المحاولة.</string>
+    <string name="reader_open">فتح في المتصفح</string>
+    <string name="video_title">ملخص المباراة</string>
     <string name="settings_language">اللغة</string>
     <string name="language_hint">يتبع التطبيق لغة الهاتف حتى تختار لغة من هنا.</string>
     <string name="settings_favorites">المفضلة</string>

@@ -1,9 +1,6 @@
 package com.koora.app.ui.screens
 
 import android.app.Activity
-import android.content.Intent
-import android.net.Uri
-import java.net.URLEncoder
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -65,7 +62,8 @@ import kotlinx.coroutines.launch
  * Match detail — v1.4: stats are FREE for everyone (no ad gate).
  * Monetization rides along passively: one capped interstitial fires on
  * entry to a LIVE match (see AdsManager.maybeShowInterstitial).
- * Finished matches offer the official video highlights on YouTube.
+ * Finished matches offer official video highlights watched IN-APP
+ * (HighlightsScreen) since v1.4.2.
  */
 sealed interface StatsUiState {
     data object Idle : StatsUiState
@@ -98,6 +96,7 @@ class MatchDetailViewModel : ViewModel() {
 fun MatchDetailScreen(
     matchId: Long,
     onBack: () -> Unit,
+    onWatchHighlights: (home: String, away: String) -> Unit,
     vm: MatchDetailViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -180,10 +179,12 @@ fun MatchDetailScreen(
                     }
                 }
 
-                // Official video highlights (YouTube) for finished matches
+                // Official video highlights, watched INSIDE the app
                 if (match.status == "FINISHED") {
                     Spacer(Modifier.height(16.dp))
-                    OutlinedButton(onClick = { openHighlights(context, match) }) {
+                    OutlinedButton(
+                        onClick = { onWatchHighlights(match.homeTeam.name, match.awayTeam.name) }
+                    ) {
                         Icon(Icons.Filled.PlayCircle, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.highlights_button))
@@ -195,18 +196,6 @@ fun MatchDetailScreen(
                 Spacer(Modifier.height(24.dp))
             }
         }
-    }
-}
-
-private fun openHighlights(context: android.content.Context, match: Match) {
-    try {
-        val query = URLEncoder.encode(
-            "${match.homeTeam.name} vs ${match.awayTeam.name} highlights",
-            "UTF-8"
-        )
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=$query")))
-    } catch (_: Exception) {
-        // no browser / bad URL -> ignore
     }
 }
 

@@ -16,14 +16,21 @@ import java.util.TimeZone
 /**
  * Football news from official RSS feeds — trilingual by design.
  *
- * The registry below is the "formula": adding a source later is one line.
+ * REGISTRY RULE (v1.4.2): ONLY football-section feeds. The v1.4.1 registry
+ * mixed in general feeds (Sky News Arabia site-wide, FilGoal root, Sky
+ * Sports general) and users saw political / golf / cricket headlines.
+ * Every URL below now points at a football section, and NewsFilter still
+ * runs over every headline as a second line of defence.
+ *
  * Each source carries its language + region so the News tab can badge items
  * and filter by the app language (EN / FR / AR).
  *
- * Regions covered for Arabic: pan-Arab (Sky News Arabia, CNN Arabic) +
- * North Africa via Egypt's FilGoal (strong African club coverage).
- * Sources that block automated readers (UEFA, Hespress, YallaKora) are
- * intentionally excluded — swap them from this registry if a proxy exists.
+ * Verified live on 2026-11-09: BBC football, Sky Sports football (id 11899
+ * — 12040 is Sky's GENERAL feed, the golf/cricket culprit), Guardian
+ * football, L'Équipe football, RMC Sport football, CNN Arabic sport,
+ * France24 Arabic sport — all football-only. Feeds that block automated
+ * readers (Hespress, YallaKora, El Botola, Sky News Arabia) are excluded
+ * until a working feed URL exists.
  */
 data class NewsSource(val name: String, val lang: String, val region: String, val url: String)
 
@@ -38,16 +45,16 @@ data class NewsItem(
 object NewsRepository {
 
     val sources = listOf(
-        // --- English ---
+        // --- English (football sections only) ---
         NewsSource("BBC Sport", "en", "Europe", "https://feeds.bbci.co.uk/sport/football/rss.xml"),
-        NewsSource("Sky Sports", "en", "Europe", "https://www.skysports.com/rss/12040"),
-        // --- French ---
+        NewsSource("Sky Sports", "en", "Europe", "https://www.skysports.com/rss/11899"),
+        NewsSource("The Guardian", "en", "Europe", "https://www.theguardian.com/football/rss"),
+        // --- French (football sections only) ---
         NewsSource("L'Équipe", "fr", "France", "https://dwh.lequipe.fr/api/edito/rss?path=/Football/"),
         NewsSource("RMC Sport", "fr", "France", "https://rmcsport.bfmtv.com/rss/football/"),
-        // --- Arabic ---
-        NewsSource("Sky News Arabia", "ar", "MENA", "https://www.skynewsarabia.com/rss"),
+        // --- Arabic (football sections only) ---
         NewsSource("CNN Arabic", "ar", "MENA", "https://arabic.cnn.com/api/v1/rss/sport/rss.xml"),
-        NewsSource("FilGoal", "ar", "Egypt", "https://www.filgoal.com/rss"),
+        NewsSource("France 24", "ar", "MENA", "https://www.france24.com/ar/%D8%B1%D9%8A%D8%A7%D8%B6%D8%A9/rss"),
     )
 
     /** Fetch all sources for [lang] in parallel; one failing source never breaks the tab. */
@@ -56,6 +63,7 @@ object NewsRepository {
             async { runCatching { fetch(src) }.getOrDefault(emptyList()) }
         }
         jobs.flatMap { it.await() }
+            .filter { NewsFilter.isFootballNews(it.title) }  // safety net over football-section feeds
             .distinctBy { it.title.lowercase().take(60) }
             .sortedByDescending { it.date }
             .take(50)

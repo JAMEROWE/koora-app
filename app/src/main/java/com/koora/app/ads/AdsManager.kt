@@ -13,8 +13,9 @@ import com.koora.app.BuildConfig
 /*
  * Ad strategy (v1.4 "moderate at peak moments"):
  *  - Banners and native cards are always-on and passive (see AdViews.kt).
- *  - One interstitial, ONLY when opening a LIVE match detail — the highest
- *    attention moment — capped hard so it never becomes noise:
+ *  - One interstitial, ONLY at the two highest-attention moments —
+ *    opening a LIVE match detail and entering the video highlights
+ *    screen — capped hard so it never becomes noise:
  *      * never in the first app session,
  *      * never more than once per 4 minutes.
  *  - No ad gates content. Rewarded gating was removed in v1.4.

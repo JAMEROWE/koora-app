@@ -20,8 +20,8 @@ android {
         applicationId = "com.koora.app"
         minSdk = 24
         targetSdk = 36 // Google Play: new apps must target API 36 since Aug 31, 2026
-        versionCode = 6
-        versionName = "1.4.1"
+        versionCode = 7
+        versionName = "1.4.2"
         buildConfigField(
             "String",
             "FOOTBALL_DATA_TOKEN",
@@ -48,9 +48,10 @@ android {
 
     signingConfigs {
         create("release") {
-            // Stable self-signed key committed to the repo so EVERY build
-            // (local or GitHub Actions) signs with the SAME signature —
-            // new versions install over old ones without uninstalling.
+            // Stable self-signed key, kept OUT of git: untracked locally and
+            // restored in CI from the encrypted KOORA_KEYSTORE secret, so
+            // EVERY build signs with the SAME signature — new versions
+            // install over old ones without uninstalling.
             val ks = rootProject.file("keystore/koora-release.keystore")
             if (ks.exists()) {
                 storeFile = ks

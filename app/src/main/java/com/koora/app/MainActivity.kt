@@ -1,5 +1,6 @@
 package com.koora.app
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
@@ -27,6 +28,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.android.ump.ConsentInformation
 import com.google.android.ump.UserMessagingPlatform
+import com.koora.app.ui.screens.ArticleReader
+import com.koora.app.ui.screens.HighlightsScreen
 import com.koora.app.ui.screens.LiveScreen
 import com.koora.app.ui.screens.MatchDetailScreen
 import com.koora.app.ui.screens.MatchesScreen
@@ -81,22 +84,29 @@ private fun KooraRoot() {
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                val backStack by nav.currentBackStackEntryAsState()
-                val currentRoute = backStack?.destination?.route
-                tabs.forEach { tab ->
-                    NavigationBarItem(
-                        selected = currentRoute == tab.route,
-                        onClick = {
-                            nav.navigate(tab.route) {
-                                popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = { Icon(tab.icon, contentDescription = null) },
-                        label = { Text(stringResource(tab.labelRes)) }
-                    )
+            // Fullscreen surfaces (article reader, video highlights) hide the
+            // bottom bar so reading/watching gets the whole screen.
+            val currentRoute = nav.currentBackStackEntryAsState().value?.destination?.route
+            val fullscreen = currentRoute != null &&
+                (currentRoute.startsWith("article") || currentRoute.startsWith("video"))
+            if (!fullscreen) {
+                NavigationBar {
+                    val backStack by nav.currentBackStackEntryAsState()
+                    val currentRoute = backStack?.destination?.route
+                    tabs.forEach { tab ->
+                        NavigationBarItem(
+                            selected = currentRoute == tab.route,
+                            onClick = {
+                                nav.navigate(tab.route) {
+                                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            icon = { Icon(tab.icon, contentDescription = null) },
+                            label = { Text(stringResource(tab.labelRes)) }
+                        )
+                    }
                 }
             }
         }
@@ -111,11 +121,33 @@ private fun KooraRoot() {
             }
             composable("live") { LiveScreen() }
             composable("standings") { StandingsScreen() }
-            composable("news") { NewsScreen() }
+            composable("news") { NewsScreen(onArticleClick = { item ->
+                nav.navigate("article?url=${Uri.encode(item.link)}&title=${Uri.encode(item.title)}")
+            }) }
             composable("settings") { SettingsScreen() }
             composable("match/{id}") { entry ->
                 val id = entry.arguments?.getString("id")?.toLongOrNull() ?: 0L
-                MatchDetailScreen(matchId = id, onBack = { nav.popBackStack() })
+                MatchDetailScreen(
+                    matchId = id,
+                    onBack = { nav.popBackStack() },
+                    onWatchHighlights = { home, away ->
+                        nav.navigate("video?home=${Uri.encode(home)}&away=${Uri.encode(away)}")
+                    }
+                )
+            }
+            composable("article?url={url}&title={title}") { entry ->
+                ArticleReader(
+                    title = entry.arguments?.getString("title").orEmpty(),
+                    url = entry.arguments?.getString("url").orEmpty(),
+                    onClose = { nav.popBackStack() }
+                )
+            }
+            composable("video?home={home}&away={away}") { entry ->
+                HighlightsScreen(
+                    home = entry.arguments?.getString("home").orEmpty(),
+                    away = entry.arguments?.getString("away").orEmpty(),
+                    onBack = { nav.popBackStack() }
+                )
             }
         }
     }

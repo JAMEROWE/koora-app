@@ -25,6 +25,10 @@
     <string name="highlights_button">Voir le résumé vidéo</string>
     <string name="news_empty">Pas d\'actualités pour le moment. Touchez Actualiser pour réessayer.</string>
     <string name="news_refresh">Actualiser les actus</string>
+    <string name="reader_close">Fermer</string>
+    <string name="reader_error">Impossible de charger cet article. Vérifiez votre connexion puis réessayez.</string>
+    <string name="reader_open">Ouvrir dans le navigateur</string>
+    <string name="video_title">Résumé vidéo</string>
     <string name="settings_language">Langue</string>
     <string name="language_hint">L\'app suit la langue du téléphone tant que vous n\'avez pas choisi ici.</string>
     <string name="settings_favorites">Favoris</string>

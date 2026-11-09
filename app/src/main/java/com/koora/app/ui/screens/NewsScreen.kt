@@ -1,7 +1,5 @@
 package com.koora.app.ui.screens
 
-import android.content.Intent
-import android.net.Uri
 import android.text.format.DateUtils
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -34,7 +32,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,8 +47,9 @@ import kotlinx.coroutines.launch
 
 /*
  * Football news tab — trilingual (EN / FR / AR) via the source registry.
- * Headlines only: title + source + region + relative time; tapping opens
- * the original article in the browser. One failing feed never breaks the tab.
+ * Headlines only: title + source + region + relative time. Since v1.4.2
+ * tapping opens the IN-APP ArticleReader (stays in Koora, banner keeps
+ * running) instead of the browser. One failing feed never breaks the tab.
  */
 class NewsViewModel : ViewModel() {
     var items by mutableStateOf<List<NewsItem>>(emptyList())
@@ -90,8 +88,10 @@ fun currentNewsLang(): String {
 }
 
 @Composable
-fun NewsScreen(vm: NewsViewModel = viewModel()) {
-    val context = LocalContext.current
+fun NewsScreen(
+    onArticleClick: (NewsItem) -> Unit,
+    vm: NewsViewModel = viewModel()
+) {
     val lang = currentNewsLang()
     var reloadTick by remember { mutableIntStateOf(0) }
 
@@ -132,15 +132,7 @@ fun NewsScreen(vm: NewsViewModel = viewModel()) {
                 else -> LazyColumn(Modifier.fillMaxSize()) {
                     items(vm.items, key = { it.link.ifEmpty { it.title } }) { item ->
                         NewsRow(item) {
-                            try {
-                                if (item.link.isNotBlank()) {
-                                    context.startActivity(
-                                        Intent(Intent.ACTION_VIEW, Uri.parse(item.link))
-                                    )
-                                }
-                            } catch (_: Exception) {
-                                // no browser -> ignore
-                            }
+                            if (item.link.isNotBlank()) onArticleClick(item)
                         }
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
