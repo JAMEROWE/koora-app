@@ -107,7 +107,7 @@ class WidgetFeedTest {
         val dup = match(1, "PSG", "Lyon", "IN_PLAY", iso(hoursAgo(1)), 2, 0)
         val picks = pickWidgetMatches(
             listOf(dup, dup) +
-                List(6) { i -> match(100 + i, "TeamA$i", "TeamB$i", "SCHEDULED", iso(now + (i + 1) * 3_600_000L)) },
+                List(6) { i -> match(100L + i, "TeamA$i", "TeamB$i", "SCHEDULED", iso(now + (i + 1) * 3_600_000L)) },
             now,
             max = 4
         )
