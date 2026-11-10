@@ -1,22 +1,20 @@
 package com.koora.app.ui.screens
 
 import android.app.Application
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
@@ -30,17 +28,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -64,15 +59,10 @@ import com.koora.app.ui.components.LivePulseDot
 import com.koora.app.ui.components.SkeletonList
 import com.koora.app.ui.components.TeamBadge
 import com.koora.app.ui.isLive
-import com.koora.app.ui.leagueBlocks
-import com.koora.app.ui.localDayKey
 import com.koora.app.ui.localDayKeyAt
 import com.koora.app.ui.matchesOnDay
-import com.koora.app.ui.paginate
 import com.koora.app.ui.scoreLabel
 import com.koora.app.ui.sortMixed
-import com.koora.app.ui.sortResultsNewestFirst
-import com.koora.app.ui.sortUpcomingSoonestFirst
 import com.koora.app.ui.statusLabel
 import com.koora.app.ui.theme.LiveRed
 import kotlinx.coroutines.launch
@@ -100,16 +90,20 @@ val ALL_COMPETITIONS = listOf(
 private val competitionLabels = ALL_COMPETITIONS.associate { it.code to it.label }
 
 /*
- * v1.5.6 "COMFORTABLE MATCHES" — the doc's IA, one API call per screen:
+ * v1.5.6 "COMFORTABLE MATCHES" — final IA (owner feedback: league
+ * sections must BE the screen, not buried below a flat list):
  *   - Top: Today | Tomorrow switch (client-side filter, zero extra calls).
- *   - Mixed block: that day's matches from ALL leagues together, each row
- *     labelled with its league; first 20 rows, loads more on scroll.
- *   - Below: one block per league actually present in the window, with
- *     Results | Upcoming | Teams (one open at a time, Results first).
+ *   - The selected day grouped into LEAGUE SECTIONS with the real league
+ *     names from the data; inside a section: live first, then upcoming
+ *     by kickoff, then newest results — results always sit under their
+ *     league header.
+ *   - Favorites block on top when non-empty; one native ad after the
+ *     first section.
  *   - Taps: finished -> full match page; upcoming/live -> vote panel;
  *     team circle -> team panel. Data: v4/matches?dateFrom&dateTo (ONE
  *     call covers both days); offline -> saved copy + "updated X min ago".
- * Demo mode shows all sample matches on both days (never empty for CI).
+ * Demo mode shows all sample matches in one day section (never empty
+ * for CI).
  */
 class MatchesViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -175,7 +169,7 @@ class MatchesViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MatchesScreen(onMatchClick: (Long) -> Unit, vm: MatchesViewModel = viewModel()) {
     val context = LocalContext.current
@@ -288,34 +282,15 @@ private fun DayMatchesContent(
     onToggleFavorite: (Match) -> Unit
 ) {
     val context = LocalContext.current
-    val listState = rememberLazyListState()
-    var shown by remember(vm.todayKey) { mutableIntStateOf(20) }
 
     val selectedKey = if (vm.tomorrow) vm.tomorrowKey else vm.todayKey
     // Demo mode always shows the full sample list (CI + keyless installs
     // must never hit an empty "today" just because of the wall clock).
     val dayList = if (vm.demo) sortMixed(vm.matches) else sortMixed(matchesOnDay(vm.matches, selectedKey))
 
-    // Favorites (starred matches) for the selected day — no API cost.
-    val favs = remember(vm.favsTick, vm.matches.size, selectedKey) {
-        val all = FavoritesStore.all(context).map { FavoritesStore.toMatch(it) }
-        (if (vm.demo) all else matchesOnDay(all, selectedKey))
-    }
-
-    // League blocks from the same window data (no extra calls); demo data
-    // carries no competition reference, so demo shows no league blocks.
-    val blocks = remember(vm.matches, selectedKey) {
-        leagueBlocks(vm.matches)
-            .map { (code, list) -> code to list }
-            .sortedBy { (code, _) ->
-                ALL_COMPETITIONS.indexOfFirst { it.code == code }
-                    .let { if (it >= 0) it else 999 }
-            }
-    }
-
-    // Real league names straight from the window data — so every block
-    // title is the provider's own name, even for a competition that is
-    // not in ALL_COMPETITIONS (never a raw code like "FL1").
+    // Real league names straight from the window data — section titles are
+    // the provider's own names, even for a competition that is not in
+    // ALL_COMPETITIONS (never a raw code like "FL1").
     val leagueTitles = remember(vm.matches) {
         vm.matches.mapNotNull { m ->
             val c = m.competition ?: return@mapNotNull null
@@ -323,73 +298,40 @@ private fun DayMatchesContent(
         }.toMap()
     }
 
-    // "Load more on scroll": past 3 rows from the bottom -> +20.
-    LaunchedEffect(listState, dayList.size, selectedKey) {
-        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
-            .collect { last ->
-                if (last >= shown - 3 && shown < dayList.size) shown += 20
+    // THE SECTIONS: the selected day grouped by league, ALL_COMPETITIONS
+    // order first (CL, PL, PD, ...), unknown leagues after. Demo data
+    // carries no competition and lands in one section titled with the day.
+    val sections = remember(dayList, leagueTitles) {
+        dayList.groupBy { it.competition?.code ?: "" }
+            .map { (code, ms) ->
+                Triple(
+                    code,
+                    leagueTitles[code] ?: competitionLabels[code] ?: "",
+                    sortMixed(ms)
+                )
+            }
+            .sortedBy { (code, _, _) ->
+                when {
+                    code.isEmpty() -> -1
+                    else -> ALL_COMPETITIONS.indexOfFirst { it.code == code }
+                        .let { if (it >= 0) it else 999 }
+                }
             }
     }
 
-    LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-        // ---- Mixed day block -------------------------------------------
-        item(key = "day-header") {
-            BlockTitle(stringResource(if (vm.tomorrow) R.string.day_tomorrow else R.string.day_today))
-        }
-        if (dayList.isEmpty()) {
-            item(key = "day-empty") {
-                val tomorrowCount = matchesOnDay(vm.matches, vm.tomorrowKey).size
-                Text(
-                    if (vm.tomorrow) stringResource(R.string.empty_tomorrow)
-                    else stringResource(R.string.empty_today, tomorrowCount),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    textAlign = TextAlign.Center
-                )
-            }
-        } else {
-            itemsIndexed(paginate(dayList, shown), key = { _, m -> "day-${m.id}" }) { index, m ->
-                if (index == 5) {
-                    // Moderate native ad placement (policy: in-list, never blocking)
-                    NativeAdCard()
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                    )
-                }
-                m.competition?.let { c ->
-                    Text(
-                        c.name.ifBlank { competitionLabels[c.code] ?: c.code },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
-                MatchRow(
-                    m = m,
-                    isFavorite = FavoritesStore.isFavorite(context, m.id),
-                    onToggleFavorite = { onToggleFavorite(m) },
-                    onMatch = {
-                        if (m.status.equals("FINISHED", true)) onMatchClick(m.id) else onVote(m)
-                    },
-                    onTeam = onTeam
-                )
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                )
-            }
-        }
+    // Favorites (starred matches) for the selected day — no API cost.
+    val favs = remember(vm.favsTick, vm.matches.size, selectedKey) {
+        val all = FavoritesStore.all(context).map { FavoritesStore.toMatch(it) }
+        (if (vm.demo) all else matchesOnDay(all, selectedKey))
+    }
 
-        // ---- Favorites block --------------------------------------------
+    LazyColumn(Modifier.fillMaxSize()) {
+        // ---- Favorites on top -------------------------------------------
         if (favs.isNotEmpty()) {
             item(key = "fav-header") {
                 BlockTitle(stringResource(R.string.fav_tab))
             }
-            itemsIndexed(favs, key = { _, m -> "fav-${m.id}" }) { _, m ->
+            items(favs, key = { "fav-${it.id}" }) { m ->
                 MatchRow(
                     m = m,
                     isFavorite = true,
@@ -405,18 +347,54 @@ private fun DayMatchesContent(
             }
         }
 
-        // ---- Per-league blocks (Results | Upcoming | Teams) --------------
-        blocks.forEach { (code, list) ->
-            item(key = "block-$code") {
-                LeagueBlock(
-                    code = code,
-                    label = leagueTitles[code] ?: competitionLabels[code] ?: code,
-                    matches = list,
-                    onMatchRow = { m ->
-                        if (m.status.equals("FINISHED", true)) onMatchClick(m.id) else onVote(m)
-                    },
-                    onTeam = onTeam
+        // ---- League sections for the selected day ------------------------
+        if (dayList.isEmpty()) {
+            item(key = "day-empty") {
+                val tomorrowCount = matchesOnDay(vm.matches, vm.tomorrowKey).size
+                Text(
+                    if (vm.tomorrow) stringResource(R.string.empty_tomorrow)
+                    else stringResource(R.string.empty_today, tomorrowCount),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    textAlign = TextAlign.Center
                 )
+            }
+        } else {
+            sections.forEachIndexed { sIdx, (code, title, rows) ->
+                item(key = "sec-$code") {
+                    LeagueHeader(
+                        title = title.ifEmpty {
+                            stringResource(if (vm.tomorrow) R.string.day_tomorrow else R.string.day_today)
+                        },
+                        count = rows.size
+                    )
+                }
+                items(rows, key = { "m-$code-${it.id}" }) { m ->
+                    MatchRow(
+                        m = m,
+                        isFavorite = FavoritesStore.isFavorite(context, m.id),
+                        onToggleFavorite = { onToggleFavorite(m) },
+                        onMatch = {
+                            if (m.status.equals("FINISHED", true)) onMatchClick(m.id) else onVote(m)
+                        },
+                        onTeam = onTeam
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                    )
+                }
+                if (sIdx == 0) {
+                    // Moderate native ad placement (policy: in-list, never blocking)
+                    item(key = "native-ad") {
+                        NativeAdCard()
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        )
+                    }
+                }
             }
         }
 
@@ -444,139 +422,42 @@ private fun BlockTitle(text: String) {
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * Section header: green brand bar + real league name + match count.
+ * This is what makes results and fixtures clearly grouped per league.
+ */
 @Composable
-private fun LeagueBlock(
-    code: String,
-    label: String,
-    matches: List<Match>,
-    onMatchRow: (Match) -> Unit,
-    onTeam: (Team) -> Unit
-) {
-    var tab by remember(code) { mutableStateOf("R") }
-    Column(
+private fun LeagueHeader(title: String, count: Int) {
+    Row(
         Modifier
             .fillMaxWidth()
-            .padding(top = 6.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        BlockTitle(label)
-        Row(
-            Modifier.padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            TabPill(stringResource(R.string.tab_results), tab == "R") { tab = "R" }
-            TabPill(stringResource(R.string.tab_upcoming), tab == "U") { tab = "U" }
-            TabPill(stringResource(R.string.tab_teams), tab == "T") { tab = "T" }
-        }
-        Spacer(Modifier.height(4.dp))
-        when (tab) {
-            "R" -> {
-                val rows = sortResultsNewestFirst(matches)
-                if (rows.isEmpty()) {
-                    SmallEmptyLine(stringResource(R.string.league_results_empty))
-                } else {
-                    rows.forEach { m ->
-                        MatchRow(
-                            m = m,
-                            isFavorite = false,
-                            onToggleFavorite = {},
-                            onMatch = { onMatchRow(m) },
-                            onTeam = onTeam,
-                            showStar = false
-                        )
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                        )
-                    }
-                }
-            }
-
-            "U" -> {
-                val rows = sortUpcomingSoonestFirst(matches)
-                if (rows.isEmpty()) {
-                    SmallEmptyLine(stringResource(R.string.league_upcoming_empty))
-                } else {
-                    rows.forEach { m ->
-                        MatchRow(
-                            m = m,
-                            isFavorite = false,
-                            onToggleFavorite = {},
-                            onMatch = { onMatchRow(m) },
-                            onTeam = onTeam,
-                            showStar = false
-                        )
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                        )
-                    }
-                }
-            }
-
-            "T" -> {
-                val teams = matches
-                    .flatMap { listOf(it.homeTeam, it.awayTeam) }
-                    .distinctBy { it.id }
-                    .sortedBy { it.name }
-                FlowRow(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    teams.forEach { t ->
-                        Surface(
-                            shape = RoundedCornerShape(50),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            onClick = { onTeam(t) }
-                        ) {
-                            Row(
-                                Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                TeamBadge(t.name, t.tla, 20.dp)
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    t.name,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TabPill(label: String, selected: Boolean, onClick: () -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = if (selected) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.surfaceContainerHigh,
-        onClick = onClick
-    ) {
+        Box(
+            Modifier
+                .size(width = 4.dp, height = 18.dp)
+                .background(
+                    MaterialTheme.colorScheme.primary,
+                    RoundedCornerShape(2.dp)
+                )
+        )
+        Spacer(Modifier.width(8.dp))
         Text(
-            label,
-            Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            count.toString(),
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = if (selected) MaterialTheme.colorScheme.onPrimary
-            else MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-}
-
-@Composable
-private fun SmallEmptyLine(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-    )
 }
 
 @Composable
