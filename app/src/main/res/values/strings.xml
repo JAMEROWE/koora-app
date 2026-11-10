@@ -62,4 +62,11 @@
     <string name="col_draw">D</string>
     <string name="col_lost">L</string>
     <string name="col_points">Pts</string>
+    <!-- v1.5.4 — own-player video screen + standings zones -->
+    <string name="video_finding">Finding official highlights…</string>
+    <string name="video_none_title">No highlights published yet</string>
+    <string name="video_none_body">Official videos for this match have not been published. Check again later.</string>
+    <string name="video_more">More highlights</string>
+    <string name="standings_legend_europe">European places</string>
+    <string name="standings_legend_relegation">Relegation</string>
 </resources>

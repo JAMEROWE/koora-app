@@ -62,4 +62,11 @@
     <string name="col_draw">ت</string>
     <string name="col_lost">خ</string>
     <string name="col_points">نقاط</string>
+    <!-- v1.5.4 — مشغّل الفيديو المدمج ومناطق الترتيب -->
+    <string name="video_finding">جارٍ البحث عن الملخصات الرسمية…</string>
+    <string name="video_none_title">لا يوجد ملخص منشور بعد</string>
+    <string name="video_none_body">لم يتم نشر الفيديوهات الرسمية لهذه المباراة بعد. عد لاحقًا.</string>
+    <string name="video_more">مزيد من الملخصات</string>
+    <string name="standings_legend_europe">مراكز أوروبية</string>
+    <string name="standings_legend_relegation">الهبوط</string>
 </resources>

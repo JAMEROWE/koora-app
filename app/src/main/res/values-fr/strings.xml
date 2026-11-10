@@ -62,4 +62,11 @@
     <string name="col_draw">N</string>
     <string name="col_lost">P</string>
     <string name="col_points">Pts</string>
+    <!-- v1.5.4 — lecteur vidéo intégré + zones du classement -->
+    <string name="video_finding">Recherche des résumés officiels…</string>
+    <string name="video_none_title">Pas encore de résumé publié</string>
+    <string name="video_none_body">Les vidéos officielles de ce match ne sont pas encore publiées. Revenez plus tard.</string>
+    <string name="video_more">Plus de résumés</string>
+    <string name="standings_legend_europe">Places européennes</string>
+    <string name="standings_legend_relegation">Relégation</string>
 </resources>

@@ -20,8 +20,8 @@ android {
         applicationId = "com.koora.app"
         minSdk = 24
         targetSdk = 36 // Google Play: new apps must target API 36 since Aug 31, 2026
-        versionCode = 11
-        versionName = "1.5.3"
+        versionCode = 12
+        versionName = "1.5.4"
         buildConfigField(
             "String",
             "FOOTBALL_DATA_TOKEN",
