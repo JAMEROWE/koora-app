@@ -2,6 +2,7 @@ package com.koora.app.ui.screens
 
 import android.app.Activity
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -60,6 +61,8 @@ import com.koora.app.data.MatchStats
 import com.koora.app.data.MatchStatsRepository
 import com.koora.app.data.StatsBar
 import com.koora.app.data.StatsEvent
+import com.koora.app.ui.components.LivePulseDot
+import com.koora.app.ui.components.TeamBadge
 import com.koora.app.ui.dateLabel
 import com.koora.app.ui.isLive
 import com.koora.app.ui.scoreLabel
@@ -172,11 +175,19 @@ fun MatchDetailScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(16.dp))
-                Text(
-                    match.homeTeam.name,
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center
-                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TeamBadge(match.homeTeam.name, match.homeTeam.tla, 34.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        match.homeTeam.name,
+                        Modifier.weight(1f),
+                        style = MaterialTheme.typography.headlineSmall,
+                        textAlign = TextAlign.Center
+                    )
+                }
                 Spacer(Modifier.height(12.dp))
                 Text(
                     scoreLabel(match),
@@ -184,17 +195,34 @@ fun MatchDetailScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(12.dp))
-                Text(
-                    match.awayTeam.name,
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center
-                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        match.awayTeam.name,
+                        Modifier.weight(1f),
+                        style = MaterialTheme.typography.headlineSmall,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    TeamBadge(match.awayTeam.name, match.awayTeam.tla, 34.dp)
+                }
                 Spacer(Modifier.height(16.dp))
-                Text(
-                    "${statusLabel(match)} • ${dateLabel(match)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (isLive(match)) {
+                        LivePulseDot()
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(
+                        "${statusLabel(match)} • ${dateLabel(match)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 match.score.halfTime?.home?.let { htHome ->
                     match.score.halfTime?.away?.let { htAway ->
                         Spacer(Modifier.height(6.dp))

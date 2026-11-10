@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +42,9 @@ import com.koora.app.R
 import com.koora.app.ads.AdBanner
 import com.koora.app.data.Match
 import com.koora.app.data.MatchRepository
+import com.koora.app.ui.components.LivePulseDot
+import com.koora.app.ui.components.SkeletonList
+import com.koora.app.ui.components.TeamBadge
 import com.koora.app.ui.isLive
 import com.koora.app.ui.scoreLabel
 import com.koora.app.ui.statusLabel
@@ -149,10 +153,7 @@ fun LiveScreen(vm: LiveViewModel = viewModel()) {
 
         Box(Modifier.weight(1f)) {
             when {
-                vm.loading && vm.live.isEmpty() -> Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) { CircularProgressIndicator() }
+                vm.loading && vm.live.isEmpty() -> SkeletonList(rows = 7, modifier = Modifier.fillMaxSize())
 
                 vm.error != null && vm.live.isEmpty() -> Box(
                     Modifier.fillMaxSize(),
@@ -200,6 +201,8 @@ private fun LiveMatchRow(m: Match) {
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        TeamBadge(m.homeTeam.name, m.homeTeam.tla, 26.dp)
+        Spacer(Modifier.width(8.dp))
         Text(
             m.homeTeam.name,
             Modifier.weight(1.2f),
@@ -212,12 +215,16 @@ private fun LiveMatchRow(m: Match) {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.width(96.dp)
         ) {
-            Text(
-                scoreLabel(m),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = LiveRed
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LivePulseDot()
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    scoreLabel(m),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = LiveRed
+                )
+            }
             Text(
                 statusLabel(m),
                 style = MaterialTheme.typography.labelSmall,
@@ -231,6 +238,8 @@ private fun LiveMatchRow(m: Match) {
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodyLarge
         )
+        Spacer(Modifier.width(8.dp))
+        TeamBadge(m.awayTeam.name, m.awayTeam.tla, 26.dp)
     }
 }
 

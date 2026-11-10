@@ -11,13 +11,14 @@ import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.koora.app.BuildConfig
 
 /*
- * Ad strategy (v1.4 "moderate at peak moments"):
+ * Ad strategy (v1.5 "moderate at peak moments", policy-safe placement v1.5.3):
  *  - Banners and native cards are always-on and passive (see AdViews.kt).
- *  - One interstitial, ONLY at the two highest-attention moments —
- *    opening a LIVE match detail and entering the video highlights
- *    screen — capped hard so it never becomes noise:
+ *  - One interstitial, ONLY at natural breaks — opening a LIVE match
+ *    detail, and LEAVING the video highlights screen (end of a content
+ *    segment, never at its start — Google Play interstitial guidance).
+ *    Capped hard so it never becomes noise:
  *      * never in the first app session,
- *      * never more than once per 4 minutes.
+ *      * never more than once per 4 minutes (the cap is SHARED).
  *  - No ad gates content. Rewarded gating was removed in v1.4.
  *
  * All unit IDs come from BuildConfig and default to Google's PUBLIC TEST
@@ -72,20 +73,40 @@ object AdsManager {
         prefs(context).edit().putInt(KEY_SESSIONS, prefs(context).getInt(KEY_SESSIONS, 0) + 1).apply()
     }
 
-    /** Show the capped interstitial if every condition passes. Never blocks content. */
-    fun maybeShowInterstitial(activity: Activity) {
+    /**
+     * Show the capped interstitial if every condition passes. Never blocks
+     * content. [onDone] runs when the ad is dismissed, fails to show, or is
+     * skipped entirely (cap/first-session/not loaded) — so callers can chain
+     * navigation after the ad moment.
+     */
+    fun maybeShowInterstitial(activity: Activity, onDone: (() -> Unit)? = null) {
+        var shown = false
         try {
             val p = prefs(activity)
-            if (p.getInt(KEY_SESSIONS, 0) < 2) return          // not in the first session
-            val last = p.getLong(KEY_LAST_INTERSTITIAL, 0L)
-            val now = System.currentTimeMillis()
-            if (now - last < CAP_MS) return                    // max one per 4 minutes
-            val ad = interstitial ?: return                    // not loaded -> silently skip
-            p.edit().putLong(KEY_LAST_INTERSTITIAL, now).apply()
-            ad.show(activity)
+            val allowed = p.getInt(KEY_SESSIONS, 0) >= 2 &&          // not the first session
+                System.currentTimeMillis() - p.getLong(KEY_LAST_INTERSTITIAL, 0L) >= CAP_MS
+            val ad = if (allowed) interstitial else null
+            if (ad != null) {
+                p.edit().putLong(KEY_LAST_INTERSTITIAL, System.currentTimeMillis()).apply()
+                ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                    override fun onAdDismissedFullScreenContent() {
+                        interstitial = null
+                        load(activity)
+                        onDone?.invoke()
+                    }
+
+                    override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                        interstitial = null
+                        onDone?.invoke()
+                    }
+                }
+                shown = true
+                ad.show(activity)
+            }
         } catch (_: Exception) {
             // ads must never crash the app
         }
+        if (!shown) onDone?.invoke()
     }
 
     private fun prefs(context: Context) =

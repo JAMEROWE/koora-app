@@ -1,6 +1,7 @@
 package com.koora.app.ui
 
 import com.koora.app.data.Match
+import com.koora.app.data.TeamColors
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -38,4 +39,25 @@ fun statusLabel(m: Match): String = when {
     isLive(m) -> "LIVE"
     m.status == "FINISHED" -> "FT"
     else -> kickoffLabel(m)
+}
+
+/** 1 for a club in the known-colors map ("famous"), else 0. Pure, unit-tested. */
+fun fameScore(m: Match): Int =
+    (if (TeamColors.isKnown(m.homeTeam.name)) 1 else 0) +
+        (if (TeamColors.isKnown(m.awayTeam.name)) 1 else 0)
+
+/**
+ * Match of the Day pick: a LIVE match always wins; otherwise the most
+ * "famous" non-finished match (earliest kickoff as tie-break); falls back
+ * to any match. Pure function — unit-tested in DesignLogicTest.
+ */
+fun pickMatchOfTheDay(matches: List<Match>): Match? {
+    if (matches.isEmpty()) return null
+    val live = matches.filter { isLive(it) }
+    val pool = live.ifEmpty {
+        matches.filter { !it.status.equals("FINISHED", true) }.ifEmpty { matches }
+    }
+    return pool.sortedWith(
+        compareByDescending<Match> { fameScore(it) }.thenBy { it.utcDate }
+    ).first()
 }

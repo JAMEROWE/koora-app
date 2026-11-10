@@ -41,6 +41,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.koora.app.R
 import com.koora.app.ads.AdBanner
+import com.koora.app.ui.components.SkeletonList
 import com.koora.app.data.NewsItem
 import com.koora.app.data.NewsRepository
 import kotlinx.coroutines.launch
@@ -112,10 +113,7 @@ fun NewsScreen(
 
         Box(Modifier.weight(1f)) {
             when {
-                vm.loading && vm.items.isEmpty() -> Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) { CircularProgressIndicator() }
+                vm.loading && vm.items.isEmpty() -> SkeletonList(rows = 7, modifier = Modifier.fillMaxSize())
 
                 vm.items.isEmpty() -> Box(
                     Modifier.fillMaxSize(),

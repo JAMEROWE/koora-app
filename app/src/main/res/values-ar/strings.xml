@@ -50,6 +50,12 @@
     <string name="about_version">الإصدار %1$s (البناء %2$s)</string>
     <string name="app_version_line">كورة v%1$s</string>
     <string name="about_data">النتائج: football-data.org • إحصائيات المباريات: ESPN • الأخبار: مصادر رسمية • الملخصات: يوتيوب</string>
+    <string name="settings_theme">المظهر</string>
+    <string name="theme_system">كالهاتف</string>
+    <string name="theme_dark">داكن</string>
+    <string name="theme_light">فاتح</string>
+    <string name="stale_updated">بيانات محفوظة · حُدّثت قبل %1$d د</string>
+    <string name="match_of_the_day">مباراة اليوم</string>
     <string name="col_team">الفريق</string>
     <string name="col_played">ل</string>
     <string name="col_won">ف</string>

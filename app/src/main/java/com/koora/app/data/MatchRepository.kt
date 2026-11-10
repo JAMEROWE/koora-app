@@ -1,12 +1,18 @@
 package com.koora.app.data
 
+import android.content.Context
 import androidx.annotation.VisibleForTesting
+import com.google.gson.Gson
+import com.google.gson.JsonObject
+import com.google.gson.reflect.TypeToken
 import com.koora.app.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.HttpException
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.File
+import java.lang.reflect.Type
 import java.util.concurrent.TimeUnit
 
 /*
@@ -14,10 +20,13 @@ import java.util.concurrent.TimeUnit
  * With a key in local.properties  -> real data from football-data.org.
  * Without a key                   -> demo data, so the app runs out of the box.
  *
- * Free-tier safety net: every response is cached for TTL_MS. Repeated calls
- * inside the TTL are served from memory (zero API calls). If the shared
- * rate limit is hit (HTTP 429) during a forced refresh, we serve the last
- * cached value instead of an error, so users never see a broken screen.
+ * Resilience (v1.5.3 "never a broken screen"):
+ *  - every successful response is cached in MEMORY (60s TTL) and written
+ *    to a DISK file in cacheDir;
+ *  - on ANY network failure (429 rate limit, timeout, no connection...),
+ *    the last cached value — memory first, then disk — is served instead
+ *    of throwing, and the key is flagged stale so the UI can show
+ *    "saved data, updated X min ago".
  */
 object MatchRepository {
 
@@ -41,9 +50,59 @@ object MatchRepository {
 
     private val store = mutableMapOf<String, Entry>()
     private val updated = mutableMapOf<String, Long>()
+    private val staleKeys = mutableSetOf<String>()
+    private val gson = Gson()
 
     /** Timestamp (epoch ms) of the last successful fetch for a cache key. */
     fun lastUpdated(key: String): Long = updated[key] ?: 0L
+
+    /** True when the current value for [key] was served from cache after a failure. */
+    fun isStale(key: String): Boolean = key in staleKeys
+
+    // ---- Disk cache -------------------------------------------------------
+
+    @Volatile
+    private var appContext: Context? = null
+
+    /** Call once from Application.onCreate. Safe to skip (tests). */
+    fun initDiskCache(context: Context) {
+        appContext = context.applicationContext
+    }
+
+    private fun diskFile(key: String): File? =
+        appContext?.let { File(it.cacheDir, "koora_${key.replace(':', '_')}.json") }
+
+    private class DiskWrap(val at: Long = 0, val data: Any? = null)
+
+    private fun <T> persist(key: String, value: T, type: Type) {
+        val f = diskFile(key) ?: return
+        runCatching {
+            val wrap = gson.toJsonTree(DiskWrap(System.currentTimeMillis(), value))
+            f.writeText(wrap.toString())
+        }
+    }
+
+    private fun <T> loadDisk(key: String, type: Type): T? {
+        val f = diskFile(key) ?: return null
+        return runCatching {
+            if (!f.exists()) return null
+            val obj = gson.fromJson(f.readText(), JsonObject::class.java)
+            val at = obj.get("at")?.asLong ?: 0L
+            val dataEl = obj.get("data") ?: return null
+            if (dataEl.isJsonNull) return null
+            val data: Any? = gson.fromJson(dataEl, type)
+            if (updated[key] == null || updated[key]!! < at) updated[key] = at
+            @Suppress("UNCHECKED_CAST")
+            data as? T
+        }.getOrNull()
+    }
+
+    private fun <T> remember(key: String, value: T, type: Type) {
+        store[key] = Entry(System.currentTimeMillis(), value)
+        updated[key] = System.currentTimeMillis()
+        staleKeys.remove(key)
+        persist(key, value, type)
+    }
 
     private val api: FootballDataApi by lazy {
         val client = OkHttpClient.Builder()
@@ -77,9 +136,8 @@ object MatchRepository {
     @Suppress("UNCHECKED_CAST")
     private fun <T> anyCached(key: String): T? = store[key]?.value as? T
 
-    private fun <T> remember(key: String, value: T) {
-        store[key] = Entry(System.currentTimeMillis(), value)
-        updated[key] = System.currentTimeMillis()
+    private fun markStale(key: String) {
+        staleKeys.add(key)
     }
 
     suspend fun matches(competition: String, force: Boolean = false): List<Match> {
@@ -87,14 +145,15 @@ object MatchRepository {
         if (!force) fresh<List<Match>>(key)?.let {
             cache = it; cacheCode = competition; return it
         }
+        val type = object : TypeToken<List<Match>>() {}.type
         val list = try {
             if (hasKey) api.matches(competition).matches ?: emptyList()
             else DemoData.matches(competition)
-        } catch (e: HttpException) {
-            val stale = anyCached<List<Match>>(key)
-            if (e.code() == 429 && stale != null) stale else throw e
+        } catch (e: Exception) {
+            val stale = anyCached<List<Match>>(key) ?: loadDisk<List<Match>>(key, type)
+            if (stale != null) { markStale(key); stale } else throw e
         }
-        remember(key, list)
+        remember(key, list, type)
         cache = list
         cacheCode = competition
         return list
@@ -103,6 +162,7 @@ object MatchRepository {
     suspend fun standings(competition: String, force: Boolean = false): List<TableRow> {
         val key = "standings:$competition"
         if (!force) fresh<List<TableRow>>(key)?.let { return it }
+        val type = object : TypeToken<List<TableRow>>() {}.type
         val table = try {
             if (hasKey) api.standings(competition)
                 .standings
@@ -110,11 +170,11 @@ object MatchRepository {
                 ?.table
                 ?: emptyList()
             else DemoData.standings()
-        } catch (e: HttpException) {
-            val stale = anyCached<List<TableRow>>(key)
-            if (e.code() == 429 && stale != null) stale else throw e
+        } catch (e: Exception) {
+            val stale = anyCached<List<TableRow>>(key) ?: loadDisk<List<TableRow>>(key, type)
+            if (stale != null) { markStale(key); stale } else throw e
         }
-        remember(key, table)
+        remember(key, table, type)
         return table
     }
 

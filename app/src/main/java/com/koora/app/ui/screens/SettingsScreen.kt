@@ -32,6 +32,7 @@ import androidx.core.os.LocaleListCompat
 import com.koora.app.BuildConfig
 import com.koora.app.R
 import com.koora.app.data.FavoritesStore
+import com.koora.app.ui.theme.ThemeController
 
 /*
  * Minimal Settings screen:
@@ -83,6 +84,29 @@ fun SettingsScreen() {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // ---- Theme (Night Stadium) ----
+        Card(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    stringResource(R.string.settings_theme),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(4.dp))
+                LanguageRow(stringResource(R.string.theme_system), ThemeController.SYSTEM, ThemeController.mode) {
+                    ThemeController.set(context, ThemeController.SYSTEM)
+                }
+                LanguageRow(stringResource(R.string.theme_dark), ThemeController.DARK, ThemeController.mode) {
+                    ThemeController.set(context, ThemeController.DARK)
+                }
+                LanguageRow(stringResource(R.string.theme_light), ThemeController.LIGHT, ThemeController.mode) {
+                    ThemeController.set(context, ThemeController.LIGHT)
+                }
             }
         }
 

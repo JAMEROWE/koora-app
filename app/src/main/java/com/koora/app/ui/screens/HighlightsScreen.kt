@@ -73,8 +73,9 @@ import java.net.URLEncoder
  *      found, e.g. competitions without an official feed).
  *
  * Monetization at the peak moment, still moderate:
- *  - the ONE capped interstitial fires on entry (max 1 per 4 minutes,
- *    never in the first session — the cap is SHARED with live matches);
+ *  - the ONE capped interstitial fires when the user LEAVES the video
+ *    (natural break — max 1 per 4 minutes, never in the first session,
+ *    the cap is SHARED with live matches);
  *  - the banner keeps running under the player for the whole watch.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -90,9 +91,17 @@ fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
     var videoId by remember { mutableStateOf<String?>(null) }
     var searchPageFallback by remember { mutableStateOf(false) }
 
-    // Capped interstitial on entry — "click to watch, an ad pops" (shared cap)
-    LaunchedEffect(Unit) {
-        (context as? Activity)?.let { AdsManager.maybeShowInterstitial(it) }
+    // Policy-safe ad moment (v1.5.3): the ONE capped interstitial fires when
+    // the user LEAVES the video — end of the content segment, never at its
+    // start (Google Play interstitial guidance). Same 4-min shared cap,
+    // never in the first session. Navigation continues after the ad.
+    fun exitAfterAd() {
+        val activity = context as? Activity
+        if (activity != null) {
+            AdsManager.maybeShowInterstitial(activity) { onBack() }
+        } else {
+            onBack()
+        }
     }
 
     LaunchedEffect(home, away) {
@@ -111,7 +120,7 @@ fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
         when {
             customView != null -> closeFullscreen()
             w != null && w.canGoBack() -> w.goBack()
-            else -> onBack()
+            else -> exitAfterAd()
         }
     }
 
@@ -125,7 +134,7 @@ fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = { exitAfterAd() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
                 }

@@ -37,6 +37,7 @@ import com.koora.app.ui.screens.NewsScreen
 import com.koora.app.ui.screens.SettingsScreen
 import com.koora.app.ui.screens.StandingsScreen
 import com.koora.app.ui.theme.KooraTheme
+import com.koora.app.ui.theme.ThemeController
 
 /*
  * AppCompatActivity (not ComponentActivity) so that the per-app language
@@ -46,10 +47,12 @@ import com.koora.app.ui.theme.KooraTheme
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Theme preference (system / dark / light) — read before setContent
+        ThemeController.init(applicationContext)
         // GDPR consent (Google UMP) — required before showing ads to EU users (France)
         requestGdprConsent()
         setContent {
-            KooraTheme {
+            KooraTheme(themeMode = ThemeController.mode) {
                 KooraRoot()
             }
         }

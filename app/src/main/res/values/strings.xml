@@ -50,6 +50,12 @@
     <string name="about_version">Version %1$s (build %2$s)</string>
     <string name="app_version_line">Koora v%1$s</string>
     <string name="about_data">Scores: football-data.org • Match stats: ESPN • News: official media feeds • Highlights: YouTube</string>
+    <string name="settings_theme">Theme</string>
+    <string name="theme_system">Follow phone</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_light">Light</string>
+    <string name="stale_updated">Saved data · updated %1$d min ago</string>
+    <string name="match_of_the_day">Match of the Day</string>
     <string name="col_team">Team</string>
     <string name="col_played">P</string>
     <string name="col_won">W</string>

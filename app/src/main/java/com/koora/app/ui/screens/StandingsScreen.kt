@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
@@ -36,6 +35,8 @@ import com.koora.app.R
 import com.koora.app.ads.AdBanner
 import com.koora.app.data.MatchRepository
 import com.koora.app.data.TableRow
+import com.koora.app.ui.components.SkeletonList
+import com.koora.app.ui.components.TeamBadge
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -122,10 +123,7 @@ fun StandingsScreen(vm: StandingsViewModel = viewModel()) {
                     }
                 }
 
-                table == null -> Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) { CircularProgressIndicator() }
+                table == null -> SkeletonList(rows = 10, modifier = Modifier.fillMaxSize())
 
                 else -> LazyColumn(Modifier.fillMaxSize()) {
                     item { TableHeader() }
@@ -199,6 +197,8 @@ private fun TableLine(row: TableRow) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        TeamBadge(row.team.name, row.team.tla, 22.dp)
+        Spacer(Modifier.width(6.dp))
         Text(
             row.team.name,
             Modifier.weight(1f),

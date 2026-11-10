@@ -4,6 +4,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.koora.app.data.MatchRepository
 import org.junit.Before
@@ -65,8 +67,17 @@ class LaunchTest {
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodesWithText("Raja Club Athletic").fetchSemanticsNodes().isNotEmpty()
         }
-        rule.onNodeWithText("Raja Club Athletic").assertExists()
-        rule.onNodeWithText("Real Madrid").assertExists()
+        // v1.5.3: the Match of the Day hero card can repeat a team's name,
+        // so assert via ALL nodes, not a single unique node.
+        rule.onAllNodesWithText("Raja Club Athletic")[0].assertExists()
+
+        // Real Madrid is the 3rd demo row: the hero card + taller rows push
+        // it below the fold on Robolectric's small screen — swipe up first.
+        rule.onAllNodesWithText("Raja Club Athletic")[0].performTouchInput { swipeUp() }
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithText("Real Madrid").fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onAllNodesWithText("Real Madrid")[0].assertExists()
     }
 
     @Test
@@ -79,6 +90,6 @@ class LaunchTest {
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodesWithText("Paris Saint-Germain").fetchSemanticsNodes().isNotEmpty()
         }
-        rule.onNodeWithText("Paris Saint-Germain").assertExists()
+        rule.onAllNodesWithText("Paris Saint-Germain")[0].assertExists()
     }
 }
