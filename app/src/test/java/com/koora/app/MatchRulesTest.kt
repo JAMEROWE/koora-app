@@ -195,7 +195,7 @@ class MatchRulesTest {
         }
         val other = match(15, "Other", "Team", "TIMED", utc(now() + 60_000L))
 
-        val (next, recent) = next5Last5(future + past + other, teamId = 10L)
+        val (next, recent) = next5Last5(future + past + other, teamId = 10L, nowMs = now())
         assertEquals(5, next.size)
         assertEquals(5, recent.size)
         // next: soonest first, ids 1..5 (both home and away sides count)
