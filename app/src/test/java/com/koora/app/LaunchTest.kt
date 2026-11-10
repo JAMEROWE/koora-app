@@ -61,19 +61,28 @@ class LaunchTest {
         rule.onNodeWithText(rule.activity.getString(R.string.tab_matches)).assertExists()
         rule.onNodeWithText(rule.activity.getString(R.string.tab_settings)).assertExists()
 
+        // v1.5.6: the Today | Tomorrow day switch rendered
+        rule.onNodeWithText(rule.activity.getString(R.string.day_today)).assertExists()
+        rule.onNodeWithText(rule.activity.getString(R.string.day_tomorrow)).assertExists()
+
         // The match list loads in a coroutine — waiting is mandatory here:
         // CI machines are fast and can reach "idle" while the list is still
         // Loading, which made this test flaky (run 42600042530).
+        // Demo mode shows the whole sample list regardless of the wall
+        // clock; the LIVE match sorts to the top of the mixed day block.
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithText("Paris Saint-Germain").fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onAllNodesWithText("Paris Saint-Germain")[0].assertExists()
+
+        // Deeper rows of the mixed list can sit below the fold on
+        // Robolectric's small screen — swipe up, then wait for each row.
+        rule.onAllNodesWithText("Paris Saint-Germain")[0].performTouchInput { swipeUp() }
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodesWithText("Raja Club Athletic").fetchSemanticsNodes().isNotEmpty()
         }
-        // v1.5.3: the Match of the Day hero card can repeat a team's name,
-        // so assert via ALL nodes, not a single unique node.
         rule.onAllNodesWithText("Raja Club Athletic")[0].assertExists()
 
-        // Real Madrid is the 3rd demo row: the hero card + taller rows push
-        // it below the fold on Robolectric's small screen — swipe up first.
-        rule.onAllNodesWithText("Raja Club Athletic")[0].performTouchInput { swipeUp() }
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodesWithText("Real Madrid").fetchSemanticsNodes().isNotEmpty()
         }

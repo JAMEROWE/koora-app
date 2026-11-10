@@ -72,4 +72,26 @@
     <!-- v1.5.5 — widget d’écran d’accueil -->
     <string name="widget_hint">Ouvrez Koora pour charger les matchs du jour</string>
     <string name="widget_live">EN DIRECT</string>
+    <!-- v1.5.6 — Matches confortables (Aujourd'hui/Demain, blocs par ligue, votes) -->
+    <string name="day_today">Aujourd\'hui</string>
+    <string name="day_tomorrow">Demain</string>
+    <string name="empty_today">Pas de match aujourd\'hui. Demain : %1$d.</string>
+    <string name="empty_tomorrow">Pas de match demain. Consultez Aujourd\'hui pour les derniers résultats.</string>
+    <string name="tab_results">Résultats</string>
+    <string name="tab_upcoming">À venir</string>
+    <string name="tab_teams">Équipes</string>
+    <string name="league_results_empty">Aucun résultat sur cette période.</string>
+    <string name="league_upcoming_empty">Aucun match à venir ici.</string>
+    <string name="vote_title">Qui va gagner ?</string>
+    <string name="vote_home">Domicile</string>
+    <string name="vote_draw">Nul</string>
+    <string name="vote_away">Extérieur</string>
+    <string name="vote_your_pick">Votre choix : %1$s</string>
+    <string name="vote_locked">Le vote est fermé au coup d\'envoi.</string>
+    <string name="vote_community">Les pourcentages de la communauté apparaîtront ici dès qu\'ils seront disponibles.</string>
+    <string name="full_match_page">Page complète du match</string>
+    <string name="panel_close">Fermer</string>
+    <string name="team_next">Prochains matchs</string>
+    <string name="team_recent">Résultats récents</string>
+    <string name="team_fixtures_unavailable">Matchs de l\'équipe indisponibles.</string>
 </resources>

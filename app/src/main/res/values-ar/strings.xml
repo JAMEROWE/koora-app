@@ -72,4 +72,26 @@
     <!-- v1.5.5 — أداة الشاشة الرئيسية -->
     <string name="widget_hint">افتح كورة لتحميل مباريات اليوم</string>
     <string name="widget_live">مباشر</string>
+    <!-- v1.5.6 — مباريات مريحة (اليوم/غدا، كتل الدوريات، التصويت) -->
+    <string name="day_today">اليوم</string>
+    <string name="day_tomorrow">غدا</string>
+    <string name="empty_today">لا مباريات اليوم. غدا: %1$d.</string>
+    <string name="empty_tomorrow">لا مباريات غدا. راجع "اليوم" لآخر النتائج.</string>
+    <string name="tab_results">النتائج</string>
+    <string name="tab_upcoming">القادمة</string>
+    <string name="tab_teams">الفرق</string>
+    <string name="league_results_empty">لا نتائج في هذه الفترة.</string>
+    <string name="league_upcoming_empty">لا مباريات قادمة هنا.</string>
+    <string name="vote_title">من سيفوز؟</string>
+    <string name="vote_home">صاحب الأرض</string>
+    <string name="vote_draw">تعادل</string>
+    <string name="vote_away">الضيف</string>
+    <string name="vote_your_pick">اختيارك: %1$s</string>
+    <string name="vote_locked">يُغلق التصويت عند انطلاق المباراة.</string>
+    <string name="vote_community">ستظهر نسب تصويت الجمهور هنا عند توفرها.</string>
+    <string name="full_match_page">صفحة المباراة الكاملة</string>
+    <string name="panel_close">إغلاق</string>
+    <string name="team_next">المباريات القادمة</string>
+    <string name="team_recent">النتائج الأخيرة</string>
+    <string name="team_fixtures_unavailable">مباريات هذا الفريق غير متوفرة.</string>
 </resources>

@@ -31,7 +31,8 @@ import java.util.concurrent.TimeUnit
  */
 object MatchRepository {
 
-    private const val TTL_MS = 60_000L
+    // v1.5.6: 5-minute TTL ("comfortable" doc) — pull-to-refresh bypasses it.
+    private const val TTL_MS = 300_000L
 
     /** Last successfully loaded match list, used by the detail screen. */
     var cache: List<Match> = emptyList()
@@ -165,6 +166,66 @@ object MatchRepository {
     private fun notifyWidgetFeed() {
         val ctx = appContext ?: return
         runCatching { WidgetFeed.refresh(ctx, cacheCode, cache) }
+    }
+
+    /**
+     * v1.5.6 Today/Tomorrow window: ONE call for every competition between
+     * two local days ("yyyy-MM-dd"). Falls back to the last cached window
+     * on any failure (stale flag -> "saved data" caption); demo mode serves
+     * the sample list with no network. Widget pools are refreshed per
+     * competition code so the home-screen widget benefits too.
+     */
+    suspend fun matchesRange(fromDay: String, toDay: String, force: Boolean = false): Pair<List<Match>, Boolean> {
+        val key = "range:$fromDay:$toDay"
+        val type = object : TypeToken<List<Match>>() {}.type
+        if (!force) fresh<List<Match>>(key)?.let { return it to false }
+        val list: List<Match> = try {
+            if (hasKey) api.matchesRange(fromDay, toDay).matches ?: emptyList()
+            else DemoData.matches("ALL").distinctBy { it.id }
+        } catch (e: Exception) {
+            val stale = anyCached<List<Match>>(key) ?: loadDisk<List<Match>>(key, type)
+            if (stale != null) { markStale(key); return stale to true } else throw e
+        }
+        remember(key, list, type)
+        cache = list
+        cacheCode = "RANGE"
+        notifyWidgetFeed()
+        val ctx = appContext
+        if (ctx != null) {
+            list.groupBy { it.competition?.code ?: "" }.forEach { (code, ms) ->
+                if (code.isNotBlank()) runCatching { WidgetFeed.refresh(ctx, code, ms) }
+            }
+        }
+        return list to false
+    }
+
+    /**
+     * A team's fixtures across all competitions for the Teams panel.
+     * 6h cache (doc). Free-plan/403/429 failures fall back to the cache;
+     * with nothing cached the exception reaches the panel, which shows the
+     * honest "team fixtures not available" state. Demo mode derives from
+     * the sample data locally — no network.
+     */
+    suspend fun teamFixtures(teamId: Long): List<Match> {
+        if (!hasKey) {
+            return DemoData.matches("ALL")
+                .filter { it.homeTeam.id == teamId || it.awayTeam.id == teamId }
+                .distinctBy { it.id }
+        }
+        val key = "team:$teamId"
+        val type = object : TypeToken<List<Match>>() {}.type
+        val sixHours = 6L * 3_600_000
+        anyCached<List<Match>>(key)?.let {
+            if (System.currentTimeMillis() - (updated[key] ?: 0L) <= sixHours) return it
+        }
+        val list: List<Match> = try {
+            api.teamMatches(teamId).matches ?: emptyList()
+        } catch (e: Exception) {
+            val stale = anyCached<List<Match>>(key) ?: loadDisk<List<Match>>(key, type)
+            if (stale != null) { markStale(key); stale } else throw e
+        }
+        remember(key, list, type)
+        return list
     }
 
     suspend fun standings(competition: String, force: Boolean = false): List<TableRow> {

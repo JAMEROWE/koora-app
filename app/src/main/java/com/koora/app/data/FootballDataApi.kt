@@ -20,13 +20,21 @@ data class Team(
 data class ScoreDetail(val home: Int? = null, val away: Int? = null)
 data class Score(val fullTime: ScoreDetail? = null, val halfTime: ScoreDetail? = null)
 
+/** Competition reference embedded in every match object (v1.5.6 league blocks). */
+data class CompetitionRef(
+    val id: Long = 0,
+    val code: String = "",
+    val name: String = ""
+)
+
 data class Match(
     val id: Long,
     val utcDate: String,
     val status: String,
     val homeTeam: Team,
     val awayTeam: Team,
-    val score: Score
+    val score: Score,
+    val competition: CompetitionRef? = null
 )
 
 data class MatchesResponse(val matches: List<Match> = emptyList())
@@ -62,6 +70,21 @@ interface FootballDataApi {
     @GET("v4/competitions/{code}/matches")
     suspend fun matches(
         @Path("code") competition: String,
+        @Query("status") status: String = "SCHEDULED,TIMED,LIVE,IN_PLAY,FINISHED"
+    ): MatchesResponse
+
+    /** v1.5.6: ONE call covers every competition for a date window (Today+Tomorrow). */
+    @GET("v4/matches")
+    suspend fun matchesRange(
+        @Query("dateFrom") dateFrom: String,
+        @Query("dateTo") dateTo: String,
+        @Query("status") status: String = "SCHEDULED,TIMED,LIVE,IN_PLAY,FINISHED"
+    ): MatchesResponse
+
+    /** v1.5.6: a team's fixtures across all competitions (Teams panel). */
+    @GET("v4/teams/{id}/matches")
+    suspend fun teamMatches(
+        @Path("id") teamId: Long,
         @Query("status") status: String = "SCHEDULED,TIMED,LIVE,IN_PLAY,FINISHED"
     ): MatchesResponse
 

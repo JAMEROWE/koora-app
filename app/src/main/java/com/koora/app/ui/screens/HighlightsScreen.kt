@@ -134,7 +134,7 @@ fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
     LaunchedEffect(home, away, retryTick) {
         resolving = true
         currentId = null
-        val found = resolveVideos(home, away)
+        val found = resolveVideos(context, home, away)
         videos = found
         currentId = found.firstOrNull()?.videoId
         resolving = false
@@ -400,18 +400,28 @@ private val OFFICIAL_CHANNELS = listOf(
     "UCBJeMCIeLQos7wacox4hmLQ"  // Serie A
 )
 
-private data class YtEntry(val title: String, val videoId: String, val published: String)
+internal data class YtEntry(val title: String, val videoId: String, val published: String)
 
-/** All matching official videos, newest first (v1.5.4 feeds our panel). */
-private suspend fun resolveVideos(home: String, away: String): List<YtEntry> =
+/** All matching official videos, newest first (v1.5.4 feeds our panel).
+ *  v1.5.6: resolved at most once per fixture — VideoCache serves found
+ *  videos for 24h and a fresh "nothing yet" for 45 minutes. */
+private suspend fun resolveVideos(context: android.content.Context?, home: String, away: String): List<YtEntry> =
     withContext(Dispatchers.IO) {
-        runCatching {
+        if (context != null) {
+            VideoCache.get(context, home, away)?.let { return@withContext it }
+        }
+        val found = runCatching {
             if (BuildConfig.YOUTUBE_API_KEY.isNotBlank()) {
                 viaDataApi(home, away) ?: viaOfficialChannels(home, away)
             } else {
                 viaOfficialChannels(home, away)
             }
         }.getOrDefault(emptyList())
+        if (context != null) {
+            if (found.isNotEmpty()) VideoCache.putFound(context, home, away, found)
+            else VideoCache.putMiss(context, home, away)
+        }
+        found
     }
 
 /** Tier 1 (optional): exact search across ALL of YouTube, needs a free API key. */
@@ -439,6 +449,18 @@ private suspend fun viaOfficialChannels(home: String, away: String): List<YtEntr
 private fun fetchChannelFeed(channelId: String): List<YtEntry> {
     val text = httpGet("https://www.youtube.com/feeds/videos.xml?channel_id=$channelId")
         ?: return emptyList()
+    return parseChannelFeed(text)
+}
+
+/**
+ * Parses a YouTube channel Atom feed. THE FIX (v1.5.6): with namespace
+ * processing disabled (Android default) the tag of <yt:videoId> arrives
+ * as "yt:videoId" — the old code compared it to "videoid" and NEVER
+ * matched, so official-channel highlights silently resolved to nothing.
+ * We now strip the prefix before matching. A saved real-shaped feed is
+ * unit-tested in HighlightsParserTest.
+ */
+internal fun parseChannelFeed(text: String): List<YtEntry> {
     val parser = XmlPullParserFactory.newInstance().newPullParser()
     parser.setInput(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)), null)
 
@@ -459,8 +481,9 @@ private fun fetchChannelFeed(channelId: String): List<YtEntry> {
                 }
                 tag = name
             }
-            XmlPullParser.TEXT -> if (inEntry) when (tag?.lowercase()) {
-                "title" -> title += parser.text
+            XmlPullParser.TEXT -> if (inEntry) when (tag?.substringAfterLast(':')?.lowercase()) {
+                // Guard: <media:title> repeats <title> — capture only the first.
+                "title" -> if (title.isEmpty()) title += parser.text
                 "videoid" -> videoId += parser.text
                 "published" -> published += parser.text
             }

@@ -72,4 +72,26 @@
     <!-- v1.5.5 — home-screen widget -->
     <string name="widget_hint">Open Koora to load today’s matches</string>
     <string name="widget_live">LIVE</string>
+    <!-- v1.5.6 — comfortable Matches (Today/Tomorrow, league blocks, votes) -->
+    <string name="day_today">Today</string>
+    <string name="day_tomorrow">Tomorrow</string>
+    <string name="empty_today">No matches today. Tomorrow has %1$d.</string>
+    <string name="empty_tomorrow">No matches tomorrow. Check Today for the latest results.</string>
+    <string name="tab_results">Results</string>
+    <string name="tab_upcoming">Upcoming</string>
+    <string name="tab_teams">Teams</string>
+    <string name="league_results_empty">No results in this period.</string>
+    <string name="league_upcoming_empty">No upcoming matches here.</string>
+    <string name="vote_title">Who wins?</string>
+    <string name="vote_home">Home</string>
+    <string name="vote_draw">Draw</string>
+    <string name="vote_away">Away</string>
+    <string name="vote_your_pick">Your pick: %1$s</string>
+    <string name="vote_locked">Voting is locked at kick-off.</string>
+    <string name="vote_community">Community percentages will appear here when available.</string>
+    <string name="full_match_page">Full match page</string>
+    <string name="panel_close">Close</string>
+    <string name="team_next">Next matches</string>
+    <string name="team_recent">Recent results</string>
+    <string name="team_fixtures_unavailable">Team fixtures not available.</string>
 </resources>
