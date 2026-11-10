@@ -124,7 +124,7 @@ fun SettingsScreen() {
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    stringResource(R.string.about_version, BuildConfig.VERSION_NAME),
+                    stringResource(R.string.about_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE.toString()),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(Modifier.height(4.dp))

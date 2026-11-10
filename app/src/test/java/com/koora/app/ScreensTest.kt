@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.koora.app.data.MatchRepository
+import com.koora.app.ui.screens.SettingsScreen
 import com.koora.app.ui.screens.ArticleReader
 import com.koora.app.ui.screens.HighlightsScreen
 import com.koora.app.ui.screens.MatchDetailScreen
@@ -97,6 +98,17 @@ class ScreensTest {
         rule.onAllNodesWithText("A. Sbai")[0].assertExists()
         rule.onAllNodesWithText("4-3-3")[0].assertExists()
         rule.onAllNodesWithText("54%")[0].assertExists()
+    }
+
+    @Test
+    fun settingsShowsExactVersion() {
+        rule.setContent {
+            KooraTheme {
+                SettingsScreen()
+            }
+        }
+        rule.waitForIdle()
+        rule.onNodeWithText("Version ${BuildConfig.VERSION_NAME}", substring = true).assertExists()
     }
 
     private fun activityString(resId: Int): String {

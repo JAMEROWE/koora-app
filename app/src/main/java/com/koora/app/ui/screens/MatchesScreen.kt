@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.koora.app.BuildConfig
 import com.koora.app.R
 import com.koora.app.ads.NativeAdCard
 import com.koora.app.data.FavoritesStore
@@ -207,6 +208,17 @@ fun MatchesScreen(onMatchClick: (Long) -> Unit, vm: MatchesViewModel = viewModel
                     )
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                    )
+                }
+                item {
+                    Text(
+                        stringResource(R.string.app_version_line, BuildConfig.VERSION_NAME),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
                     )
                 }
             }

@@ -47,7 +47,8 @@
     <string name="language_hint">The app follows your phone language until you pick one here.</string>
     <string name="settings_favorites">Favorites</string>
     <string name="settings_about">About</string>
-    <string name="about_version">Version %1$s</string>
+    <string name="about_version">Version %1$s (build %2$s)</string>
+    <string name="app_version_line">Koora v%1$s</string>
     <string name="about_data">Scores: football-data.org • Match stats: ESPN • News: official media feeds • Highlights: YouTube</string>
     <string name="col_team">Team</string>
     <string name="col_played">P</string>
