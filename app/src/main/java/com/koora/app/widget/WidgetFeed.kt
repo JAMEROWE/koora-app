@@ -51,15 +51,18 @@ object WidgetFeed {
     fun loadPicks(context: Context): List<Match> = runCatching {
         val f = File(context.filesDir, PICKS_FILE)
         if (!f.exists()) emptyList()
-        else gson.fromJson(f.readText(), object : TypeToken<List<Match>>() {}.type)
-            ?: emptyList()
+        else gson.fromJson<List<Match>>(
+            f.readText(),
+            object : TypeToken<List<Match>>() {}.type
+        ) ?: emptyList()
     }.getOrDefault(emptyList())
 
     private fun readPool(context: Context): Map<String, List<Match>> = runCatching {
         val f = File(context.filesDir, POOL_FILE)
-        if (!f.exists()) emptyMap()
-        else gson.fromJson(f.readText(), poolType) ?: emptyMap()
-    }.getOrDefault(emptyMap())
+        if (!f.exists()) emptyMap<String, List<Match>>()
+        else gson.fromJson<Map<String, List<Match>>>(f.readText(), poolType)
+            ?: emptyMap()
+    }.getOrDefault(emptyMap<String, List<Match>>())
 
     private fun writePool(context: Context, pool: Map<String, List<Match>>) {
         File(context.filesDir, POOL_FILE).writeText(gson.toJson(pool))
