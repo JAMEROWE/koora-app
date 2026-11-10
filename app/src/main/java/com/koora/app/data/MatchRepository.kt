@@ -6,6 +6,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import com.koora.app.BuildConfig
+import com.koora.app.widget.WidgetFeed
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.HttpException
@@ -156,7 +157,14 @@ object MatchRepository {
         remember(key, list, type)
         cache = list
         cacheCode = competition
+        notifyWidgetFeed()
         return list
+    }
+
+    /** v1.5.5: after every successful matches() fetch, refresh the widget. */
+    private fun notifyWidgetFeed() {
+        val ctx = appContext ?: return
+        runCatching { WidgetFeed.refresh(ctx, cacheCode, cache) }
     }
 
     suspend fun standings(competition: String, force: Boolean = false): List<TableRow> {

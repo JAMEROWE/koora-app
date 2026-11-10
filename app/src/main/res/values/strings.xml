@@ -69,4 +69,7 @@
     <string name="video_more">More highlights</string>
     <string name="standings_legend_europe">European places</string>
     <string name="standings_legend_relegation">Relegation</string>
+    <!-- v1.5.5 — home-screen widget -->
+    <string name="widget_hint">Open Koora to load today’s matches</string>
+    <string name="widget_live">LIVE</string>
 </resources>

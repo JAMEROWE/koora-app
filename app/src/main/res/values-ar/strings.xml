@@ -69,4 +69,7 @@
     <string name="video_more">مزيد من الملخصات</string>
     <string name="standings_legend_europe">مراكز أوروبية</string>
     <string name="standings_legend_relegation">الهبوط</string>
+    <!-- v1.5.5 — أداة الشاشة الرئيسية -->
+    <string name="widget_hint">افتح كورة لتحميل مباريات اليوم</string>
+    <string name="widget_live">مباشر</string>
 </resources>

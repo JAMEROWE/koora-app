@@ -1,17 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Koora launcher mark (v1.5.5): white football with classic pentagon
+     pattern + pitch-green accent arc, on the Night Stadium background.
+     Content stays inside the 66dp adaptive-icon safe zone (ball r=24 at
+     center 54,54). Same drawable doubles as the themed-icon monochrome. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- football ring -->
+
+    <!-- ball outline -->
     <path
-        android:fillColor="#00000000"
+        android:pathData="M30,54 a24,24 0 1,0 48,0 a24,24 0 1,0 -48,0"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="5"
-        android:pathData="M54,24 a30,30 0 1,0 0.0001,0 Z" />
-    <!-- pentagon -->
+        android:strokeWidth="4"
+        android:fillColor="#00000000" />
+
+    <!-- pitch-green brand arc (bottom-right of the ball) -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M54,42 L65.4,50.3 L61.1,63.7 L46.9,63.7 L42.6,50.3 Z" />
+        android:pathData="M77.2,60.2 A24,24 0 0,1 60.2,77.2"
+        android:strokeColor="#22C55E"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+    <!-- center pentagon -->
+    <path
+        android:pathData="M54,45 L62.6,51.2 L59.3,61.3 L48.7,61.3 L45.4,51.2 Z"
+        android:fillColor="#FFFFFF" />
+
+    <!-- pentagon spokes to the rim -->
+    <path
+        android:pathData="M54,45 L54,30.5 M62.6,51.2 L76.35,46.74 M59.3,61.3 L67.8,73 M48.7,61.3 L40.2,73 M45.4,51.2 L31.65,46.74"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
 </vector>

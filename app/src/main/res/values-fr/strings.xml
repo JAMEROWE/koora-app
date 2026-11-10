@@ -69,4 +69,7 @@
     <string name="video_more">Plus de résumés</string>
     <string name="standings_legend_europe">Places européennes</string>
     <string name="standings_legend_relegation">Relégation</string>
+    <!-- v1.5.5 — widget d’écran d’accueil -->
+    <string name="widget_hint">Ouvrez Koora pour charger les matchs du jour</string>
+    <string name="widget_live">EN DIRECT</string>
 </resources>
