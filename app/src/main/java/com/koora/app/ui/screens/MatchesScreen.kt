@@ -313,6 +313,16 @@ private fun DayMatchesContent(
             }
     }
 
+    // Real league names straight from the window data — so every block
+    // title is the provider's own name, even for a competition that is
+    // not in ALL_COMPETITIONS (never a raw code like "FL1").
+    val leagueTitles = remember(vm.matches) {
+        vm.matches.mapNotNull { m ->
+            val c = m.competition ?: return@mapNotNull null
+            if (c.code.isBlank() || c.name.isBlank()) null else c.code to c.name
+        }.toMap()
+    }
+
     // "Load more on scroll": past 3 rows from the bottom -> +20.
     LaunchedEffect(listState, dayList.size, selectedKey) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
@@ -400,6 +410,7 @@ private fun DayMatchesContent(
             item(key = "block-$code") {
                 LeagueBlock(
                     code = code,
+                    label = leagueTitles[code] ?: competitionLabels[code] ?: code,
                     matches = list,
                     onMatchRow = { m ->
                         if (m.status.equals("FINISHED", true)) onMatchClick(m.id) else onVote(m)
@@ -437,6 +448,7 @@ private fun BlockTitle(text: String) {
 @Composable
 private fun LeagueBlock(
     code: String,
+    label: String,
     matches: List<Match>,
     onMatchRow: (Match) -> Unit,
     onTeam: (Team) -> Unit
@@ -447,7 +459,7 @@ private fun LeagueBlock(
             .fillMaxWidth()
             .padding(top = 6.dp)
     ) {
-        BlockTitle(competitionLabels[code] ?: code)
+        BlockTitle(label)
         Row(
             Modifier.padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
