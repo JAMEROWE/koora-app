@@ -61,9 +61,10 @@ class LaunchTest {
         rule.onNodeWithText(rule.activity.getString(R.string.tab_matches)).assertExists()
         rule.onNodeWithText(rule.activity.getString(R.string.tab_settings)).assertExists()
 
-        // v1.5.6: the Today | Tomorrow day switch rendered
-        rule.onNodeWithText(rule.activity.getString(R.string.day_today)).assertExists()
-        rule.onNodeWithText(rule.activity.getString(R.string.day_tomorrow)).assertExists()
+        // v1.5.6: the Today | Tomorrow day switch rendered. "Today" also
+        // titles the mixed block, so assert via ALL nodes, not uniqueness.
+        rule.onAllNodesWithText(rule.activity.getString(R.string.day_today))[0].assertExists()
+        rule.onAllNodesWithText(rule.activity.getString(R.string.day_tomorrow))[0].assertExists()
 
         // The match list loads in a coroutine — waiting is mandatory here:
         // CI machines are fast and can reach "idle" while the list is still
