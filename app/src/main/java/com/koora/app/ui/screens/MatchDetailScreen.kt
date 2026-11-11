@@ -698,8 +698,8 @@ private fun StatsBarsCard(match: Match, ds: MatchStats) {
     val dark = isSystemInDarkTheme()
     val homeKitRaw = Color(TeamColors.colorsFor(match.homeTeam.name).bg)
     val awayKitRaw = Color(TeamColors.colorsFor(match.awayTeam.name).bg)
-    val homeNum = Color(statNumberColor(TeamColors.colorsFor(match.homeTeam.name).bg, dark))
-    val awayNum = Color(statNumberColor(TeamColors.colorsFor(match.awayTeam.name).bg, dark))
+    val homeNum = Color(statNumberColor(TeamColors.colorsFor(match.homeTeam.name).bg.toInt(), dark))
+    val awayNum = Color(statNumberColor(TeamColors.colorsFor(match.awayTeam.name).bg.toInt(), dark))
     val homeShort =
         match.homeTeam.tla ?: match.homeTeam.shortName ?: match.homeTeam.name
     val awayShort =
