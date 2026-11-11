@@ -2,6 +2,7 @@ package com.koora.app
 
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -67,7 +68,9 @@ class LaunchTest {
 
         // The bottom navigation rendered (activity + Scaffold + tabs all alive)
         rule.onNodeWithText(rule.activity.getString(R.string.tab_matches)).assertExists()
-        rule.onNodeWithText(rule.activity.getString(R.string.tab_settings)).assertExists()
+        // v1.9.0: Settings LEFT the bottom bar (master spec §1.1) — it is the
+        // gear icon in the top-right now, labeled with its content description.
+        rule.onNodeWithContentDescription(rule.activity.getString(R.string.tab_settings)).assertExists()
 
         // The window loads in a coroutine — waiting is mandatory (CI can
         // reach "idle" while the skeleton is still showing). Botola Pro is

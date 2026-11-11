@@ -96,7 +96,9 @@ class ScreensTest {
         // (A player can appear in BOTH the events timeline and the lineup
         // list, so assert presence via onAllNodesWithText, not uniqueness.)
         rule.onAllNodesWithText("A. Sbai")[0].assertExists()
-        rule.onAllNodesWithText("4-3-3")[0].assertExists()
+        // v1.9.0: the formation now renders inside the team anchor together
+        // with the coach ("4-3-3  •  J. Sektioui"), so match by substring.
+        rule.onAllNodesWithText("4-3-3", substring = true)[0].assertExists()
         rule.onAllNodesWithText("54%")[0].assertExists()
     }
 
