@@ -1,14 +1,14 @@
 package com.koora.app
 
-import android.app.Application
 import android.content.Intent
-import androidx.test.core.app.ApplicationProvider
+import androidx.activity.ComponentActivity
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.koora.app.ui.components.openHighlightInAppCustomTab
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
@@ -18,42 +18,46 @@ import org.robolectric.annotation.Config
  * sanitized video id. Robolectric records the started activity, so the
  * exact intent is verified on the JVM — no device needed.
  *
- * The fallback fires only when YouTube refuses the inline embed
- * (embeddable=false / geo-block / stall guard) — the official web
- * player keeps all branding and ads intact, the external YouTube app
- * is never involved.
+ * The helper is ALWAYS called with an Activity context in production
+ * (LocalContext.current inside a composable = MainActivity) — that is
+ * what keeps the Custom Tab inside Koora's own task window, one X away
+ * from Koora. The test mirrors exactly that: an Application context
+ * would (rightly) throw AndroidRuntimeException, because the intent
+ * deliberately carries no FLAG_ACTIVITY_NEW_TASK.
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [34])
 class CustomTabFallbackTest {
 
+    private fun launchFromActivity(videoId: String): Pair<ComponentActivity, Intent?> {
+        val activity = Robolectric.buildActivity(ComponentActivity::class.java).setup().get()
+        openHighlightInAppCustomTab(activity, videoId)
+        return activity to Shadows.shadowOf(activity).nextStartedActivity
+    }
+
     @Test
     fun opensOfficialWatchUrl() {
-        val app = ApplicationProvider.getApplicationContext<Application>()
-        openHighlightInAppCustomTab(app, "dQw4w9WgXcQ")
-        val started: Intent = Shadows.shadowOf(app).nextStartedActivity
-        assertEquals(Intent.ACTION_VIEW, started.action)
+        val (_, started) = launchFromActivity("dQw4w9WgXcQ")
+        assertEquals(Intent.ACTION_VIEW, started!!.action)
         assertEquals("https://www.youtube.com/watch?v=dQw4w9WgXcQ", started.data.toString())
     }
 
     @Test
     fun sanitizesDangerousVideoId() {
-        val app = ApplicationProvider.getApplicationContext<Application>()
-        openHighlightInAppCustomTab(app, "abc<script>alert(1)</script>")
-        val started = Shadows.shadowOf(app).nextStartedActivity
+        val (_, started) = launchFromActivity("abc<script>alert(1)</script>")
         // Every char outside [A-Za-z0-9_-] is stripped — the URL stays one
         // official watch link, never an injection vector.
         assertEquals(
             "https://www.youtube.com/watch?v=abcscriptalert1script",
-            started.data.toString()
+            started!!.data.toString()
         )
     }
 
     @Test
     fun blankIdOpensNothing() {
-        val app = ApplicationProvider.getApplicationContext<Application>()
-        Shadows.shadowOf(app).clearNextStartedActivities()
-        openHighlightInAppCustomTab(app, "***")
-        assertNull(Shadows.shadowOf(app).nextStartedActivity)
+        val (_, started) = launchFromActivity("***")
+        // A blank id after sanitization means there is no official video
+        // to hand over — nothing is started, the honest state stays.
+        assertNull(started)
     }
 }
