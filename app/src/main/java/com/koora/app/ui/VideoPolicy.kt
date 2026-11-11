@@ -16,6 +16,13 @@ package com.koora.app.ui
  * as much as a UX choice. The small YouTube logo ON the player itself
  * stays — YouTube's terms require it, and that is what keeps embedding
  * legal.
+ *
+ * v1.9.1 — the Chrome Custom Tab fallback (master spec v5 §6.1,
+ * HighlightCustomTab.kt) is the SANCTIONED exception: when YouTube
+ * itself refuses the inline embed (embeddable=false / geo-block /
+ * stall), the official watch URL opens in an in-app tab that renders
+ * YouTube's own web player inside Koora's task window. This policy
+ * still governs the embedded WebView exactly as before.
  */
 object VideoPolicy {
 

@@ -7,6 +7,10 @@ import androidx.activity.compose.BackHandler
 // v1.8.0: video resolution moved to HighlightsSource.kt. v1.9.0: playback
 // moved to OfficialInAppYouTubePlayer (Error 153 fix, master spec §7.2).
 // This file keeps only resolution + the Koora panel around the player.
+// v1.9.1 (master spec v5 §6.1): when YouTube itself refuses inline
+// embedding (embeddable=false / geo-block / stall), the failed video
+// hands over seamlessly to a Koora-themed IN-APP Chrome Custom Tab —
+// official web player, still inside Koora's task, X returns here.
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,6 +59,7 @@ import com.koora.app.ads.AdBanner
 import com.koora.app.ads.AdsManager
 import com.koora.app.ui.components.LivePulseDot
 import com.koora.app.ui.components.OfficialInAppYouTubePlayer
+import com.koora.app.ui.components.openHighlightInAppCustomTab
 import com.koora.app.ui.theme.PitchAccent
 
 /*
@@ -199,8 +205,12 @@ fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
                             customView = null
                             customViewCallback = null
                         },
-                        onEmbedBlockedOrFailed = {
-                            currentId?.let { blockedIds = blockedIds + it }
+                        onEmbedBlockedOrFailed = { failedId ->
+                            // Spec §6.1: hide the failed candidate AND switch
+                            // seamlessly to the in-app Custom Tab (official
+                            // player, Koora's task, X returns here).
+                            blockedIds = blockedIds + failedId
+                            openHighlightInAppCustomTab(context, failedId)
                         }
                     )
 
@@ -277,8 +287,19 @@ fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
                     }
                 }
 
-                // No official video found — branded state, NEVER YouTube's site
-                else -> NoHighlightsState(onRetry = { retryTick++ })
+                // No official video found (or every candidate refused inline
+                // embedding) — branded state, NEVER YouTube's site.
+                // v1.9.1: when a verified official video EXISTS but YouTube
+                // refused the inline embed, offer the one-tap in-app Custom
+                // Tab (each failure already auto-opened it; this re-opens
+                // the newest). Genuinely unpublished matches keep the pure
+                // honest state — no button, no placeholder.
+                else -> NoHighlightsState(
+                    onRetry = { retryTick++ },
+                    onWatchInTab = videos.firstOrNull()?.let { v ->
+                        { openHighlightInAppCustomTab(context, v.videoId) }
+                    }
+                )
             }
 
             // Ads while watching — the other reason watching stays in-app
@@ -313,7 +334,10 @@ private fun ResolvingState() {
 }
 
 @Composable
-private fun NoHighlightsState(onRetry: () -> Unit) {
+private fun NoHighlightsState(
+    onRetry: () -> Unit,
+    onWatchInTab: (() -> Unit)? = null
+) {
     Column(
         Modifier
             .fillMaxSize()
@@ -342,6 +366,15 @@ private fun NoHighlightsState(onRetry: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         Button(onClick = onRetry) {
             Text(stringResource(R.string.retry))
+        }
+        // v1.9.1 (spec §6.1): only when a verified official video exists
+        // but YouTube refused the inline embed — the guaranteed in-app
+        // path. Never shown for a genuinely "nothing published" state.
+        onWatchInTab?.let { action ->
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(onClick = action) {
+                Text(stringResource(R.string.video_open_tab))
+            }
         }
     }
 }

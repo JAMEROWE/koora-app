@@ -81,6 +81,9 @@
     <string name="video_finding">Finding official highlights…</string>
     <string name="video_none_title">No highlights published yet</string>
     <string name="video_none_body">Official videos for this match have not been published. Check again later.</string>
+    <!-- v1.9.1 (master spec §6.1): the verified video exists but YouTube
+         refused the inline embed — one tap reopens it in the in-app tab -->
+    <string name="video_open_tab">Watch in in-app tab</string>
     <string name="video_more">More highlights</string>
     <string name="standings_legend_europe">European places</string>
     <string name="standings_legend_relegation">Relegation</string>

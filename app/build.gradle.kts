@@ -20,8 +20,8 @@ android {
         applicationId = "com.koora.app"
         minSdk = 24
         targetSdk = 36 // Google Play: new apps must target API 36 since Aug 31, 2026
-        versionCode = 20
-        versionName = "1.9.0"
+        versionCode = 21
+        versionName = "1.9.1"
         buildConfigField(
             "String",
             "FOOTBALL_DATA_TOKEN",
@@ -129,6 +129,11 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    // v1.9.1 (master spec §6.1): Chrome Custom Tabs — the in-app fallback
+    // when a rights-holder refuses inline embedding (status.embeddable=false).
+    // Renders YouTube's official web player inside Koora's own task window
+    // (single X returns to Koora) — never the external YouTube app.
+    implementation(libs.androidx.browser)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
