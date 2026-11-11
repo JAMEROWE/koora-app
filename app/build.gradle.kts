@@ -20,8 +20,8 @@ android {
         applicationId = "com.koora.app"
         minSdk = 24
         targetSdk = 36 // Google Play: new apps must target API 36 since Aug 31, 2026
-        versionCode = 17
-        versionName = "1.6.2"
+        versionCode = 18
+        versionName = "1.7.0"
         buildConfigField(
             "String",
             "FOOTBALL_DATA_TOKEN",
@@ -36,6 +36,15 @@ android {
             "String",
             "API_FOOTBALL_KEY",
             "\"${localProps.getProperty("API_FOOTBALL_KEY") ?: ""}\""
+        )
+        // v1.7.0: PitchAPI free key (pitchapi.dev) — adds the attractive
+        // leagues football-data.org does not cover (Europa/Conference
+        // League, Saudi Pro League, Süper Lig, Argentina, Liga MX, MLS,
+        // Scotland, Belgium, J1, K1). Empty = the feature sleeps silently.
+        buildConfigField(
+            "String",
+            "PITCH_API_KEY",
+            "\"${localProps.getProperty("PITCH_API_KEY") ?: ""}\""
         )
         // Ad unit IDs default to Google's PUBLIC TEST units. Set real ones in
         // local.properties (or a GitHub secret -> local.properties) later — zero code change.

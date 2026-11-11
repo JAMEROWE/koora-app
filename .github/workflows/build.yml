@@ -34,6 +34,7 @@ jobs:
         env:
           TOKEN: ${{ secrets.FOOTBALL_DATA_TOKEN }}
           AFKEY: ${{ secrets.API_FOOTBALL_KEY }}
+          PITCHKEY: ${{ secrets.PITCH_API_KEY }}
           YTKEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: |
           rm -f local.properties
@@ -46,6 +47,10 @@ jobs:
           if [ -n "$AFKEY" ]; then
             echo "API_FOOTBALL_KEY=$AFKEY" >> local.properties
             echo "API-Football key applied: events + lineups + stats ON"
+          fi
+          if [ -n "$PITCHKEY" ]; then
+            echo "PITCH_API_KEY=$PITCHKEY" >> local.properties
+            echo "PitchAPI key applied: extra leagues (UEL/UECL/SPL/TUR/ARG/MEX/MLS/SCO/BEL/JPN/KOR)"
           fi
           if [ -n "$YTKEY" ]; then
             echo "YOUTUBE_API_KEY=$YTKEY" >> local.properties

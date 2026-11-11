@@ -40,6 +40,17 @@ val ALL_COMPETITIONS = listOf(
     Competition("CLG", "Coupe de France"),
     Competition("UEL", "Europa League"),
     Competition("UECL", "Conference League"),
+    // v1.7.0: "max attractive leagues" — served by the PitchAPI layer
+    // (football-data.org free tier offers none of these).
+    Competition("SPL", "Saudi Pro League"),
+    Competition("TUR", "Süper Lig"),
+    Competition("ARG", "Liga Profesional"),
+    Competition("MEX", "Liga MX"),
+    Competition("MLS", "MLS"),
+    Competition("SCO", "Scottish Premiership"),
+    Competition("BEL", "Belgian Pro League"),
+    Competition("JPN", "J. League"),
+    Competition("KOR", "K League 1"),
     Competition("ELC", "Championship"),
     Competition("DED", "Eredivisie"),
     Competition("PPL", "Primeira Liga"),

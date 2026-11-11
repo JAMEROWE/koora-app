@@ -238,6 +238,17 @@ object MatchRepository {
                 dayMatches.forEach { m -> merged.putIfAbsent(m.id, m) }
             }
         }
+        // v1.7.0: Europa/Conference League + Saudi/Turkey/Argentina/Mexico/
+        // MLS/Scotland/Belgium/Japan/Korea via PitchAPI (free key). Same
+        // rules as the API-Football layer: sleeps without its key, per-day
+        // TTL cache, whitelist-only import — and the whitelist contains ONLY
+        // leagues football-data.org does not cover, so no double import.
+        if (PitchFixtures.available) {
+            for (day in daysBetween(fromDay, toDay)) {
+                val dayMatches = runCatching { pitchDay(day, type) }.getOrNull() ?: continue
+                dayMatches.forEach { m -> merged.putIfAbsent(m.id, m) }
+            }
+        }
         val result = merged.values.toList()
         cache = result
         cacheCode = "WINDOW"
@@ -310,6 +321,35 @@ object MatchRepository {
 
     /** Cache lifetime for one API-Football date key ("yyyy-MM-dd"). */
     private fun afTtlMs(day: String, now: Long): Long = when {
+        day == todayKeyLocal() -> 10 * 60_000L            // today: live-ish
+        day < todayKeyLocal() -> nextLocalMidnight(now) - now // past: final
+        else -> 30 * 60_000L                              // future: slow drift
+    }
+
+    /**
+     * One PitchAPI date with its own cache TTL. Never throws upward:
+     * any failure degrades to the last cached copy ("stale" flag) or to
+     * an empty list — a PitchAPI outage can never blank the other leagues.
+     */
+    private suspend fun pitchDay(day: String, type: Type): List<Match> {
+        val key = "pitch:$day"
+        val now = System.currentTimeMillis()
+        val ttl = pitchTtlMs(day, now)
+        anyCached<List<Match>>(key)?.let { cached ->
+            if (now - (updated[key] ?: 0L) <= ttl) return cached
+        }
+        return try {
+            val fetched = PitchFixtures.fetchDay(day)
+            remember(key, fetched, type)
+            fetched
+        } catch (e: Exception) {
+            val stale = anyCached<List<Match>>(key) ?: loadDisk<List<Match>>(key, type)
+            if (stale != null) { markStale(key); stale } else emptyList()
+        }
+    }
+
+    /** Cache lifetime for one PitchAPI date key ("yyyy-MM-dd"). */
+    private fun pitchTtlMs(day: String, now: Long): Long = when {
         day == todayKeyLocal() -> 10 * 60_000L            // today: live-ish
         day < todayKeyLocal() -> nextLocalMidnight(now) - now // past: final
         else -> 30 * 60_000L                              // future: slow drift
