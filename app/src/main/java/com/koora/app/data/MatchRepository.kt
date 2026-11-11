@@ -228,6 +228,16 @@ object MatchRepository {
             }
             list.forEach { m -> merged.putIfAbsent(m.id, m) }
         }
+        // v1.6.1: cups + Botola Pro via API-Football (free plan, ONE request
+        // per window day). Each date is cached on its own TTL (past: until
+        // local midnight — results never change; today: 10 min; future: 30
+        // min). Fully asleep without the API_FOOTBALL_KEY build value.
+        if (AfFixtures.available) {
+            for (day in daysBetween(fromDay, toDay)) {
+                val dayMatches = runCatching { afDay(day, type) }.getOrNull() ?: continue
+                dayMatches.forEach { m -> merged.putIfAbsent(m.id, m) }
+            }
+        }
         val result = merged.values.toList()
         cache = result
         cacheCode = "WINDOW"
@@ -274,6 +284,68 @@ object MatchRepository {
         val stale = anyCached<List<Match>>(leagueKey) ?: loadDisk<List<Match>>(leagueKey, type)
         if (stale != null) markStale(leagueKey)
         return stale ?: emptyList()
+    }
+
+    /**
+     * One API-Football date with its own cache TTL. Never throws upward:
+     * any failure degrades to the last cached copy ("stale" flag) or to an
+     * empty list — a cups outage can never blank the other leagues.
+     */
+    private suspend fun afDay(day: String, type: Type): List<Match> {
+        val key = "af:$day"
+        val now = System.currentTimeMillis()
+        val ttl = afTtlMs(day, now)
+        anyCached<List<Match>>(key)?.let { cached ->
+            if (now - (updated[key] ?: 0L) <= ttl) return cached
+        }
+        return try {
+            val fetched = AfFixtures.fetchDay(day)
+            remember(key, fetched, type)
+            fetched
+        } catch (e: Exception) {
+            val stale = anyCached<List<Match>>(key) ?: loadDisk<List<Match>>(key, type)
+            if (stale != null) { markStale(key); stale } else emptyList()
+        }
+    }
+
+    /** Cache lifetime for one API-Football date key ("yyyy-MM-dd"). */
+    private fun afTtlMs(day: String, now: Long): Long = when {
+        day == todayKeyLocal() -> 10 * 60_000L            // today: live-ish
+        day < todayKeyLocal() -> nextLocalMidnight(now) - now // past: final
+        else -> 30 * 60_000L                              // future: slow drift
+    }
+
+    private val dayFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+
+    private fun todayKeyLocal(): String = dayFormat.format(java.util.Date())
+
+    private fun nextLocalMidnight(now: Long): Long {
+        val c = java.util.Calendar.getInstance()
+        c.timeInMillis = now
+        c.add(java.util.Calendar.DAY_OF_MONTH, 1)
+        c.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        c.set(java.util.Calendar.MINUTE, 0)
+        c.set(java.util.Calendar.SECOND, 0)
+        c.set(java.util.Calendar.MILLISECOND, 0)
+        return c.timeInMillis
+    }
+
+    /** Local days "yyyy-MM-dd" from fromDay to toDay inclusive (defensive). */
+    private fun daysBetween(fromDay: String, toDay: String): List<String> {
+        val out = mutableListOf<String>()
+        try {
+            val from = dayFormat.parse(fromDay) ?: return listOf(fromDay)
+            val end = dayFormat.parse(toDay) ?: return listOf(fromDay)
+            val c = java.util.Calendar.getInstance()
+            c.time = from
+            while (!c.time.after(end) && out.size < 15) {
+                out.add(dayFormat.format(c.time))
+                c.add(java.util.Calendar.DAY_OF_MONTH, 1)
+            }
+        } catch (_: Exception) {
+        }
+        if (out.isEmpty()) out.add(fromDay)
+        return out
     }
 
     /**

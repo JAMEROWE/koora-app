@@ -113,10 +113,11 @@ class LiveViewModel : ViewModel() {
             todayKey = localDayKeyAt(now, 0)
             tomorrowKey = localDayKeyAt(now, 1)
             try {
-                // ONE shared window (yesterday..tomorrow) — the Results tab
-                // reads the same per-league cache, zero extra calls.
+                // ONE shared window (6 days back..tomorrow) — identical keys in
+                // the Results tab, zero extra calls between the two tabs; the
+                // 6-day depth is what fills Results with the last matchday.
                 window = MatchRepository.matchesWindow(
-                    localDayKeyAt(now, -1), tomorrowKey, force = force
+                    localDayKeyAt(now, -6), tomorrowKey, force = force
                 )
                 errorMessage = null
                 updatedAt = System.currentTimeMillis()

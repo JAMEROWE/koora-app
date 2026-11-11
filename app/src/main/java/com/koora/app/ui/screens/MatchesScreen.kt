@@ -97,9 +97,13 @@ class MatchesViewModel : ViewModel() {
             todayKey = localDayKeyAt(now, 0)
             yesterdayKey = localDayKeyAt(now, -1)
             try {
-                // Same shared window the Live tab loads — per-league cache
-                // makes this free.
-                window = MatchRepository.matchesWindow(yesterdayKey, todayKey, force = force)
+                // v1.6.1: EXACTLY the Live tab's window (-6 days..tomorrow) so
+                // both tabs share one per-league cache (identical keys = zero
+                // duplicate calls). The 6-day depth is what makes finished
+                // results from the last matchday actually appear.
+                window = MatchRepository.matchesWindow(
+                    localDayKeyAt(now, -6), localDayKeyAt(now, 1), force = force
+                )
                 errorMessage = null
             } catch (e: Exception) {
                 errorMessage = e.message ?: "Network error"

@@ -20,12 +20,21 @@ android {
         applicationId = "com.koora.app"
         minSdk = 24
         targetSdk = 36 // Google Play: new apps must target API 36 since Aug 31, 2026
-        versionCode = 15
-        versionName = "1.6.0"
+        versionCode = 16
+        versionName = "1.6.1"
         buildConfigField(
             "String",
             "FOOTBALL_DATA_TOKEN",
             "\"${localProps.getProperty("FOOTBALL_DATA_TOKEN") ?: ""}\""
+        )
+        // v1.6.1: API-Football free key (api-football.com) — adds the cups the
+        // football-data.org free tier gates (Copa del Rey, FA Cup, Coppa Italia,
+        // DFB-Pokal, Coupe de France, Europa/Conference League) plus Botola Pro.
+        // Empty string = the feature sleeps silently, zero behaviour change.
+        buildConfigField(
+            "String",
+            "API_FOOTBALL_KEY",
+            "\"${localProps.getProperty("API_FOOTBALL_KEY") ?: ""}\""
         )
         // Ad unit IDs default to Google's PUBLIC TEST units. Set real ones in
         // local.properties (or a GitHub secret -> local.properties) later — zero code change.

@@ -31,6 +31,15 @@ val ALL_COMPETITIONS = listOf(
     Competition("SA", "Serie A"),
     Competition("BL1", "Bundesliga"),
     Competition("FL1", "Ligue 1"),
+    // v1.6.1: cups + European nights, served by the API-Football layer
+    // (football-data.org free tier has none of these).
+    Competition("CDR", "Copa del Rey"),
+    Competition("FAC", "FA Cup"),
+    Competition("COP", "Coppa Italia"),
+    Competition("DFB", "DFB-Pokal"),
+    Competition("CLG", "Coupe de France"),
+    Competition("UEL", "Europa League"),
+    Competition("UECL", "Conference League"),
     Competition("ELC", "Championship"),
     Competition("DED", "Eredivisie"),
     Competition("PPL", "Primeira Liga"),
