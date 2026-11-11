@@ -23,6 +23,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -91,6 +92,7 @@ fun currentNewsLang(): String {
 @Composable
 fun NewsScreen(
     onArticleClick: (NewsItem) -> Unit,
+    onOpenSettings: () -> Unit = {},
     vm: NewsViewModel = viewModel()
 ) {
     val lang = currentNewsLang()
@@ -106,6 +108,10 @@ fun NewsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Spacer(Modifier.weight(1f))
+            // v1.9.0 (spec §1.1): Settings gear top-right on every top screen.
+            IconButton(onClick = onOpenSettings) {
+                Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.tab_settings))
+            }
             IconButton(onClick = { reloadTick++ }) {
                 Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.news_refresh))
             }

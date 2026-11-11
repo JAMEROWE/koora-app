@@ -1,17 +1,26 @@
 package com.koora.app.ui.screens
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -90,6 +99,8 @@ class LiveViewModel : ViewModel() {
         private set
     var tomorrowKey by mutableStateOf("")
         private set
+    var dayAfterKey by mutableStateOf("")
+        private set
     var favsTick by mutableIntStateOf(0)
         private set
     var updatedAt by mutableStateOf(0L)
@@ -113,12 +124,13 @@ class LiveViewModel : ViewModel() {
             val now = System.currentTimeMillis()
             todayKey = localDayKeyAt(now, 0)
             tomorrowKey = localDayKeyAt(now, 1)
+            dayAfterKey = localDayKeyAt(now, 2)
             try {
-                // ONE shared window (6 days back..tomorrow) — identical keys in
-                // the Results tab, zero extra calls between the two tabs; the
-                // 6-day depth is what fills Results with the last matchday.
+                // ONE shared window (6 days back..day after tomorrow, v1.9.0
+                // spec §2.1) — identical keys in Results/Highlights, zero
+                // extra calls between tabs.
                 window = MatchRepository.matchesWindow(
-                    localDayKeyAt(now, -6), tomorrowKey, force = force
+                    localDayKeyAt(now, -6), dayAfterKey, force = force
                 )
                 errorMessage = null
                 updatedAt = System.currentTimeMillis()
@@ -135,6 +147,7 @@ class LiveViewModel : ViewModel() {
 @Composable
 fun LiveScreen(
     onMatchClick: (Long) -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     vm: LiveViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -160,13 +173,28 @@ fun LiveScreen(
 
     var voteFor by remember { mutableStateOf<Match?>(null) }
     var teamFor by remember { mutableStateOf<Team?>(null) }
+    // v1.9.0 (spec §2.1): date strip — 0 all, 1 today, 2 tomorrow, 3 day after.
+    var dayFilter by remember { mutableIntStateOf(0) }
     val onToggleFavorite: (Match) -> Unit = { m ->
         FavoritesStore.toggle(context, m)
         vm.bumpFavorites()
     }
 
     Column(Modifier.fillMaxSize()) {
-        StadiumHero()
+        // Spec §1.1: Settings gear floats over the stadium hero, top-right.
+        Box {
+            StadiumHero()
+            IconButton(
+                onClick = onOpenSettings,
+                modifier = Modifier.align(Alignment.TopEnd)
+            ) {
+                Icon(
+                    Icons.Filled.Settings,
+                    contentDescription = stringResource(R.string.tab_settings),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
 
         if (vm.demo) {
             Text(
@@ -188,6 +216,39 @@ fun LiveScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 2.dp)
+            )
+        }
+
+        // v1.9.0 (spec §2.1): quick date selector strip — instant switching
+        // between today, tomorrow and the day after. No calendar picker:
+        // the honest window is -6..+2 days, and a calendar would promise
+        // days we cannot fill.
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 4.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip(
+                selected = dayFilter == 0,
+                onClick = { dayFilter = 0 },
+                label = { Text(stringResource(R.string.chip_all), maxLines = 1) }
+            )
+            FilterChip(
+                selected = dayFilter == 1,
+                onClick = { dayFilter = 1 },
+                label = { Text(stringResource(R.string.day_today), maxLines = 1) }
+            )
+            FilterChip(
+                selected = dayFilter == 2,
+                onClick = { dayFilter = 2 },
+                label = { Text(stringResource(R.string.day_tomorrow), maxLines = 1) }
+            )
+            FilterChip(
+                selected = dayFilter == 3,
+                onClick = { dayFilter = 3 },
+                label = { Text(stringResource(R.string.day_after), maxLines = 1) }
             )
         }
 
@@ -231,43 +292,63 @@ fun LiveScreen(
                 val favTitle = stringResource(R.string.fav_tab)
                 val todayTitle = stringResource(R.string.day_today)
                 val tomorrowTitle = stringResource(R.string.day_tomorrow)
+                val dayAfterTitle = stringResource(R.string.day_after)
                 val tomorrowCount = if (vm.demo) 0
                 else matchesOnDay(vm.window, vm.tomorrowKey).size
                 val todayEmpty = stringResource(R.string.empty_today, tomorrowCount)
                 val tomorrowEmpty = stringResource(R.string.empty_tomorrow)
+                val dayAfterEmpty = stringResource(R.string.empty_day_after)
 
                 LazyColumn(Modifier.fillMaxSize()) {
                     favoritesBlock(
                         vm, context, favTitle, onMatchClick,
                         { voteFor = it }, { teamFor = it }, onToggleFavorite
                     )
-                    dayBlock(
-                        tag = "t",
-                        title = todayTitle,
-                        emptyText = todayEmpty,
-                        sections = daySections(todayMatches(vm)),
-                        titles = titles,
-                        favIds = favIds,
-                        onMatchClick = onMatchClick,
-                        onVote = { voteFor = it },
-                        onTeam = { teamFor = it },
-                        onToggleFavorite = onToggleFavorite
-                    )
+                    if (dayFilter == 0 || dayFilter == 1) {
+                        dayBlock(
+                            tag = "t",
+                            title = todayTitle,
+                            emptyText = todayEmpty,
+                            sections = daySections(todayMatches(vm)),
+                            titles = titles,
+                            favIds = favIds,
+                            onMatchClick = onMatchClick,
+                            onVote = { voteFor = it },
+                            onTeam = { teamFor = it },
+                            onToggleFavorite = onToggleFavorite
+                        )
+                    }
                     // v1.8.0 roadmap P0: native ad card in the fixture feed
                     // (FotMob-style in-feed placement, matches the Results tab).
                     item(key = "ad-native-live") { NativeAdCard() }
-                    dayBlock(
-                        tag = "w",
-                        title = tomorrowTitle,
-                        emptyText = tomorrowEmpty,
-                        sections = daySections(tomorrowMatches(vm)),
-                        titles = titles,
-                        favIds = favIds,
-                        onMatchClick = onMatchClick,
-                        onVote = { voteFor = it },
-                        onTeam = { teamFor = it },
-                        onToggleFavorite = onToggleFavorite
-                    )
+                    if (dayFilter == 0 || dayFilter == 2) {
+                        dayBlock(
+                            tag = "w",
+                            title = tomorrowTitle,
+                            emptyText = tomorrowEmpty,
+                            sections = daySections(tomorrowMatches(vm)),
+                            titles = titles,
+                            favIds = favIds,
+                            onMatchClick = onMatchClick,
+                            onVote = { voteFor = it },
+                            onTeam = { teamFor = it },
+                            onToggleFavorite = onToggleFavorite
+                        )
+                    }
+                    if (dayFilter == 0 || dayFilter == 3) {
+                        dayBlock(
+                            tag = "da",
+                            title = dayAfterTitle,
+                            emptyText = dayAfterEmpty,
+                            sections = daySections(dayAfterMatches(vm)),
+                            titles = titles,
+                            favIds = favIds,
+                            onMatchClick = onMatchClick,
+                            onVote = { voteFor = it },
+                            onTeam = { teamFor = it },
+                            onToggleFavorite = onToggleFavorite
+                        )
+                    }
                     item(key = "version") {
                         Text(
                             stringResource(R.string.app_version_line, BuildConfig.VERSION_NAME),
@@ -320,6 +401,11 @@ private fun tomorrowMatches(vm: LiveViewModel): List<Match> =
     if (vm.demo) emptyList()
     else sortMixed(matchesOnDay(vm.window, vm.tomorrowKey))
 
+/** v1.9.0 (spec §2.1): the day after tomorrow — demo stays honest (empty). */
+private fun dayAfterMatches(vm: LiveViewModel): List<Match> =
+    if (vm.demo) emptyList()
+    else sortMixed(matchesOnDay(vm.window, vm.dayAfterKey))
+
 // ---- LazyColumn blocks ------------------------------------------------------
 
 private fun LazyListScope.favoritesBlock(
@@ -333,7 +419,9 @@ private fun LazyListScope.favoritesBlock(
 ) {
     val all = FavoritesStore.all(context).map { FavoritesStore.toMatch(it) }
     val favs = if (vm.demo) all
-    else matchesOnDay(all, vm.todayKey) + matchesOnDay(all, vm.tomorrowKey)
+    else matchesOnDay(all, vm.todayKey) +
+        matchesOnDay(all, vm.tomorrowKey) +
+        matchesOnDay(all, vm.dayAfterKey)
     if (favs.isEmpty()) return
     item(key = "fav-header") { DayTitle(title) }
     items(favs, key = { "fav-${it.id}" }) { m ->

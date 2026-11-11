@@ -2,14 +2,11 @@ package com.koora.app.ui.screens
 
 import android.app.Activity
 import android.view.View
-import android.view.ViewGroup
 import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
-// v1.8.0: video resolution moved to HighlightsSource.kt (shared with the
-// match-detail availability gate). This file keeps ONLY the player UI.
+// v1.8.0: video resolution moved to HighlightsSource.kt. v1.9.0: playback
+// moved to OfficialInAppYouTubePlayer (Error 153 fix, master spec §7.2).
+// This file keeps only resolution + the Koora panel around the player.
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +14,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,7 +30,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -53,12 +48,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import com.koora.app.R
 import com.koora.app.ads.AdBanner
 import com.koora.app.ads.AdsManager
-import com.koora.app.ui.VideoPolicy
 import com.koora.app.ui.components.LivePulseDot
+import com.koora.app.ui.components.OfficialInAppYouTubePlayer
 import com.koora.app.ui.theme.PitchAccent
 
 /*
@@ -96,17 +90,24 @@ import com.koora.app.ui.theme.PitchAccent
 @Composable
 fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
     val context = LocalContext.current
-    var webView by remember { mutableStateOf<WebView?>(null) }
-    var progress by remember { mutableIntStateOf(0) }
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
 
     // v1.5.4: resolve ALL matching official videos, newest first.
     // The first plays immediately; the rest fill OUR panel under the player.
     var videos by remember { mutableStateOf<List<YtEntry>>(emptyList()) }
-    var currentId by remember { mutableStateOf<String?>(null) }
+    var pickedId by remember { mutableStateOf<String?>(null) }
     var resolving by remember { mutableStateOf(true) }
     var retryTick by remember { mutableIntStateOf(0) }
+
+    // v1.9.0 (spec §7.1.4): videos that fail IN the player (100/101/150/153)
+    // are hidden (GONE) and the next candidate auto-plays. Never an error
+    // box, never an external app. When every candidate failed we show the
+    // honest branded state — never a placeholder video.
+    var blockedIds by remember { mutableStateOf(setOf<String>()) }
+    val currentId: String? =
+        videos.firstOrNull { it.videoId == pickedId && it.videoId !in blockedIds }?.videoId
+            ?: videos.firstOrNull { it.videoId !in blockedIds }?.videoId
 
     // Policy-safe ad moment (v1.5.3): the ONE capped interstitial fires when
     // the user LEAVES the video — end of the content segment, never at its
@@ -123,10 +124,10 @@ fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
 
     LaunchedEffect(home, away, retryTick) {
         resolving = true
-        currentId = null
+        pickedId = null
+        blockedIds = emptySet()
         val found = HighlightsSource.resolve(context, home, away)
         videos = found
-        currentId = found.firstOrNull()?.videoId
         resolving = false
     }
 
@@ -139,8 +140,7 @@ fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
     fun pick(entry: YtEntry) {
         if (entry.videoId == currentId) return
         closeFullscreen()
-        currentId = entry.videoId
-        webView?.loadUrl(VideoPolicy.embedUrl(entry.videoId))
+        pickedId = entry.videoId
     }
 
     // With the navigation policy blocking every escape there is nothing
@@ -172,12 +172,6 @@ fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            if (progress in 1..99 && currentId != null) {
-                LinearProgressIndicator(
-                    progress = { progress / 100f },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
 
             when {
                 // Resolving the exact video — branded, calm, no spinner wall
@@ -186,66 +180,28 @@ fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
                 // PLAYER-ONLY VIEW: the official embed in a 16:9 frame, with
                 // Koora's own "More highlights" panel below — never YouTube's.
                 currentId != null -> Column(Modifier.fillMaxSize()) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(16f / 9f)
-                            .background(Color.Black)
-                    ) {
-                        AndroidView(
-                            modifier = Modifier.fillMaxSize(),
-                            factory = { ctx ->
-                                WebView(ctx).apply {
-                                    layoutParams = ViewGroup.LayoutParams(
-                                        ViewGroup.LayoutParams.MATCH_PARENT,
-                                        ViewGroup.LayoutParams.MATCH_PARENT
-                                    )
-                                    settings.javaScriptEnabled = true
-                                    settings.domStorageEnabled = true
-                                    settings.mediaPlaybackRequiresUserGesture = false
-                                    webViewClient = object : WebViewClient() {
-                                        override fun shouldOverrideUrlLoading(
-                                            view: WebView,
-                                            request: WebResourceRequest
-                                        ): Boolean {
-                                            if (!request.isForMainFrame) return false
-                                            // v1.5.4 policy: the ONLY page this
-                                            // screen loads is the official embed.
-                                            // Logo / share / redirect taps can no
-                                            // longer show YouTube's site.
-                                            return !VideoPolicy.isAllowedMainframeUrl(
-                                                request.url.toString()
-                                            )
-                                        }
-                                    }
-                                    webChromeClient = object : WebChromeClient() {
-                                        override fun onProgressChanged(v: WebView?, p: Int) {
-                                            progress = p
-                                        }
-
-                                        override fun onShowCustomView(
-                                            view: View,
-                                            callback: CustomViewCallback
-                                        ) {
-                                            if (customView != null) {
-                                                callback.onCustomViewHidden()
-                                                return
-                                            }
-                                            customView = view
-                                            customViewCallback = callback
-                                        }
-
-                                        override fun onHideCustomView() {
-                                            customView = null
-                                            customViewCallback = null
-                                        }
-                                    }
-                                    loadUrl(VideoPolicy.embedUrl(currentId ?: ""))
-                                    webView = this
-                                }
+                    // v1.9.0 (spec §7.2): official IFrame API bootstrapped from
+                    // an https://www.youtube.com base document + origin var —
+                    // the Error 153 fix. Any embed error hides the player (GONE)
+                    // and auto-plays the next candidate.
+                    OfficialInAppYouTubePlayer(
+                        videoId = currentId,
+                        onEnterFullscreen = { view, callback ->
+                            if (customView != null) {
+                                callback.onCustomViewHidden()
+                                return@OfficialInAppYouTubePlayer
                             }
-                        )
-                    }
+                            customView = view
+                            customViewCallback = callback
+                        },
+                        onExitFullscreen = {
+                            customView = null
+                            customViewCallback = null
+                        },
+                        onEmbedBlockedOrFailed = {
+                            currentId?.let { blockedIds = blockedIds + it }
+                        }
+                    )
 
                     // OUR content under OUR player
                     Column(

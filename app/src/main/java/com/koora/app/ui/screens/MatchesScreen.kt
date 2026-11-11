@@ -10,8 +10,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -96,7 +100,10 @@ class MatchesViewModel : ViewModel() {
                 // duplicate calls). The 6-day depth is what makes finished
                 // results from the last matchday actually appear.
                 window = MatchRepository.matchesWindow(
-                    localDayKeyAt(now, -6), localDayKeyAt(now, 1), force = force
+                    // v1.9.0 (spec §2.1): window extends to the day after
+                    // tomorrow — identical keys in Live/Results/Highlights,
+                    // zero duplicate calls between the tabs.
+                    localDayKeyAt(now, -6), localDayKeyAt(now, 2), force = force
                 )
                 errorMessage = null
             } catch (e: Exception) {
@@ -110,7 +117,11 @@ class MatchesViewModel : ViewModel() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MatchesScreen(onMatchClick: (Long) -> Unit, vm: MatchesViewModel = viewModel()) {
+fun MatchesScreen(
+    onMatchClick: (Long) -> Unit,
+    onOpenSettings: () -> Unit = {},
+    vm: MatchesViewModel = viewModel()
+) {
     val context = LocalContext.current
 
     var voteFor by remember { mutableStateOf<Match?>(null) }
@@ -121,7 +132,15 @@ fun MatchesScreen(onMatchClick: (Long) -> Unit, vm: MatchesViewModel = viewModel
     }
 
     Column(Modifier.fillMaxSize()) {
-        TopAppBar(title = { Text(stringResource(R.string.tab_results)) })
+        // v1.9.0 (spec §1.1): Settings gear top-right on every top screen.
+        TopAppBar(
+            title = { Text(stringResource(R.string.tab_results)) },
+            actions = {
+                IconButton(onClick = onOpenSettings) {
+                    Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.tab_settings))
+                }
+            }
+        )
 
         when {
             vm.loading && vm.window.isEmpty() ->

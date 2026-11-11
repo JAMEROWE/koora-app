@@ -4,8 +4,11 @@ import android.app.Activity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,11 +39,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,10 +58,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
@@ -74,14 +82,17 @@ import com.koora.app.data.StatsBar
 import com.koora.app.data.StatsEvent
 import com.koora.app.data.StatsLineup
 import com.koora.app.data.StatsPlayer
+import com.koora.app.data.Team
 import com.koora.app.data.TeamColors
 import com.koora.app.ui.components.LivePulseDot
 import com.koora.app.ui.components.TeamBadge
 import com.koora.app.ui.dateLabel
 import com.koora.app.ui.formationRows
 import com.koora.app.ui.isLive
-import com.koora.app.ui.minuteValue
+import com.koora.app.ui.playerMatches
+import com.koora.app.ui.positionLabel
 import com.koora.app.ui.scoreLabel
+import com.koora.app.ui.statNumberColor
 import com.koora.app.ui.statusLabel
 import com.koora.app.ui.theme.LiveRed
 import com.koora.app.ui.theme.PitchGreen
@@ -98,10 +109,11 @@ import kotlinx.coroutines.launch
  *  - Highlights button on every FINISHED match (always visible, one
  *    predictable entry); the player lists only verified official videos.
  *  - Team-colored stadium hero (home left / away right, subtle lerp).
- *  - 90-minute event timeline above the event list.
- *  - Dual-sided stat bars in each team's kit color.
- *  - 2D formation pitch for lineups (falls back to the text list when
- *    formation or XI data is incomplete — positions are never invented).
+ * v1.9.0 (master spec):
+ *  - Crest comparison header above Match stats; WCAG-safe stat numbers.
+ *  - ONE unified green pitch (home top / away bottom) replaces the dot
+ *    timeline; event badges with minutes sit above each player; tapping
+ *    a player opens the max-info bottom sheet.
  *  - Sticky banner at the bottom (highest-dwell screen, roadmap P0).
  */
 sealed interface StatsUiState {
@@ -585,108 +597,13 @@ private fun EventsCard(match: Match, ds: MatchStats) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            Spacer(Modifier.height(12.dp))
-            // v1.8.0 roadmap: horizontal 90-minute track — goals, cards and
-            // subs positioned by real minute (home above, away below).
-            // Events with an unparseable minute are skipped (never guessed).
-            MatchTimeline(match, ds.events)
-            Spacer(Modifier.height(10.dp))
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-            )
             Spacer(Modifier.height(8.dp))
+            // v1.9.0 (spec §4.1): the separate dot timeline is GONE — the
+            // unified pitch in the lineups card carries the visual story
+            // (badges with minutes above the players themselves). This list
+            // stays as the accessible, full-detail record of the match.
             ds.events.forEach { e -> EventRow(match, e) }
         }
-    }
-}
-
-@Composable
-private fun MatchTimeline(match: Match, events: List<StatsEvent>) {
-    val homeKit = Color(TeamColors.colorsFor(match.homeTeam.name).bg)
-    val awayKit = Color(TeamColors.colorsFor(match.awayTeam.name).bg)
-    val track = MaterialTheme.colorScheme.outlineVariant
-
-    // Events positioned by real minute; unparseable minutes are skipped
-    // (never guessed). Same-minute collisions on one side stack one row
-    // up/down instead of overlapping; rows are capped — 3+ events in one
-    // minute for one team are vanishingly rare and may slightly overlap.
-    data class Plot(val min: Double, val e: StatsEvent, val row: Int)
-    val homeSide = mutableListOf<Plot>()
-    val awaySide = mutableListOf<Plot>()
-    events.forEach { e ->
-        val m = minuteValue(e.minute) ?: return@forEach
-        val side = if (e.side == 0) homeSide else awaySide
-        val row = (side.count { it.e.minute == e.minute }).coerceAtMost(1)
-        side.add(Plot(m, e, row))
-    }
-
-    BoxWithConstraints(Modifier.fillMaxWidth().height(60.dp)) {
-        val w = maxWidth
-        // 0'..95' span so 90+5 fits inside the track; 6dp padding each side
-        fun x(min: Double): Float = 6f + (min.coerceIn(0.0, 95.0) / 95.0).toFloat() * (w.value - 12f)
-        // the track itself
-        Box(
-            Modifier
-                .align(Alignment.CenterStart)
-                .fillMaxWidth()
-                .padding(horizontal = 6.dp)
-                .height(2.dp)
-                .background(track, RoundedCornerShape(1.dp))
-        )
-        // minute ticks 45 / 90
-        listOf(45.0 to "45", 90.0 to "90").forEach { (min, label) ->
-            Text(
-                label,
-                Modifier
-                    .align(Alignment.TopStart)
-                    .offset(x = (x(min) - 4f).dp, y = 2.dp),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        // home events just ABOVE the track, away events just BELOW it
-        homeSide.forEach { p ->
-            TimelineDot(
-                e = p.e, color = homeKit,
-                modifier = Modifier
-                    .offset(x = (x(p.min) - 5f).dp, y = (20 - p.row * 9).dp)
-            )
-        }
-        awaySide.forEach { p ->
-            TimelineDot(
-                e = p.e, color = awayKit,
-                modifier = Modifier
-                    .offset(x = (x(p.min) - 5f).dp, y = (34 + p.row * 9).dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun TimelineDot(e: StatsEvent, color: Color, modifier: Modifier = Modifier) {
-    when (e.kind) {
-        "yellow" -> Surface(
-            modifier = modifier.size(7.dp),
-            shape = RoundedCornerShape(1.dp),
-            color = Color(0xFFF2C94C)
-        ) {}
-        "red" -> Surface(
-            modifier = modifier.size(7.dp),
-            shape = RoundedCornerShape(1.dp),
-            color = Color(0xFFEB5757)
-        ) {}
-        "sub" -> Surface(
-            modifier = modifier.size(7.dp),
-            shape = CircleShape,
-            color = Color.Transparent,
-            border = BorderStroke(1.5.dp, color)
-        ) {}
-        else -> Surface(
-            modifier = modifier.size(10.dp),
-            shape = CircleShape,
-            color = color,
-            border = BorderStroke(1.dp, Color.White)
-        ) {}
     }
 }
 
@@ -774,9 +691,19 @@ private fun CardChip(color: Color) {
 
 @Composable
 private fun StatsBarsCard(match: Match, ds: MatchStats) {
-    // v1.8.0 roadmap: bars colored by each team's primary kit color.
-    val homeKit = Color(TeamColors.colorsFor(match.homeTeam.name).bg)
-    val awayKit = Color(TeamColors.colorsFor(match.awayTeam.name).bg)
+    // v1.9.0 (spec §5): crest + name comparison header above the bars, and
+    // stat NUMBERS lifted to WCAG-readable tones — a dark kit on a dark
+    // theme (or a white kit on light) would be unreadable otherwise.
+    // Bars keep the raw kit colors.
+    val dark = isSystemInDarkTheme()
+    val homeKitRaw = Color(TeamColors.colorsFor(match.homeTeam.name).bg)
+    val awayKitRaw = Color(TeamColors.colorsFor(match.awayTeam.name).bg)
+    val homeNum = Color(statNumberColor(TeamColors.colorsFor(match.homeTeam.name).bg, dark))
+    val awayNum = Color(statNumberColor(TeamColors.colorsFor(match.awayTeam.name).bg, dark))
+    val homeShort =
+        match.homeTeam.tla ?: match.homeTeam.shortName ?: match.homeTeam.name
+    val awayShort =
+        match.awayTeam.tla ?: match.awayTeam.shortName ?: match.awayTeam.name
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(
@@ -784,6 +711,49 @@ private fun StatsBarsCard(match: Match, ds: MatchStats) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+            Spacer(Modifier.height(10.dp))
+            // Spec §5: Home crest + short name | score/status | Away.
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        homeShort,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    TeamBadge(match.homeTeam.name, match.homeTeam.tla, 26.dp)
+                }
+                Text(
+                    scoreLabel(match),
+                    Modifier.padding(horizontal = 10.dp),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TeamBadge(match.awayTeam.name, match.awayTeam.tla, 26.dp)
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        awayShort,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
             Spacer(Modifier.height(12.dp))
             ds.bars.forEach { b ->
                 Column(Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
@@ -793,7 +763,7 @@ private fun StatsBarsCard(match: Match, ds: MatchStats) {
                             Modifier.width(36.dp),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold,
-                            color = homeKit,
+                            color = homeNum,
                             textAlign = TextAlign.End
                         )
                         Text(
@@ -811,11 +781,11 @@ private fun StatsBarsCard(match: Match, ds: MatchStats) {
                             Modifier.width(36.dp),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold,
-                            color = awayKit
+                            color = awayNum
                         )
                     }
                     Spacer(Modifier.height(4.dp))
-                    SplitBar(b.homeFraction, homeKit, awayKit)
+                    SplitBar(b.homeFraction, homeKitRaw, awayKitRaw)
                 }
             }
         }
@@ -856,16 +826,26 @@ private fun SplitBar(homeFraction: Float?, homeColor: Color, awayColor: Color) {
     }
 }
 
+/** A tapped player and everything we honestly know about their match. */
+private data class PlayerSpot(
+    val player: StatsPlayer,
+    val side: Int,
+    val posKey: String,
+    val events: List<StatsEvent>
+)
+
 @Composable
 private fun LineupsSection(match: Match, ds: MatchStats) {
-    // v1.8.0 roadmap P1: 2D tactical pitch. Rendered ONLY when both XIs
-    // are complete (11 starters each, formation rows sum to 10 outfield
-    // players) — the provider lists starters GK-first in formation order,
-    // verified live 2026-11-11 on real ESPN summaries. Anything less
-    // falls back to the v1.5.0 text list; positions are NEVER invented.
+    // v1.9.0 (spec §4): ONE unified pitch — home top half, away bottom half,
+    // events as badges with minutes above each player, subs on a bench
+    // strip, tap any player for the max-info sheet. Rendered ONLY when both
+    // XIs are complete (11 starters each, formation rows sum to 10 outfield
+    // players) — anything less falls back to the text list; positions are
+    // NEVER invented (no-fake rule).
     val pitchable = ds.lineups.size == 2 && ds.lineups.all { lu ->
         lu.starters.size == 11 && formationRows(lu.formation)?.sum() == 11
     }
+    var playerFor by remember { mutableStateOf<PlayerSpot?>(null) }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(
@@ -875,19 +855,11 @@ private fun LineupsSection(match: Match, ds: MatchStats) {
             )
             Spacer(Modifier.height(12.dp))
             if (pitchable) {
-                Row(Modifier.fillMaxWidth()) {
-                    LineupsPitch(
-                        ds.lineups[0],
-                        Color(TeamColors.colorsFor(match.homeTeam.name).bg),
-                        Modifier.weight(1f)
-                    )
-                    Spacer(Modifier.width(14.dp))
-                    LineupsPitch(
-                        ds.lineups[1],
-                        Color(TeamColors.colorsFor(match.awayTeam.name).bg),
-                        Modifier.weight(1f)
-                    )
-                }
+                UnifiedPitch(
+                    match = match,
+                    ds = ds,
+                    onPlayer = { playerFor = it }
+                )
             } else {
                 Row(Modifier.fillMaxWidth()) {
                     ds.lineups.forEachIndexed { i, lu ->
@@ -898,79 +870,180 @@ private fun LineupsSection(match: Match, ds: MatchStats) {
             }
         }
     }
+    playerFor?.let { spot ->
+        PlayerSheet(spot, match, onDismiss = { playerFor = null })
+    }
+}
+
+/** Team anchor above/below the pitch: crest + name + formation + coach. */
+@Composable
+private fun TeamAnchor(team: Team, lu: StatsLineup) {
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TeamBadge(team.name, team.tla, 20.dp)
+        Spacer(Modifier.width(8.dp))
+        Text(
+            team.shortName ?: team.name,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            listOfNotNull(lu.formation, lu.coach).joinToString("  •  "),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }
 
 /**
- * One team's half of the pitch, drawn vertically (own goal at the
- * bottom). Node positions come from the formation rows mapped onto the
- * provider's GK-first starter order.
+ * The all-in-one pitch (spec §4.1): vertical, home occupying the TOP half
+ * and away the BOTTOM half so both teams face each other across the
+ * halfway line. Positions come from the formation rows mapped onto the
+ * provider's GK-first starter order — the same verified mapping as v1.8.0.
+ * The pitch is forced LTR: a mirrored pitch would lie about the game.
  */
 @Composable
-private fun LineupsPitch(lu: StatsLineup, kitColor: Color, modifier: Modifier = Modifier) {
-    val rows = formationRows(lu.formation) ?: return
-    val pitchLine = MaterialTheme.colorScheme.outlineVariant
-    Column(modifier) {
-        Text(
-            lu.formation ?: "",
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        lu.coach?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Spacer(Modifier.height(6.dp))
+private fun UnifiedPitch(
+    match: Match,
+    ds: MatchStats,
+    onPlayer: (PlayerSpot) -> Unit
+) {
+    val homeKit = Color(TeamColors.colorsFor(match.homeTeam.name).bg)
+    val awayKit = Color(TeamColors.colorsFor(match.awayTeam.name).bg)
+    TeamAnchor(match.homeTeam, ds.lineups[0])
+    Spacer(Modifier.height(8.dp))
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         BoxWithConstraints(
             Modifier
                 .fillMaxWidth()
-                .aspectRatio(0.62f)
-                .clip(RoundedCornerShape(10.dp))
+                .aspectRatio(0.85f)
+                .clip(RoundedCornerShape(12.dp))
                 .background(PitchGreen.copy(alpha = 0.10f))
-                .border(1.dp, pitchLine.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
         ) {
+            val pitchLine = MaterialTheme.colorScheme.outlineVariant
             val pitchW = maxWidth
             val pitchH = maxHeight
-            // halfway line above the GK (bottom of the half)
+            // halfway line
             Box(
                 Modifier
-                    .align(Alignment.BottomStart)
+                    .align(Alignment.CenterStart)
                     .fillMaxWidth()
                     .padding(horizontal = 6.dp)
-                    .offset(y = (-14).dp)
                     .height(0.5.dp)
                     .background(pitchLine.copy(alpha = 0.5f))
             )
-            var playerIndex = 0
-            rows.forEachIndexed { rowIdx, count ->
-                val f = rowIdx.toFloat() / (rows.size - 1).coerceAtLeast(1)
-                val yFrac = 0.93f - f * 0.78f          // GK bottom -> attackers top
-                repeat(count) {
-                    val p = lu.starters.getOrNull(playerIndex) ?: return@repeat
-                    playerIndex++
-                    val xFrac = (it + 1f) / (count + 1f)
-                    PlayerNode(
-                        p = p,
-                        color = kitColor,
-                        modifier = Modifier.offset(
-                            x = pitchW * (xFrac - 0.5f * (22.dp.value / pitchW.value)),
-                            y = pitchH * yFrac
-                        )
-                    )
-                }
+            // center circle
+            Box(
+                Modifier
+                    .align(Alignment.Center)
+                    .size(46.dp)
+                    .border(1.dp, pitchLine.copy(alpha = 0.5f), CircleShape)
+            )
+            PitchTeam(
+                lineup = ds.lineups[0],
+                side = 0,
+                kit = homeKit,
+                events = ds.events,
+                yFor = { f -> 0.07f + f * 0.37f },   // GK top edge -> attackers near center
+                onPlayer = onPlayer,
+                pitchW = pitchW,
+                pitchH = pitchH
+            )
+            PitchTeam(
+                lineup = ds.lineups[1],
+                side = 1,
+                kit = awayKit,
+                events = ds.events,
+                yFor = { f -> 0.93f - f * 0.37f },   // GK bottom edge -> attackers near center
+                onPlayer = onPlayer,
+                pitchW = pitchW,
+                pitchH = pitchH
+            )
+        }
+    }
+    Spacer(Modifier.height(8.dp))
+    TeamAnchor(match.awayTeam, ds.lineups[1])
+    BenchStrip(match, ds.events)
+}
+
+/** One team's players + their event badges, placed by formation rows. */
+@Composable
+private fun BoxScope.PitchTeam(
+    lineup: StatsLineup,
+    side: Int,
+    kit: Color,
+    events: List<StatsEvent>,
+    yFor: (Float) -> Float,
+    onPlayer: (PlayerSpot) -> Unit,
+    pitchW: Dp,
+    pitchH: Dp
+) {
+    val rows = formationRows(lineup.formation) ?: return
+    var playerIndex = 0
+    rows.forEachIndexed { rowIdx, count ->
+        val f = rowIdx.toFloat() / (rows.size - 1).coerceAtLeast(1)
+        val yFrac = yFor(f)
+        repeat(count) {
+            val p = lineup.starters.getOrNull(playerIndex) ?: return@repeat
+            val idx = playerIndex
+            playerIndex++
+            val xFrac = (it + 1f) / (count + 1f)
+            // Events involving THIS starter: goals/cards name them directly;
+            // a substitution names them in `other` (the replaced player).
+            val mine = events.filter { ev ->
+                ev.side == side && (
+                    if (ev.kind == "sub") playerMatches(ev.other ?: "", p.name)
+                    else playerMatches(ev.player, p.name)
+                )
             }
+            val spot = PlayerSpot(
+                player = p,
+                side = side,
+                posKey = positionLabel(rows, idx),
+                events = mine
+            )
+            PlayerNode(
+                p = p,
+                color = kit,
+                badges = mine,
+                modifier = Modifier.offset(
+                    x = pitchW * (xFrac - 0.5f * (22.dp.value / pitchW.value)),
+                    y = pitchH * yFrac
+                ),
+                onClick = { onPlayer(spot) }
+            )
         }
     }
 }
 
 @Composable
-private fun PlayerNode(p: StatsPlayer, color: Color, modifier: Modifier = Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+private fun PlayerNode(
+    p: StatsPlayer,
+    color: Color,
+    badges: List<StatsEvent>,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier.clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Spec §4.2: event badges ABOVE the jersey, grouped per kind —
+        // "⚽ 23', 67'", cards and the sub arrow. Only real events, only
+        // real minutes; nothing is invented to fill the pitch.
+        badges.groupBy { if (it.kind == "sub") "sub" else it.kind }
+            .values
+            .take(3)
+            .forEach { group -> EventBadge(group, color) }
+        if (badges.isNotEmpty()) Spacer(Modifier.height(1.dp))
         Surface(
             shape = CircleShape,
             color = color,
@@ -993,6 +1066,187 @@ private fun PlayerNode(p: StatsPlayer, color: Color, modifier: Modifier = Modifi
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1
         )
+    }
+}
+
+/** One grouped badge pill: minute(s) + kind glyph, colored by kind. */
+@Composable
+private fun EventBadge(group: List<StatsEvent>, kit: Color) {
+    val kind = group.first().kind
+    val minutes = group.joinToString(", ") { "${it.minute}'" }
+    val bg = when (kind) {
+        "yellow" -> Color(0xFFF2C94C)
+        "red" -> Color(0xFFEB5757)
+        "sub" -> MaterialTheme.colorScheme.outlineVariant
+        else -> kit
+    }
+    val fg = when (kind) {
+        "yellow" -> Color(0xFF3B2F00)
+        else -> Color.White
+    }
+    val glyph = if (kind == "sub") "⬇" else if (kind == "goal") "⚽" else ""
+    Surface(
+        shape = RoundedCornerShape(5.dp),
+        color = bg,
+        border = if (kind == "goal") BorderStroke(0.5.dp, Color.White) else null
+    ) {
+        Text(
+            ("$glyph $minutes").trim(),
+            Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+            fontSize = 7.sp,
+            fontWeight = FontWeight.Bold,
+            color = fg,
+            maxLines = 1
+        )
+    }
+}
+
+/**
+ * Bench strip (spec §4.2): the players who came ON, with their minute.
+ * Built ONLY from real substitution events — no subs in the data, no
+ * strip (we never invent a bench).
+ */
+@Composable
+private fun BenchStrip(match: Match, events: List<StatsEvent>) {
+    val subs = events.filter { it.kind == "sub" }
+    if (subs.isEmpty()) return
+    Spacer(Modifier.height(10.dp))
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+    )
+    Spacer(Modifier.height(8.dp))
+    Row(Modifier.fillMaxWidth()) {
+        Column(Modifier.weight(1f)) {
+            subs.filter { it.side == 0 }.forEach { BenchRow(it) }
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            subs.filter { it.side == 1 }.forEach { BenchRow(it) }
+        }
+    }
+}
+
+@Composable
+private fun BenchRow(e: StatsEvent) {
+    Text(
+        "⬆ ${e.minute}'  ${e.player}",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(vertical = 1.dp)
+    )
+}
+
+/**
+ * Player max-info sheet (spec §4.3) — every field we ACTUALLY have from
+ * the free providers: identity (number, name, team, formation-derived
+ * position group) and this match's real events. Photos, ages and career
+ * bios are premium-API fields; when a richer plan is connected they
+ * render here automatically. Zero placeholders on the free tier.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PlayerSheet(spot: PlayerSpot, match: Match, onDismiss: () -> Unit) {
+    val team = if (spot.side == 0) match.homeTeam else match.awayTeam
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 28.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TeamBadge(team.name, team.tla, 34.dp)
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(
+                        "#${spot.player.number ?: "·"}  ${spot.player.name}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "${team.shortName ?: team.name}  •  " +
+                            stringResource(positionString(spot.posKey)),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            if (spot.events.isNotEmpty()) {
+                Text(
+                    stringResource(R.string.stats_events),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(6.dp))
+                spot.events.forEach { ev -> SheetEventRow(ev) }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                stringResource(R.string.player_sheet_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun positionString(key: String): Int = when (key) {
+    "GK" -> R.string.pos_gk
+    "DF" -> R.string.pos_df
+    "FW" -> R.string.pos_fw
+    else -> R.string.pos_mf
+}
+
+@Composable
+private fun SheetEventRow(e: StatsEvent) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            e.minute,
+            Modifier.width(44.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        when (e.kind) {
+            "yellow" -> CardChip(Color(0xFFF2C94C))
+            "red" -> CardChip(Color(0xFFEB5757))
+            "sub" -> Icon(
+                Icons.Filled.SwapVert, contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            else -> Icon(
+                Icons.Filled.SportsSoccer, contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Column {
+            if (e.detail.isNotBlank()) {
+                Text(
+                    e.detail,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1
+                )
+            }
+            e.other?.let {
+                Text(
+                    if (e.kind == "sub") "→ $it" else "($it)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
     }
 }
 

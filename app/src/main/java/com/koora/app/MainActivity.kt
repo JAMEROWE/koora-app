@@ -10,7 +10,6 @@ import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.OndemandVideo
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -22,6 +21,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -79,16 +80,16 @@ private data class TabItem(val route: String, val icon: ImageVector, val labelRe
 @Composable
 private fun KooraRoot() {
     val nav = rememberNavController()
-    // v1.6.0: Live is the main experience (Today + Tomorrow by league with
-    // polls) and opens first; Matches is now the Results screen.
+    // v1.9.0 (master spec §1): Settings LEFT the bottom bar — it is now the
+    // gear icon in every top-level screen's app bar. Five single-line tabs:
     val tabs = listOf(
         TabItem("live", Icons.Filled.FiberManualRecord, R.string.tab_live),
         TabItem("matches", Icons.Filled.SportsSoccer, R.string.tab_matches),
         TabItem("standings", Icons.Filled.EmojiEvents, R.string.tab_standings),
         TabItem("highlights", Icons.Filled.OndemandVideo, R.string.tab_highlights),
-        TabItem("news", Icons.Filled.Article, R.string.tab_news),
-        TabItem("settings", Icons.Filled.Settings, R.string.tab_settings)
+        TabItem("news", Icons.Filled.Article, R.string.tab_news)
     )
+    val openSettings = { nav.navigate("settings") }
 
     Scaffold(
         bottomBar = {
@@ -112,7 +113,18 @@ private fun KooraRoot() {
                                 }
                             },
                             icon = { Icon(tab.icon, contentDescription = null) },
-                            label = { Text(stringResource(tab.labelRes)) }
+                            label = {
+                                // Spec §1.2: single-line labels — "Standings"
+                                // never wraps its last letter onto a second
+                                // line on compact screens or in FR/AR.
+                                Text(
+                                    stringResource(tab.labelRes),
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis,
+                                    fontSize = 10.sp
+                                )
+                            }
                         )
                     }
                 }
@@ -125,21 +137,33 @@ private fun KooraRoot() {
             modifier = Modifier.padding(padding)
         ) {
             composable("matches") {
-                MatchesScreen(onMatchClick = { id -> nav.navigate("match/$id") })
+                MatchesScreen(
+                    onMatchClick = { id -> nav.navigate("match/$id") },
+                    onOpenSettings = openSettings
+                )
             }
             composable("live") {
-                LiveScreen(onMatchClick = { id -> nav.navigate("match/$id") })
+                LiveScreen(
+                    onMatchClick = { id -> nav.navigate("match/$id") },
+                    onOpenSettings = openSettings
+                )
             }
-            composable("standings") { StandingsScreen() }
+            composable("standings") { StandingsScreen(onOpenSettings = openSettings) }
             composable("highlights") {
-                HighlightsHubScreen(onWatch = { home, away ->
-                    nav.navigate("video?home=${Uri.encode(home)}&away=${Uri.encode(away)}")
-                })
+                HighlightsHubScreen(
+                    onWatch = { home, away ->
+                        nav.navigate("video?home=${Uri.encode(home)}&away=${Uri.encode(away)}")
+                    },
+                    onOpenSettings = openSettings
+                )
             }
-            composable("news") { NewsScreen(onArticleClick = { item ->
-                nav.navigate("article?url=${Uri.encode(item.link)}&title=${Uri.encode(item.title)}")
-            }) }
-            composable("settings") { SettingsScreen() }
+            composable("news") { NewsScreen(
+                onArticleClick = { item ->
+                    nav.navigate("article?url=${Uri.encode(item.link)}&title=${Uri.encode(item.title)}")
+                },
+                onOpenSettings = openSettings
+            ) }
+            composable("settings") { SettingsScreen(onBack = { nav.popBackStack() }) }
             composable("match/{id}") { entry ->
                 val id = entry.arguments?.getString("id")?.toLongOrNull() ?: 0L
                 MatchDetailScreen(

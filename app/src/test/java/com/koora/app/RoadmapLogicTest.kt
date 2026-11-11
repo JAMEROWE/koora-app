@@ -2,10 +2,14 @@ package com.koora.app
 
 import com.koora.app.ui.formationRows
 import com.koora.app.ui.minuteValue
+import com.koora.app.ui.playerMatches
+import com.koora.app.ui.positionLabel
+import com.koora.app.ui.statNumberColor
 import com.koora.app.ui.screens.regionAllows
 import com.koora.app.ui.screens.verifyDataApiVideo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -144,5 +148,77 @@ class RoadmapLogicTest {
         assertFalse(regionAllows(listOf("US"), emptyList(), "us"))
         // "FR" in the allow list must admit "fr" devices
         assertTrue(regionAllows(emptyList(), listOf("FR"), "fr"))
+    }
+
+    // ---------- v1.9.0: playerMatches (pitch event badges) ----------
+
+    @Test
+    fun playerMatches_fullAndSurnameForms() {
+        assertTrue(playerMatches("Bukayo Saka", "Bukayo Saka"))
+        assertTrue(playerMatches("B. Saka", "Bukayo Saka"))        // abbreviated event text
+        assertTrue(playerMatches("Bukayo Saka", "B Saka"))          // "B" dropped (short token)
+        assertTrue(playerMatches("Saka", "Bukayo Saka"))            // surname-only event text still matches
+        // ...but a DIFFERENT first-name-only form does not:
+        assertFalse(playerMatches("Gabriel", "Gabriel Barbosa"))    // same first name, different player
+        assertFalse(playerMatches("Cole Palmer", "Bukayo Saka"))
+        assertFalse(playerMatches("", "Bukayo Saka"))
+    }
+
+    @Test
+    fun playerMatches_sameSurnameDistinctPlayers_cannotBothMatch() {
+        // Two Haleys in one match are rare; the surname rule is the best
+        // honest signal available — but a DIFFERENT surname never matches.
+        assertFalse(playerMatches("Jamie Vardy", "Jordan Ayew"))
+    }
+
+    // ---------- v1.9.0: statNumberColor (WCAG-safe numbers) ----------
+
+    private fun lum(c: Int): Double {
+        val r = (c shr 16) and 0xFF
+        val g = (c shr 8) and 0xFF
+        val b = c and 0xFF
+        return 0.2126 * r / 255.0 + 0.7152 * g / 255.0 + 0.0722 * b / 255.0
+    }
+
+    @Test
+    fun statNumberColor_darkKitLiftedInDarkTheme() {
+        val darkNavy = 0xFF1A2A5E.toInt()
+        val lifted = statNumberColor(darkNavy, darkTheme = true)
+        assertNotEquals(darkNavy, lifted)
+        assertTrue("lifted color must be brighter", lum(lifted) > lum(darkNavy))
+    }
+
+    @Test
+    fun statNumberColor_whiteKitDarkenedInLightTheme() {
+        val white = 0xFFFFFFFF.toInt()
+        val darkened = statNumberColor(white, darkTheme = false)
+        assertTrue("darkened color must be darker", lum(darkened) < lum(white))
+    }
+
+    @Test
+    fun statNumberColor_alreadyReadable_isUntouched() {
+        val midGreen = 0xFF34D399.toInt()   // bright enough for dark, dark enough for light
+        assertEquals(midGreen, statNumberColor(midGreen, darkTheme = true))
+        assertEquals(midGreen, statNumberColor(midGreen, darkTheme = false))
+    }
+
+    // ---------- v1.9.0: positionLabel (structural, never invented) ----------
+
+    @Test
+    fun positionLabel_433() {
+        val rows = formationRows("4-3-3")!!      // [1, 4, 3, 3]
+        assertEquals("GK", positionLabel(rows, 0))
+        assertEquals("DF", positionLabel(rows, 1))
+        assertEquals("DF", positionLabel(rows, 4))
+        assertEquals("MF", positionLabel(rows, 5))
+        assertEquals("FW", positionLabel(rows, 8))
+        assertEquals("FW", positionLabel(rows, 10))
+    }
+
+    @Test
+    fun positionLabel_outOfRange_isSafe() {
+        val rows = formationRows("4-3-3")!!
+        assertEquals("MF", positionLabel(rows, -1))
+        assertEquals("MF", positionLabel(rows, 11))
     }
 }

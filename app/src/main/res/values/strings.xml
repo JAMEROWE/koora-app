@@ -19,6 +19,15 @@
     <string name="tab_highlights">Highlights</string>
     <string name="hub_empty">No official highlights released yet. Videos appear here the moment the leagues publish them — tap refresh to check again.</string>
     <string name="hub_refresh">Refresh highlights</string>
+    <string name="day_after">Day after</string>
+    <string name="empty_day_after">No matches yet for the day after tomorrow.</string>
+    <string name="chip_all">All days</string>
+    <string name="nav_back">Back</string>
+    <string name="pos_gk">Goalkeeper</string>
+    <string name="pos_df">Defender</string>
+    <string name="pos_mf">Midfielder</string>
+    <string name="pos_fw">Forward</string>
+    <string name="player_sheet_note">Full profiles — photos, ages, season stats — unlock automatically when a richer data plan is connected.</string>
     <string name="fav_tab">Favorites</string>
     <string name="fav_empty">No favorite matches yet. Tap the star on any match to follow it.</string>
     <string name="fav_count">Saved matches: %1$d</string>

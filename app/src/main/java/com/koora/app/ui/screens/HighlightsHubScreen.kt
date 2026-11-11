@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -78,9 +79,10 @@ class HighlightsHubViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val now = System.currentTimeMillis()
-                // Exactly the Live/Results window — shared per-league cache.
+                // Exactly the Live/Results window (v1.9.0: ..day after) —
+                // shared per-league cache, zero duplicate calls.
                 val fixtures = MatchRepository.matchesWindow(
-                    localDayKeyAt(now, -6), localDayKeyAt(now, 1)
+                    localDayKeyAt(now, -6), localDayKeyAt(now, 2)
                 )
                 rows = HighlightsHub.resolve(context, fixtures)
             } catch (_: Exception) {
@@ -97,6 +99,7 @@ class HighlightsHubViewModel : ViewModel() {
 @Composable
 fun HighlightsHubScreen(
     onWatch: (String, String) -> Unit,
+    onOpenSettings: () -> Unit = {},
     vm: HighlightsHubViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -110,6 +113,13 @@ fun HighlightsHubScreen(
         TopAppBar(
             title = { Text(stringResource(R.string.tab_highlights)) },
             actions = {
+                // v1.9.0 (spec §1.1): Settings gear top-right.
+                IconButton(onClick = onOpenSettings) {
+                    Icon(
+                        Icons.Filled.Settings,
+                        contentDescription = stringResource(R.string.tab_settings)
+                    )
+                }
                 IconButton(onClick = { reloadTick++ }) {
                     Icon(
                         Icons.Filled.Refresh,

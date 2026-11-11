@@ -19,6 +19,15 @@
     <string name="tab_highlights">الملخصات</string>
     <string name="hub_empty">لا توجد ملخصات رسمية منشورة بعد. تظهر الفيديوهات هنا فور نشرها من قبل الدوريات — اضغط التحديث لإعادة المحاولة.</string>
     <string name="hub_refresh">تحديث الملخصات</string>
+    <string name="day_after">بعد غد</string>
+    <string name="empty_day_after">لا توجد مباريات بعد غد حالياً.</string>
+    <string name="chip_all">كل الأيام</string>
+    <string name="nav_back">رجوع</string>
+    <string name="pos_gk">حارس المرمى</string>
+    <string name="pos_df">مدافع</string>
+    <string name="pos_mf">وسط</string>
+    <string name="pos_fw">مهاجم</string>
+    <string name="player_sheet_note">الملفات الكاملة — الصور والأعمار وإحصائيات الموسم — تظهر تلقائياً عند توصيل خطة بيانات أغنى.</string>
     <string name="fav_tab">المفضلة</string>
     <string name="fav_empty">لا توجد مباريات مفضلة. اضغط على النجمة في أي مباراة لمتابعتها.</string>
     <string name="fav_count">المباريات المحفوظة: %1$d</string>
