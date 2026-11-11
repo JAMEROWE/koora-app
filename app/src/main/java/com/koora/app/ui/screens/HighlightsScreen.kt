@@ -8,6 +8,8 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
+// v1.8.0: video resolution moved to HighlightsSource.kt (shared with the
+// match-detail availability gate). This file keeps ONLY the player UI.
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,24 +54,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.google.gson.Gson
-import com.koora.app.BuildConfig
 import com.koora.app.R
 import com.koora.app.ads.AdBanner
 import com.koora.app.ads.AdsManager
 import com.koora.app.ui.VideoPolicy
 import com.koora.app.ui.components.LivePulseDot
 import com.koora.app.ui.theme.PitchAccent
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
-import org.xmlpull.v1.XmlPullParser
-import org.xmlpull.v1.XmlPullParserFactory
-import java.io.ByteArrayInputStream
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
 
 /*
  * IN-APP VIDEO HIGHLIGHTS — "Watch highlights" plays INSIDE Koora.
@@ -134,7 +124,7 @@ fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
     LaunchedEffect(home, away, retryTick) {
         resolving = true
         currentId = null
-        val found = resolveVideos(context, home, away)
+        val found = HighlightsSource.resolve(context, home, away)
         videos = found
         currentId = found.firstOrNull()?.videoId
         resolving = false
@@ -264,6 +254,19 @@ fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
                             .weight(1f)
                             .verticalScroll(rememberScrollState())
                     ) {
+                        // v1.8.0 attribution (roadmap §3.4) — shown whenever the
+                        // player is visible: official video, streamed by YouTube.
+                        val currentChannel = videos
+                            .firstOrNull { it.videoId == currentId }?.channel
+                        Text(
+                            stringResource(
+                                R.string.video_attribution,
+                                currentChannel?.takeIf { it.isNotBlank() } ?: "YouTube"
+                            ),
+                            Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         val more = videos.drop(1)
                         if (more.isNotEmpty()) {
                             Text(
@@ -387,152 +390,3 @@ private fun NoHighlightsState(onRetry: () -> Unit) {
 }
 
 // ---------------------------------------------------------------------------
-// Video resolution
-// ---------------------------------------------------------------------------
-
-/** Official competition channels (verified live 2026-11-09). */
-private val OFFICIAL_CHANNELS = listOf(
-    "UCG5qGWdu8nIRZqJ_GgDwQ-w", // Premier League
-    "UCTv-XvfzLX3i4IGWAm4sbmA", // LaLiga
-    "UCQsH5XtIc9hONE1BQjucM0g", // Ligue 1
-    "UCyGa1YEx9ST66rYrJTGIKOw", // UEFA (Champions League)
-    "UC6UL29enLNe4mqwTfAyeNuw", // Bundesliga
-    "UCBJeMCIeLQos7wacox4hmLQ"  // Serie A
-)
-
-internal data class YtEntry(val title: String, val videoId: String, val published: String)
-
-/** All matching official videos, newest first (v1.5.4 feeds our panel).
- *  v1.5.6: resolved at most once per fixture — VideoCache serves found
- *  videos for 24h and a fresh "nothing yet" for 45 minutes. */
-private suspend fun resolveVideos(context: android.content.Context?, home: String, away: String): List<YtEntry> =
-    withContext(Dispatchers.IO) {
-        if (context != null) {
-            VideoCache.get(context, home, away)?.let { return@withContext it }
-        }
-        val found = runCatching {
-            if (BuildConfig.YOUTUBE_API_KEY.isNotBlank()) {
-                viaDataApi(home, away) ?: viaOfficialChannels(home, away)
-            } else {
-                viaOfficialChannels(home, away)
-            }
-        }.getOrDefault(emptyList())
-        if (context != null) {
-            if (found.isNotEmpty()) VideoCache.putFound(context, home, away, found)
-            else VideoCache.putMiss(context, home, away)
-        }
-        found
-    }
-
-/** Tier 1 (optional): exact search across ALL of YouTube, needs a free API key. */
-private fun viaDataApi(home: String, away: String): List<YtEntry>? {
-    val q = URLEncoder.encode("$home vs $away highlights", "UTF-8")
-    val url = "https://www.googleapis.com/youtube/v3/search" +
-        "?part=snippet&type=video&maxResults=1&q=$q&key=${BuildConfig.YOUTUBE_API_KEY}"
-    val text = httpGet(url) ?: return null
-    data class Id(val videoId: String? = null)
-    data class Item(val id: Id? = null)
-    data class SearchResult(val items: List<Item> = emptyList())
-    val id = Gson().fromJson(text, SearchResult::class.java).items.firstOrNull()?.id?.videoId
-    return id?.let { listOf(YtEntry("$home vs $away — highlights", it, "")) }
-}
-
-/** Tier 2 (no key): match team names against official league channels' feeds. */
-private suspend fun viaOfficialChannels(home: String, away: String): List<YtEntry> =
-    coroutineScope {
-        OFFICIAL_CHANNELS.map { ch -> async { runCatching { fetchChannelFeed(ch) }.getOrDefault(emptyList()) } }
-            .flatMap { it.await() }
-            .filter { titleMatches(it.title, home) && titleMatches(it.title, away) }
-            .sortedByDescending { it.published }  // newest highlights first
-    }
-
-private fun fetchChannelFeed(channelId: String): List<YtEntry> {
-    val text = httpGet("https://www.youtube.com/feeds/videos.xml?channel_id=$channelId")
-        ?: return emptyList()
-    return parseChannelFeed(text)
-}
-
-/**
- * Parses a YouTube channel Atom feed. THE FIX (v1.5.6): with namespace
- * processing disabled (Android default) the tag of <yt:videoId> arrives
- * as "yt:videoId" — the old code compared it to "videoid" and NEVER
- * matched, so official-channel highlights silently resolved to nothing.
- * We now strip the prefix before matching. A saved real-shaped feed is
- * unit-tested in HighlightsParserTest.
- */
-internal fun parseChannelFeed(text: String): List<YtEntry> {
-    val parser = XmlPullParserFactory.newInstance().newPullParser()
-    parser.setInput(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)), null)
-
-    val entries = mutableListOf<YtEntry>()
-    var inEntry = false
-    var tag: String? = null
-    var title = ""
-    var videoId = ""
-    var published = ""
-
-    while (parser.eventType != XmlPullParser.END_DOCUMENT) {
-        when (parser.eventType) {
-            XmlPullParser.START_TAG -> {
-                val name = parser.name ?: ""
-                if (name.equals("entry", true)) {
-                    inEntry = true
-                    title = ""; videoId = ""; published = ""
-                }
-                tag = name
-            }
-            XmlPullParser.TEXT -> if (inEntry) when (tag?.substringAfterLast(':')?.lowercase()) {
-                // Guard: <media:title> repeats <title> — capture only the first.
-                "title" -> if (title.isEmpty()) title += parser.text
-                "videoid" -> videoId += parser.text
-                "published" -> published += parser.text
-            }
-            XmlPullParser.END_TAG -> {
-                val name = parser.name ?: ""
-                if (name.equals("entry", true)) {
-                    inEntry = false
-                    if (videoId.isNotBlank()) {
-                        entries += YtEntry(title.trim(), videoId.trim(), published.trim())
-                    }
-                }
-            }
-        }
-        parser.next()
-    }
-    return entries
-}
-
-/** Token-based title matching tolerant of provider naming differences. */
-private val stopTokens = setOf("fc", "cf", "club", "athletic", "ac", "sc", "afc", "as", "ca", "cd", "if", "de", "the")
-
-// Tokens too generic to match alone ("Real Betis" vs "Real Madrid", "Man City")
-private val ambiguousTokens = setOf("real", "city", "inter", "united", "sporting", "racing", "union", "atletico")
-
-private fun tokens(name: String): List<String> =
-    name.lowercase()
-        .replace(Regex("[^\\p{L}\\p{Nd} ]"), " ")
-        .split(Regex("\\s+"))
-        .filter { it.isNotEmpty() && it !in stopTokens }
-
-internal fun titleMatches(title: String, team: String): Boolean {
-    val t = title.lowercase()
-    val toks = tokens(team)
-    // A distinctive token (>=4 chars, not generic) decides the match
-    if (toks.any { it !in ambiguousTokens && it.length >= 4 && t.contains(it) }) return true
-    // Otherwise only the full normalized name counts
-    val full = toks.joinToString(" ")
-    return full.isNotEmpty() && t.contains(full)
-}
-
-private fun httpGet(url: String): String? = runCatching {
-    val conn = URL(url).openConnection() as HttpURLConnection
-    conn.connectTimeout = 8_000
-    conn.readTimeout = 12_000
-    conn.instanceFollowRedirects = true
-    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; KooraApp/1.5)")
-    try {
-        conn.inputStream.use { it.readBytes().decodeToString() }
-    } finally {
-        conn.disconnect()
-    }
-}.getOrNull()

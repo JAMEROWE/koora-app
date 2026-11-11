@@ -38,6 +38,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.koora.app.BuildConfig
 import com.koora.app.R
 import com.koora.app.ads.AdBanner
+import com.koora.app.ads.NativeAdCard
 import com.koora.app.data.FavoritesStore
 import com.koora.app.data.Match
 import com.koora.app.data.MatchRepository
@@ -252,6 +253,9 @@ fun LiveScreen(
                         onTeam = { teamFor = it },
                         onToggleFavorite = onToggleFavorite
                     )
+                    // v1.8.0 roadmap P0: native ad card in the fixture feed
+                    // (FotMob-style in-feed placement, matches the Results tab).
+                    item(key = "ad-native-live") { NativeAdCard() }
                     dayBlock(
                         tag = "w",
                         title = tomorrowTitle,

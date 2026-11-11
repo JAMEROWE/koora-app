@@ -23,6 +23,9 @@
     <string name="no_live">لا توجد مباريات مباشرة حالياً. عود قريباً — هذه الصفحة تُحدّث تلقائياً.</string>
     <string name="updated_at">آخر تحديث %1$s</string>
     <string name="highlights_button">شاهد ملخص المباراة</string>
+    <string name="highlights_attribution">فيديوهات رسمية عبر يوتيوب • قنوات الدوريات الموثقة</string>
+    <string name="video_attribution">فيديو رسمي عبر يوتيوب • %1$s</string>
+    <string name="legal_notice">كورة هو تطبيق مستقل للنتائج المباشرة والإحصائيات الرياضية. جميع ملخصات المباريات هي فيديوهات رسمية تُستضاف وتُبث مباشرة عبر يوتيوب من قبل أصحاب الحقوق المعنيين. كورة لا تستضيف أو ترفع أو تدّعي ملكية أي بث فيديو أو شعارات دوريات أو علامات تجارية للأندية.</string>
     <string name="news_empty">لا توجد أخبار حالياً. اضغط التحديث لإعادة المحاولة.</string>
     <string name="news_refresh">تحديث الأخبار</string>
     <string name="reader_close">إغلاق</string>

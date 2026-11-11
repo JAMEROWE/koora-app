@@ -87,6 +87,11 @@ object MatchStatsRepository {
     )
 
     // football-data competition code -> ESPN soccer slug (no key needed)
+    // v1.8.0: extended to the v1.7.0 "max attractive leagues" — every slug
+    // verified live 2026-11-11 (scoreboard returns the league object).
+    // KOR (K League 1) is deliberately ABSENT: ESPN has no coverage for it
+    // (league registry contains no kor.* entry), so those match pages show
+    // H2H/form only — sections stay hidden, never faked.
     internal val espnLeagueMap = mapOf(
         "CL" to "uefa.champions",
         "PL" to "eng.1",
@@ -100,7 +105,17 @@ object MatchStatsRepository {
         "BSA" to "bra.1",
         "CLI" to "conmebol.libertadores",
         "WC" to "fifa.world",
-        "EC" to "uefa.euro"
+        "EC" to "uefa.euro",
+        "UEL" to "uefa.europa",
+        "UECL" to "uefa.europa.conf",
+        "SPL" to "ksa.1",
+        "TUR" to "tur.1",
+        "ARG" to "arg.1",
+        "MEX" to "mex.1",
+        "MLS" to "usa.1",
+        "SCO" to "sco.1",
+        "BEL" to "bel.1",
+        "JPN" to "jpn.1"
     )
 
     private val hasKey: Boolean get() = BuildConfig.API_FOOTBALL_KEY.isNotBlank()

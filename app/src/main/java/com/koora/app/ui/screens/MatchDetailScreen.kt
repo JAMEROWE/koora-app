@@ -1,17 +1,21 @@
 package com.koora.app.ui.screens
 
 import android.app.Activity
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -47,16 +51,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.koora.app.BuildConfig
 import com.koora.app.R
+import com.koora.app.ads.AdBanner
 import com.koora.app.ads.AdsManager
 import com.koora.app.data.Match
 import com.koora.app.data.MatchRepository
@@ -64,10 +72,15 @@ import com.koora.app.data.MatchStats
 import com.koora.app.data.MatchStatsRepository
 import com.koora.app.data.StatsBar
 import com.koora.app.data.StatsEvent
+import com.koora.app.data.StatsLineup
+import com.koora.app.data.StatsPlayer
+import com.koora.app.data.TeamColors
 import com.koora.app.ui.components.LivePulseDot
 import com.koora.app.ui.components.TeamBadge
 import com.koora.app.ui.dateLabel
+import com.koora.app.ui.formationRows
 import com.koora.app.ui.isLive
+import com.koora.app.ui.minuteValue
 import com.koora.app.ui.scoreLabel
 import com.koora.app.ui.statusLabel
 import com.koora.app.ui.theme.LiveRed
@@ -80,6 +93,17 @@ import kotlinx.coroutines.launch
  * entry to a LIVE match (see AdsManager.maybeShowInterstitial).
  * Finished matches offer official video highlights watched IN-APP
  * (HighlightsScreen) since v1.4.2.
+ *
+ * v1.8.0 roadmap release:
+ *  - Highlights button exists ONLY when a verified official video is
+ *    confirmed available (roadmap P0) — otherwise the section is fully
+ *    hidden, never a placeholder or disabled state.
+ *  - Team-colored stadium hero (home left / away right, subtle lerp).
+ *  - 90-minute event timeline above the event list.
+ *  - Dual-sided stat bars in each team's kit color.
+ *  - 2D formation pitch for lineups (falls back to the text list when
+ *    formation or XI data is incomplete — positions are never invented).
+ *  - Sticky banner at the bottom (highest-dwell screen, roadmap P0).
  */
 sealed interface StatsUiState {
     data object Idle : StatsUiState
@@ -135,16 +159,15 @@ fun MatchDetailScreen(
     // Stats load automatically — free, no ad gate
     LaunchedEffect(matchId) { vm.loadStats(matchId) }
 
-    // Deep stats (events, lineups, bars) — demo sample or API-Football.
-    // v1.6.0: the league code comes from the MATCH itself (the window
-    // merged every competition, so the global cache tag no longer tells
-    // which league this fixture belongs to).
+    // Deep stats (events, lineups, bars) — real providers (ESPN / API-Football).
+    // v1.8.0: the demo sample is DEBUG-only — a release build with no key
+    // HIDES the sections (no-fake rule), it never shows invented players.
     LaunchedEffect(matchId) {
         match?.let {
             vm.loadDeepStats(
                 it,
                 it.competition?.code?.takeIf { c -> c.isNotBlank() } ?: MatchRepository.cacheCode,
-                !MatchRepository.hasKey
+                BuildConfig.DEBUG && !MatchRepository.hasKey
             )
         }
     }
@@ -166,7 +189,9 @@ fun MatchDetailScreen(
                     }
                 }
             )
-        }
+        },
+        // v1.8.0 roadmap P0: sticky banner on the highest-dwell screen.
+        bottomBar = { AdBanner() }
     ) { padding ->
         if (match == null) {
             Box(
@@ -187,16 +212,24 @@ fun MatchDetailScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(16.dp))
-                // v1.5.4 "stadium hero" — floodlit gradient scoreboard card
+                // v1.8.0 "stadium hero" — floodlit scoreboard card tinted with
+                // the two teams' kit colors (subtle, theme-aware lerp: home
+                // left, away right, neutral center).
+                val heroBase = MaterialTheme.colorScheme.surfaceContainerHigh
+                val heroEdge = MaterialTheme.colorScheme.surface
+                val homeKit = Color(TeamColors.colorsFor(match.homeTeam.name).bg)
+                val awayKit = Color(TeamColors.colorsFor(match.awayTeam.name).bg)
                 Box(
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(20.dp))
                         .background(
-                            Brush.verticalGradient(
+                            Brush.horizontalGradient(
                                 listOf(
-                                    MaterialTheme.colorScheme.surfaceContainerHigh,
-                                    MaterialTheme.colorScheme.surface
+                                    lerp(heroBase, homeKit, 0.20f),
+                                    lerp(heroBase, homeKit, 0.08f),
+                                    lerp(heroEdge, awayKit, 0.08f),
+                                    lerp(heroEdge, awayKit, 0.20f)
                                 )
                             )
                         )
@@ -269,8 +302,20 @@ fun MatchDetailScreen(
                     }
                 }
 
-                // Official video highlights, watched INSIDE the app
-                if (match.status == "FINISHED") {
+                // Official video highlights, watched INSIDE the app.
+                // v1.8.0 (roadmap P0): the section exists ONLY when a verified
+                // official video is confirmed available — checked once per
+                // fixture (VideoCache serves it), hidden from the UI tree
+                // otherwise. No placeholder, no disabled state, no fallback.
+                var videoReady by remember(matchId) { mutableStateOf(false) }
+                LaunchedEffect(matchId) {
+                    if (match.status == "FINISHED") {
+                        videoReady = HighlightsSource.hasVideo(
+                            context, match.homeTeam.name, match.awayTeam.name
+                        )
+                    }
+                }
+                if (videoReady) {
                     Spacer(Modifier.height(16.dp))
                     Button(
                         onClick = { onWatchHighlights(match.homeTeam.name, match.awayTeam.name) }
@@ -279,12 +324,22 @@ fun MatchDetailScreen(
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.highlights_button))
                     }
+                    Spacer(Modifier.height(4.dp))
+                    // Roadmap §3.4 inline attribution — shown whenever the
+                    // button is visible.
+                    Text(
+                        stringResource(R.string.highlights_attribution),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
                 }
 
                 Spacer(Modifier.height(28.dp))
                 StatsContent(match, vm.stats)
 
-                // Deep stats v1.5.0 — events, bars, lineups (hidden when no data)
+                // Deep stats v1.8.0 — timeline, events, kit-colored bars,
+                // 2D formation pitch (hidden when no data, as always)
                 vm.deepStats?.let { ds ->
                     if (ds.events.isNotEmpty()) {
                         Spacer(Modifier.height(20.dp))
@@ -292,11 +347,11 @@ fun MatchDetailScreen(
                     }
                     if (ds.bars.isNotEmpty()) {
                         Spacer(Modifier.height(16.dp))
-                        StatsBarsCard(ds)
+                        StatsBarsCard(match, ds)
                     }
                     if (ds.lineups.isNotEmpty()) {
                         Spacer(Modifier.height(16.dp))
-                        LineupsCard(ds)
+                        LineupsSection(match, ds)
                     }
                 }
 
@@ -525,7 +580,7 @@ private fun FormRow(teamName: String, form: List<Char>) {
 }
 
 // ---------------------------------------------------------------------------
-// Deep stats cards (v1.5.0): events timeline, stat bars, lineups
+// Deep stats cards (v1.8.0): 90' timeline, events, kit bars, 2D pitch
 // ---------------------------------------------------------------------------
 
 @Composable
@@ -537,9 +592,108 @@ private fun EventsCard(match: Match, ds: MatchStats) {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+            Spacer(Modifier.height(12.dp))
+            // v1.8.0 roadmap: horizontal 90-minute track — goals, cards and
+            // subs positioned by real minute (home above, away below).
+            // Events with an unparseable minute are skipped (never guessed).
+            MatchTimeline(match, ds.events)
+            Spacer(Modifier.height(10.dp))
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+            )
             Spacer(Modifier.height(8.dp))
             ds.events.forEach { e -> EventRow(match, e) }
         }
+    }
+}
+
+@Composable
+private fun MatchTimeline(match: Match, events: List<StatsEvent>) {
+    val homeKit = Color(TeamColors.colorsFor(match.homeTeam.name).bg)
+    val awayKit = Color(TeamColors.colorsFor(match.awayTeam.name).bg)
+    val track = MaterialTheme.colorScheme.outlineVariant
+
+    // Events positioned by real minute; unparseable minutes are skipped
+    // (never guessed). Same-minute collisions on one side stack one row
+    // up/down instead of overlapping; rows are capped — 3+ events in one
+    // minute for one team are vanishingly rare and may slightly overlap.
+    data class Plot(val min: Double, val e: StatsEvent, val row: Int)
+    val homeSide = mutableListOf<Plot>()
+    val awaySide = mutableListOf<Plot>()
+    events.forEach { e ->
+        val m = minuteValue(e.minute) ?: return@forEach
+        val side = if (e.side == 0) homeSide else awaySide
+        val row = (side.count { it.e.minute == e.minute }).coerceAtMost(1)
+        side.add(Plot(m, e, row))
+    }
+
+    BoxWithConstraints(Modifier.fillMaxWidth().height(60.dp)) {
+        val w = maxWidth
+        // 0'..95' span so 90+5 fits inside the track; 6dp padding each side
+        fun x(min: Double): Float = 6f + (min.coerceIn(0.0, 95.0) / 95.0).toFloat() * (w.value - 12f)
+        // the track itself
+        Box(
+            Modifier
+                .align(Alignment.CenterStart)
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp)
+                .height(2.dp)
+                .background(track, RoundedCornerShape(1.dp))
+        )
+        // minute ticks 45 / 90
+        listOf(45.0 to "45", 90.0 to "90").forEach { (min, label) ->
+            Text(
+                label,
+                Modifier
+                    .align(Alignment.TopStart)
+                    .offset(x = (x(min) - 4f).dp, y = 2.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        // home events just ABOVE the track, away events just BELOW it
+        homeSide.forEach { p ->
+            TimelineDot(
+                e = p.e, color = homeKit,
+                modifier = Modifier
+                    .offset(x = (x(p.min) - 5f).dp, y = (20 - p.row * 9).dp)
+            )
+        }
+        awaySide.forEach { p ->
+            TimelineDot(
+                e = p.e, color = awayKit,
+                modifier = Modifier
+                    .offset(x = (x(p.min) - 5f).dp, y = (34 + p.row * 9).dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TimelineDot(e: StatsEvent, color: Color, modifier: Modifier = Modifier) {
+    when (e.kind) {
+        "yellow" -> Surface(
+            modifier = modifier.size(7.dp),
+            shape = RoundedCornerShape(1.dp),
+            color = Color(0xFFF2C94C)
+        ) {}
+        "red" -> Surface(
+            modifier = modifier.size(7.dp),
+            shape = RoundedCornerShape(1.dp),
+            color = Color(0xFFEB5757)
+        ) {}
+        "sub" -> Surface(
+            modifier = modifier.size(7.dp),
+            shape = CircleShape,
+            color = Color.Transparent,
+            border = BorderStroke(1.5.dp, color)
+        ) {}
+        else -> Surface(
+            modifier = modifier.size(10.dp),
+            shape = CircleShape,
+            color = color,
+            border = BorderStroke(1.dp, Color.White)
+        ) {}
     }
 }
 
@@ -626,7 +780,10 @@ private fun CardChip(color: Color) {
 }
 
 @Composable
-private fun StatsBarsCard(ds: MatchStats) {
+private fun StatsBarsCard(match: Match, ds: MatchStats) {
+    // v1.8.0 roadmap: bars colored by each team's primary kit color.
+    val homeKit = Color(TeamColors.colorsFor(match.homeTeam.name).bg)
+    val awayKit = Color(TeamColors.colorsFor(match.awayTeam.name).bg)
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(
@@ -643,6 +800,7 @@ private fun StatsBarsCard(ds: MatchStats) {
                             Modifier.width(36.dp),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold,
+                            color = homeKit,
                             textAlign = TextAlign.End
                         )
                         Text(
@@ -659,11 +817,12 @@ private fun StatsBarsCard(ds: MatchStats) {
                             b.away,
                             Modifier.width(36.dp),
                             style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = awayKit
                         )
                     }
                     Spacer(Modifier.height(4.dp))
-                    SplitBar(b.homeFraction)
+                    SplitBar(b.homeFraction, homeKit, awayKit)
                 }
             }
         }
@@ -685,7 +844,7 @@ private fun localStatLabel(label: String): String = when (label.lowercase()) {
 }
 
 @Composable
-private fun SplitBar(homeFraction: Float?) {
+private fun SplitBar(homeFraction: Float?, homeColor: Color, awayColor: Color) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -693,8 +852,8 @@ private fun SplitBar(homeFraction: Float?) {
     ) {
         if (homeFraction != null) {
             val w = homeFraction.coerceIn(0.02f, 0.98f)
-            Box(Modifier.weight(w).fillMaxHeight().background(PitchGreen))
-            Box(Modifier.weight(1f - w).fillMaxHeight().background(Color(0xFF8A9A93)))
+            Box(Modifier.weight(w).fillMaxHeight().background(homeColor))
+            Box(Modifier.weight(1f - w).fillMaxHeight().background(awayColor))
         } else {
             Box(
                 Modifier.weight(1f).fillMaxHeight()
@@ -705,7 +864,15 @@ private fun SplitBar(homeFraction: Float?) {
 }
 
 @Composable
-private fun LineupsCard(ds: MatchStats) {
+private fun LineupsSection(match: Match, ds: MatchStats) {
+    // v1.8.0 roadmap P1: 2D tactical pitch. Rendered ONLY when both XIs
+    // are complete (11 starters each, formation rows sum to 10 outfield
+    // players) — the provider lists starters GK-first in formation order,
+    // verified live 2026-11-11 on real ESPN summaries. Anything less
+    // falls back to the v1.5.0 text list; positions are NEVER invented.
+    val pitchable = ds.lineups.size == 2 && ds.lineups.all { lu ->
+        lu.starters.size == 11 && formationRows(lu.formation)?.sum() == 11
+    }
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(
@@ -714,61 +881,179 @@ private fun LineupsCard(ds: MatchStats) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth()) {
-                ds.lineups.forEachIndexed { i, lu ->
-                    if (i > 0) Spacer(Modifier.width(16.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            lu.team,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        lu.formation?.let {
-                            Text(
-                                it,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        lu.coach?.let {
-                            Text(
-                                "${stringResource(R.string.stats_coach)}: $it",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        lu.starters.forEach { p ->
-                            Row(Modifier.padding(vertical = 2.dp)) {
-                                Text(
-                                    p.number ?: "·",
-                                    Modifier.width(20.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    p.name,
-                                    Modifier.weight(1f),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                        Text(
-                            stringResource(R.string.stats_subs, lu.subsCount),
-                            Modifier.padding(top = 6.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+            if (pitchable) {
+                Row(Modifier.fillMaxWidth()) {
+                    LineupsPitch(
+                        ds.lineups[0],
+                        Color(TeamColors.colorsFor(match.homeTeam.name).bg),
+                        Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    LineupsPitch(
+                        ds.lineups[1],
+                        Color(TeamColors.colorsFor(match.awayTeam.name).bg),
+                        Modifier.weight(1f)
+                    )
+                }
+            } else {
+                Row(Modifier.fillMaxWidth()) {
+                    ds.lineups.forEachIndexed { i, lu ->
+                        if (i > 0) Spacer(Modifier.width(16.dp))
+                        LineupTextColumn(lu, Modifier.weight(1f))
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * One team's half of the pitch, drawn vertically (own goal at the
+ * bottom). Node positions come from the formation rows mapped onto the
+ * provider's GK-first starter order.
+ */
+@Composable
+private fun LineupsPitch(lu: StatsLineup, kitColor: Color, modifier: Modifier = Modifier) {
+    val rows = formationRows(lu.formation) ?: return
+    val pitchLine = MaterialTheme.colorScheme.outlineVariant
+    Column(modifier) {
+        Text(
+            lu.formation ?: "",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        lu.coach?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        BoxWithConstraints(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(0.62f)
+                .clip(RoundedCornerShape(10.dp))
+                .background(PitchGreen.copy(alpha = 0.10f))
+                .border(1.dp, pitchLine.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+        ) {
+            val pitchW = maxWidth
+            val pitchH = maxHeight
+            // halfway line above the GK (bottom of the half)
+            Box(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp)
+                    .offset(y = (-14).dp)
+                    .height(0.5.dp)
+                    .background(pitchLine.copy(alpha = 0.5f))
+            )
+            var playerIndex = 0
+            rows.forEachIndexed { rowIdx, count ->
+                val f = rowIdx.toFloat() / (rows.size - 1).coerceAtLeast(1)
+                val yFrac = 0.93f - f * 0.78f          // GK bottom -> attackers top
+                repeat(count) {
+                    val p = lu.starters.getOrNull(playerIndex) ?: return@repeat
+                    playerIndex++
+                    val xFrac = (it + 1f) / (count + 1f)
+                    PlayerNode(
+                        p = p,
+                        color = kitColor,
+                        modifier = Modifier.offset(
+                            x = pitchW * (xFrac - 0.5f * (22.dp.value / pitchW.value)),
+                            y = pitchH * yFrac
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerNode(p: StatsPlayer, color: Color, modifier: Modifier = Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(
+            shape = CircleShape,
+            color = color,
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.surface)
+        ) {
+            Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
+                Text(
+                    p.number ?: "·",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+        Text(
+            p.name.substringAfterLast(" ").take(10),
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 7.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1
+        )
+    }
+}
+
+/** v1.5.0 text lineup (fallback when the formation pitch can't be trusted). */
+@Composable
+private fun LineupTextColumn(lu: StatsLineup, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        Text(
+            lu.team,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        lu.formation?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        lu.coach?.let {
+            Text(
+                "${stringResource(R.string.stats_coach)}: $it",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        lu.starters.forEach { p ->
+            Row(Modifier.padding(vertical = 2.dp)) {
+                Text(
+                    p.number ?: "·",
+                    Modifier.width(20.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    p.name,
+                    Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        Text(
+            stringResource(R.string.stats_subs, lu.subsCount),
+            Modifier.padding(top = 6.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
