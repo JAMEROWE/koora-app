@@ -109,8 +109,8 @@ class AfFixturesTest {
         assertEquals("FINISHED", m.status)
         assertEquals(2, m.score.fullTime?.home)
         assertEquals(1, m.score.fullTime?.away)
-        assertEquals("RA", m.homeTeam.tla)   // two words -> initials
-        assertEquals("WYA", m.awayTeam.tla)  // one word -> first 3 letters
+        assertEquals("RCA", m.homeTeam.tla)  // three words -> 3 initials
+        assertEquals("WA", m.awayTeam.tla)   // two words -> initials
     }
 
     @Test
