@@ -5,9 +5,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeDown
-import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.koora.app.data.MatchRepository
 import org.junit.Before
@@ -73,35 +70,30 @@ class LaunchTest {
         // gear icon in the top-right now, labeled with its content description.
         rule.onNodeWithContentDescription(rule.activity.getString(R.string.tab_settings)).assertExists()
 
-        // The window loads in a coroutine — waiting is mandatory (CI can
-        // reach "idle" while the skeleton is still showing). Botola Pro is
-        // the FIRST section, so Raja is the top match row once loaded.
-        // v1.9.0: the date-strip chips now sit between the hero and the
-        // list (spec §2.1) — on Robolectric's tiny screen the first match
-        // row fell below the fold, so scroll the list down once first. The
-        // "Today" title is the first list item and always visible.
-        rule.waitUntil(timeoutMillis = 10_000) {
-            rule.onAllNodesWithText(rule.activity.getString(R.string.day_today))
-                .fetchSemanticsNodes().isNotEmpty()
-        }
-        rule.onAllNodesWithText(rule.activity.getString(R.string.day_today))[0]
-            .performTouchInput { swipeUp() }
-        rule.waitUntil(timeoutMillis = 10_000) {
-            rule.onAllNodesWithText("Raja Club Athletic").fetchSemanticsNodes().isNotEmpty()
-        }
-        rule.onAllNodesWithText("Raja Club Athletic")[0].assertExists()
+        // v1.9.0 (spec §2.1): the date-strip chips sit above the feed.
+        rule.onNodeWithText(rule.activity.getString(R.string.chip_all)).assertExists()
 
-        // Scroll the LIST back to the top (swipe down on the row itself),
-        // then the day title and the league header must be there. (The
-        // Tomorrow block sits below the fold of Robolectric's 470px screen —
-        // its logic is covered by MatchRulesTest and verified on-device.)
-        rule.onAllNodesWithText("Raja Club Athletic")[0].performTouchInput { swipeDown() }
+        // The window loads in a coroutine — waiting is mandatory. In demo
+        // mode the WHOLE window lands on "Today", and the word "Today"
+        // appears TWICE once the feed composed: the chip AND the list's day
+        // title. Two nodes = the live feed rendered its first section.
+        // (On Robolectric's 470px screen the match rows themselves sit below
+        // the fold; the rows are fully asserted on the Matches tab below —
+        // same MatchRow/LeagueSection code, real data instead of scroll
+        // gymnastics.)
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodesWithText(rule.activity.getString(R.string.day_today))
+                .fetchSemanticsNodes().size >= 2
+        }
+
+        // The new Day-After filter (spec §2.1): tapping the chip narrows the
+        // feed to the day-after block, which honestly reports empty in demo
+        // mode (never a fake fixture).
+        rule.onNodeWithText(rule.activity.getString(R.string.day_after)).performClick()
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithText(rule.activity.getString(R.string.empty_day_after))
                 .fetchSemanticsNodes().isNotEmpty()
         }
-        rule.onAllNodesWithText(rule.activity.getString(R.string.day_today))[0].assertExists()
-        rule.onAllNodesWithText("Botola Pro")[0].assertExists()
     }
 
     @Test
