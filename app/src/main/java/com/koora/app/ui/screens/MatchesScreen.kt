@@ -45,15 +45,15 @@ import com.koora.app.ui.components.MatchRow
 import com.koora.app.ui.components.SkeletonList
 import com.koora.app.ui.competitionLabels
 import com.koora.app.ui.daySections
-import com.koora.app.ui.localDayKey
 import com.koora.app.ui.localDayKeyAt
 import com.koora.app.ui.sortResultsNewestFirst
 import kotlinx.coroutines.launch
 
 /*
  * MATCHES TAB (v1.6.0) — now the RESULTS screen, as the owner defined it:
- *   - finished matches from yesterday + today, newest first, grouped
- *     UNDER THEIR LEAGUE (green-barred headers, real league names);
+ *   - finished matches of the WHOLE loaded window (last matchday
+ *     included), newest first, grouped UNDER THEIR LEAGUE (green-barred
+ *     headers, real league names);
  *   - tapping a result opens the full match page with the complete
  *     statistics (events, lineups, bars, h2h, highlights);
  *   - tapping a team circle opens the team panel: next 5 fixtures (each
@@ -70,10 +70,6 @@ class MatchesViewModel : ViewModel() {
     var errorMessage by mutableStateOf<String?>(null)
         private set
     var window by mutableStateOf<List<Match>>(emptyList())
-        private set
-    var todayKey by mutableStateOf("")
-        private set
-    var yesterdayKey by mutableStateOf("")
         private set
     var favsTick by mutableIntStateOf(0)
         private set
@@ -94,8 +90,6 @@ class MatchesViewModel : ViewModel() {
         viewModelScope.launch {
             if (force) refreshing = true
             val now = System.currentTimeMillis()
-            todayKey = localDayKeyAt(now, 0)
-            yesterdayKey = localDayKeyAt(now, -1)
             try {
                 // v1.6.1: EXACTLY the Live tab's window (-6 days..tomorrow) so
                 // both tabs share one per-league cache (identical keys = zero
@@ -223,14 +217,16 @@ fun MatchesScreen(onMatchClick: (Long) -> Unit, vm: MatchesViewModel = viewModel
 
 // ---- Data shaping ----------------------------------------------------------
 
-/** Finished matches of yesterday + today, newest first. */
+/*
+ * v1.6.2 REGRESSION FIX — v1.6.1 widened the shared fetch to a -6..+1 day
+ * window but this filter still hid everything older than yesterday+today.
+ * During the November international break (no club matches yesterday or
+ * today) the tab downloaded 6 days of real results and then displayed NONE
+ * of them. Results = every FINISHED match the window already carries,
+ * newest first — no extra API calls, nothing faked.
+ */
 private fun finishedMatches(vm: MatchesViewModel): List<Match> =
-    sortResultsNewestFirst(
-        vm.window.filter { m ->
-            m.status.equals("FINISHED", true) &&
-                (localDayKey(m) == vm.todayKey || localDayKey(m) == vm.yesterdayKey)
-        }
-    )
+    sortResultsNewestFirst(vm.window)
 
 // ---- LazyColumn block --------------------------------------------------------
 

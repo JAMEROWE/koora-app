@@ -20,8 +20,8 @@ android {
         applicationId = "com.koora.app"
         minSdk = 24
         targetSdk = 36 // Google Play: new apps must target API 36 since Aug 31, 2026
-        versionCode = 16
-        versionName = "1.6.1"
+        versionCode = 17
+        versionName = "1.6.2"
         buildConfigField(
             "String",
             "FOOTBALL_DATA_TOKEN",
@@ -29,7 +29,8 @@ android {
         )
         // v1.6.1: API-Football free key (api-football.com) — adds the cups the
         // football-data.org free tier gates (Copa del Rey, FA Cup, Coppa Italia,
-        // DFB-Pokal, Coupe de France, Europa/Conference League) plus Botola Pro.
+        // DFB-Pokal, Coupe de France, Europa/Conference League) plus Botola Pro,
+        // and powers the deep match stats (events + lineups).
         // Empty string = the feature sleeps silently, zero behaviour change.
         buildConfigField(
             "String",
@@ -52,13 +53,6 @@ android {
             "String",
             "AD_UNIT_INTERSTITIAL",
             "\"${localProps.getProperty("AD_UNIT_INTERSTITIAL") ?: "ca-app-pub-3940256099942544/1033173712"}\""
-        )
-        // api-football.com free key (100 req/day, events+lineups+stats).
-        // Empty -> deep stats stay hidden on real data (demo mode shows a sample).
-        buildConfigField(
-            "String",
-            "API_FOOTBALL_KEY",
-            "\"${localProps.getProperty("API_FOOTBALL_KEY") ?: ""}\""
         )
         // Optional: free YouTube Data API key -> exact per-match highlight video.
         // Empty -> official league channels' RSS feeds are used (no key needed).
