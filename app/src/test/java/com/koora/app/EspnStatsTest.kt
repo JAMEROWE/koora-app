@@ -37,13 +37,19 @@ class EspnStatsTest {
 
     @Test
     fun `espn league map covers every competition in the app`() {
+        // v1.8.0: the map now also covers the v1.7.0 "max attractive leagues"
+        // (PitchAPI-side competitions) — slugs verified live 2026-11-11.
+        // KOR is deliberately absent: ESPN has no K League coverage, so
+        // those detail pages show H2H/form only (never faked).
         val codes = listOf(
-            "CL", "PL", "PD", "SA", "BL1", "FL1", "ELC", "DED", "PPL", "BSA", "CLI", "WC", "EC"
+            "CL", "PL", "PD", "SA", "BL1", "FL1", "ELC", "DED", "PPL", "BSA", "CLI", "WC", "EC",
+            "UEL", "UECL", "SPL", "TUR", "ARG", "MEX", "MLS", "SCO", "BEL", "JPN"
         )
         codes.forEach {
             assertTrue("missing ESPN slug for $it", MatchStatsRepository.espnLeagueMap.containsKey(it))
         }
-        assertEquals(13, MatchStatsRepository.espnLeagueMap.size)
+        assertFalse("ESPN has no K League coverage — must stay unmapped", MatchStatsRepository.espnLeagueMap.containsKey("KOR"))
+        assertEquals(23, MatchStatsRepository.espnLeagueMap.size)
     }
 
     @Test

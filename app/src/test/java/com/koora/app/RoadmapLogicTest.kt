@@ -39,7 +39,7 @@ class RoadmapLogicTest {
     fun minutesParse_toleratesQuoteAndMinuteSuffix() {
         assertEquals(12.0, minuteValue("12'")!!, 0.001)
         assertEquals(45.0, minuteValue("45m")!!, 0.001)
-        assertEquals(45.2, minuteValue(" 45 ")!!, 0.001)
+        assertEquals(45.0, minuteValue(" 45 ")!!, 0.001)
     }
 
     @Test
@@ -139,7 +139,10 @@ class RoadmapLogicTest {
 
     @Test
     fun regionAllows_isCaseInsensitive() {
-        assertTrue(regionAllows(listOf("ma"), emptyList(), "MA"))
+        // "ma" in the block list must block "MA" devices
+        assertFalse(regionAllows(listOf("ma"), emptyList(), "MA"))
         assertFalse(regionAllows(listOf("US"), emptyList(), "us"))
+        // "FR" in the allow list must admit "fr" devices
+        assertTrue(regionAllows(emptyList(), listOf("FR"), "fr"))
     }
 }
