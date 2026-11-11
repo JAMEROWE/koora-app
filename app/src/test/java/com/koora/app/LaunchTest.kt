@@ -62,17 +62,19 @@ class LaunchTest {
         rule.onNodeWithText(rule.activity.getString(R.string.tab_matches)).assertExists()
         rule.onNodeWithText(rule.activity.getString(R.string.tab_settings)).assertExists()
 
-        // v1.6.0 Live layout: Today block first, Tomorrow block after it.
-        rule.onAllNodesWithText(rule.activity.getString(R.string.day_today))[0].assertExists()
-        rule.onAllNodesWithText(rule.activity.getString(R.string.day_tomorrow))[0].assertExists()
-
         // The window loads in a coroutine — waiting is mandatory (CI can
-        // reach "idle" while the list is still loading). Botola Pro is the
-        // FIRST section, so Raja appears near the top.
+        // reach "idle" while the skeleton is still showing, which hides the
+        // day titles). Botola Pro is the FIRST section, so Raja appears
+        // near the top once loaded.
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodesWithText("Raja Club Athletic").fetchSemanticsNodes().isNotEmpty()
         }
         rule.onAllNodesWithText("Raja Club Athletic")[0].assertExists()
+
+        // v1.6.0 Live layout: Today block first, Tomorrow block after it.
+        // (Asserted AFTER the content load — the skeleton has no titles.)
+        rule.onAllNodesWithText(rule.activity.getString(R.string.day_today))[0].assertExists()
+        rule.onAllNodesWithText(rule.activity.getString(R.string.day_tomorrow))[0].assertExists()
 
         // Deeper sections sit below the fold on Robolectric's small screen —
         // swipe up, then wait for each row (PSG in Ligue 1, Real in CL).
