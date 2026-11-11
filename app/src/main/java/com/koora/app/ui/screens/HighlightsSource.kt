@@ -48,7 +48,8 @@ internal val OFFICIAL_CHANNELS: List<Pair<String, String>> = listOf(
     "UCBJeMCIeLQos7wacox4hmLQ" to "Serie A"
 )
 
-internal data class YtEntry(
+/* Public: returned by the public HighlightsSource.resolve(). */
+data class YtEntry(
     val title: String,
     val videoId: String,
     val published: String,
