@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.koora.app.data.MatchRepository
 import org.junit.Before
@@ -75,6 +76,16 @@ class LaunchTest {
         // The window loads in a coroutine — waiting is mandatory (CI can
         // reach "idle" while the skeleton is still showing). Botola Pro is
         // the FIRST section, so Raja is the top match row once loaded.
+        // v1.9.0: the date-strip chips now sit between the hero and the
+        // list (spec §2.1) — on Robolectric's tiny screen the first match
+        // row fell below the fold, so scroll the list down once first. The
+        // "Today" title is the first list item and always visible.
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithText(rule.activity.getString(R.string.day_today))
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        rule.onAllNodesWithText(rule.activity.getString(R.string.day_today))[0]
+            .performTouchInput { swipeUp() }
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodesWithText("Raja Club Athletic").fetchSemanticsNodes().isNotEmpty()
         }
