@@ -18,36 +18,46 @@ object DemoData {
         return fmt.format(Date(System.currentTimeMillis() + hoursFromNow * 3_600_000L))
     }
 
+    /*
+     * v1.6.0: each sample match now carries its competition reference, so
+     * demo mode renders the same LEAGUE SECTIONS the real data does
+     * (never an empty-looking screen for CI or keyless installs).
+     */
     fun matches(competition: String): List<Match> = listOf(
         Match(
             id = 9001, utcDate = iso(-1), status = "FINISHED",
             homeTeam = Team(101, "Raja Club Athletic", tla = "RCA"),
             awayTeam = Team(102, "Wydad AC", tla = "WAC"),
-            score = Score(fullTime = ScoreDetail(2, 1))
+            score = Score(fullTime = ScoreDetail(2, 1)),
+            competition = CompetitionRef(0, "BOT", "Botola Pro")
         ),
         Match(
             id = 9002, utcDate = iso(0), status = "IN_PLAY",
             homeTeam = Team(103, "Paris Saint-Germain", tla = "PSG"),
             awayTeam = Team(104, "Olympique de Marseille", tla = "OM"),
-            score = Score(fullTime = ScoreDetail(1, 1), halfTime = ScoreDetail(0, 1))
+            score = Score(fullTime = ScoreDetail(1, 1), halfTime = ScoreDetail(0, 1)),
+            competition = CompetitionRef(0, "FL1", "Ligue 1")
         ),
         Match(
             id = 9003, utcDate = iso(3), status = "TIMED",
             homeTeam = Team(105, "Real Madrid", tla = "RMA"),
             awayTeam = Team(106, "Manchester City", tla = "MCI"),
-            score = Score()
+            score = Score(),
+            competition = CompetitionRef(0, "CL", "Champions League")
         ),
         Match(
             id = 9004, utcDate = iso(5), status = "TIMED",
             homeTeam = Team(107, "Olympique Lyonnais", tla = "OL"),
             awayTeam = Team(108, "Lille OSC", tla = "LIL"),
-            score = Score()
+            score = Score(),
+            competition = CompetitionRef(0, "FL1", "Ligue 1")
         ),
         Match(
             id = 9005, utcDate = iso(-24), status = "FINISHED",
             homeTeam = Team(109, "AS FAR Rabat", tla = "FAR"),
             awayTeam = Team(110, "MC Oujda", tla = "MCO"),
-            score = Score(fullTime = ScoreDetail(3, 0))
+            score = Score(fullTime = ScoreDetail(3, 0)),
+            competition = CompetitionRef(0, "BOT", "Botola Pro")
         )
     )
 

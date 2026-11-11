@@ -77,9 +77,11 @@ private data class TabItem(val route: String, val icon: ImageVector, val labelRe
 @Composable
 private fun KooraRoot() {
     val nav = rememberNavController()
+    // v1.6.0: Live is the main experience (Today + Tomorrow by league with
+    // polls) and opens first; Matches is now the Results screen.
     val tabs = listOf(
-        TabItem("matches", Icons.Filled.SportsSoccer, R.string.tab_matches),
         TabItem("live", Icons.Filled.FiberManualRecord, R.string.tab_live),
+        TabItem("matches", Icons.Filled.SportsSoccer, R.string.tab_matches),
         TabItem("standings", Icons.Filled.EmojiEvents, R.string.tab_standings),
         TabItem("news", Icons.Filled.Article, R.string.tab_news),
         TabItem("settings", Icons.Filled.Settings, R.string.tab_settings)
@@ -116,13 +118,15 @@ private fun KooraRoot() {
     ) { padding ->
         NavHost(
             navController = nav,
-            startDestination = "matches",
+            startDestination = "live",
             modifier = Modifier.padding(padding)
         ) {
             composable("matches") {
                 MatchesScreen(onMatchClick = { id -> nav.navigate("match/$id") })
             }
-            composable("live") { LiveScreen() }
+            composable("live") {
+                LiveScreen(onMatchClick = { id -> nav.navigate("match/$id") })
+            }
             composable("standings") { StandingsScreen() }
             composable("news") { NewsScreen(onArticleClick = { item ->
                 nav.navigate("article?url=${Uri.encode(item.link)}&title=${Uri.encode(item.title)}")

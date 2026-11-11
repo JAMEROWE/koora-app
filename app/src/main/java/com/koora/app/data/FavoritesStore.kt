@@ -55,7 +55,8 @@ object FavoritesStore {
     fun toggle(context: Context, match: Match) {
         val list = all(context)
         val listNoId = list.filter { it.id != match.id }
-        val code = MatchRepository.cacheCode
+        val code = match.competition?.code?.takeIf { c -> c.isNotBlank() }
+            ?: MatchRepository.cacheCode
         val ft = match.score.fullTime
         val entry = FavoriteMatch(
             id = match.id,

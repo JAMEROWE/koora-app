@@ -1,10 +1,12 @@
 package com.koora.app
 
 import com.koora.app.data.CompetitionRef
+import com.koora.app.data.DemoData
 import com.koora.app.data.Match
 import com.koora.app.data.Score
 import com.koora.app.data.ScoreDetail
 import com.koora.app.data.Team
+import com.koora.app.ui.daySections
 import com.koora.app.ui.leagueBlocks
 import com.koora.app.ui.localDayKey
 import com.koora.app.ui.localDayKeyAt
@@ -217,6 +219,38 @@ class MatchRulesTest {
         val blocks = leagueBlocks(listOf(pl, cl, demo))
         assertEquals(setOf("PL", "CL"), blocks.keys)
         assertEquals(listOf(1L), blocks["PL"]!!.map { it.id })
+    }
+
+    // ---- Day sections (v1.6.0 Live/Results structure) ---------------------
+
+    @Test
+    fun daySections_groupByLeague_inDisplayOrder() {
+        // PL match, BOT match, an unknown league, and one without competition.
+        val bot = match(1, "Raja", "Wydad", "FINISHED", "2026-11-10T18:00:00Z", 2, 1, compCode = "BOT")
+        val pl = match(2, "A", "B", "TIMED", "2026-11-10T20:00:00Z", compCode = "PL")
+        val unknown = match(3, "C", "D", "TIMED", "2026-11-10T21:00:00Z", compCode = "ZZZ")
+        val noComp = match(4, "E", "F", "FINISHED", "2026-11-10T19:00:00Z", 0, 0)
+
+        val sections = daySections(listOf(unknown, noComp, pl, bot))
+
+        // No-competition block first, then Botola Pro (display order),
+        // then Premier League, unknown league last.
+        assertEquals(
+            listOf("", "BOT", "PL", "ZZZ"),
+            sections.map { it.code }
+        )
+        assertEquals(listOf(1L), sections.first { it.code == "BOT" }.matches.map { it.id })
+    }
+
+    @Test
+    fun daySections_demoMatchesCarryCompetition() {
+        // v1.6.0: the demo sample is stamped with competitions so demo mode
+        // renders the same league sections as real data (never an empty
+        // screen), with unique ids after deduplication.
+        val demo = DemoData.matches("ALL").distinctBy { it.id }
+        assertEquals(5, demo.size)
+        assertTrue(demo.all { !it.competition?.code.isNullOrBlank() })
+        assertTrue(demo.any { it.competition?.code == "BOT" })
     }
 
     // ---- Video cache TTL ------------------------------------------------------------

@@ -12,6 +12,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.HttpException
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import kotlinx.coroutines.delay
 import java.io.File
 import java.lang.reflect.Type
 import java.util.concurrent.TimeUnit
@@ -33,6 +34,34 @@ object MatchRepository {
 
     // v1.5.6: 5-minute TTL ("comfortable" doc) — pull-to-refresh bypasses it.
     private const val TTL_MS = 300_000L
+
+    /*
+     * WINDOW LOADING (v1.6.0) — WHY PER-COMPETITION CALLS:
+     * the free tier proved NOT to serve the all-competitions /v4/matches
+     * endpoint (real installs got an empty screen), so the window is
+     * assembled from the resource that always worked:
+     * /v4/competitions/{code}/matches?dateFrom&dateTo.
+     *
+     * Free plan = 10 calls/minute, so the loader is rate-limit aware:
+     *  - one cache entry PER LEAGUE (5-min TTL + disk copy): a failing or
+     *    rate-limited league can never blank out the other leagues;
+     *  - forced refreshes (pull-to-refresh / 60s live auto-refresh) fetch
+     *    at most FETCHES_PER_ROUND leagues, and only leagues not updated
+     *    in the last 60s — successive rounds naturally rotate through all
+     *    leagues while never exceeding the quota;
+     *  - 429 -> one retry after RETRY_429_DELAY_MS;
+     *  - 403/404 (plan/season) -> remembered as empty so we never hammer
+     *    a rejected endpoint again this window;
+     *  - any other failure -> last saved copy for that league, else skip.
+     * Botola Pro (BOT) has no football-data.org resource yet — it joins
+     * with the API-Football upgrade, demo mode stamps it locally.
+     */
+    private val WINDOW_LEAGUES = listOf(
+        "CL", "PL", "PD", "SA", "BL1", "FL1", "ELC", "DED", "PPL", "BSA", "CLI", "WC", "EC"
+    )
+    private const val FETCHES_PER_ROUND = 6
+    private const val FORCE_MIN_INTERVAL_MS = 60_000L
+    private const val RETRY_429_DELAY_MS = 6_000L
 
     /** Last successfully loaded match list, used by the detail screen. */
     var cache: List<Match> = emptyList()
@@ -169,34 +198,82 @@ object MatchRepository {
     }
 
     /**
-     * v1.5.6 Today/Tomorrow window: ONE call for every competition between
-     * two local days ("yyyy-MM-dd"). Falls back to the last cached window
-     * on any failure (stale flag -> "saved data" caption); demo mode serves
-     * the sample list with no network. Widget pools are refreshed per
-     * competition code so the home-screen widget benefits too.
+     * v1.6.0 THE WINDOW: every competition merged over a local date range
+     * ("yyyy-MM-dd".."yyyy-MM-dd"). ONE shared fetch feeds the Live tab
+     * (today + tomorrow sections) AND the Results tab (finished matches) —
+     * zero duplicate calls between screens thanks to the per-league cache.
      */
-    suspend fun matchesRange(fromDay: String, toDay: String, force: Boolean = false): Pair<List<Match>, Boolean> {
-        val key = "range:$fromDay:$toDay"
+    suspend fun matchesWindow(fromDay: String, toDay: String, force: Boolean = false): List<Match> {
+        if (!hasKey) return DemoData.matches("ALL").distinctBy { it.id }
         val type = object : TypeToken<List<Match>>() {}.type
-        if (!force) fresh<List<Match>>(key)?.let { return it to false }
-        val list: List<Match> = try {
-            if (hasKey) api.matchesRange(fromDay, toDay).matches ?: emptyList()
-            else DemoData.matches("ALL").distinctBy { it.id }
-        } catch (e: Exception) {
-            val stale = anyCached<List<Match>>(key) ?: loadDisk<List<Match>>(key, type)
-            if (stale != null) { markStale(key); return stale to true } else throw e
+        val now = System.currentTimeMillis()
+        // Refreshes are budget-capped to protect the 10/min free quota; only
+        // a truly first load (no league cached at all) may fetch everything.
+        val haveAnyWindowCache = updated.keys.any { it.startsWith("leaguewin:") }
+        var fetchBudget = if (!haveAnyWindowCache) Int.MAX_VALUE else FETCHES_PER_ROUND
+        // Live auto-refresh wants 60s freshness; a plain screen entry only
+        // refetches leagues past the 5-minute TTL.
+        val minAgeMs = if (force) FORCE_MIN_INTERVAL_MS else TTL_MS
+        val merged = LinkedHashMap<Long, Match>()
+        for (code in WINDOW_LEAGUES) {
+            val leagueKey = "leaguewin:$code:$fromDay:$toDay"
+            val cached = anyCached<List<Match>>(leagueKey)
+            val age = now - (updated[leagueKey] ?: 0L)
+            val allowNetwork = cached == null || (age >= minAgeMs && fetchBudget > 0)
+            val list: List<Match> = if (allowNetwork) {
+                if (cached != null) fetchBudget--
+                fetchLeagueWindow(code, leagueKey, fromDay, toDay, type)
+            } else {
+                cached ?: loadDisk<List<Match>>(leagueKey, type) ?: emptyList()
+            }
+            list.forEach { m -> merged.putIfAbsent(m.id, m) }
         }
-        remember(key, list, type)
-        cache = list
-        cacheCode = "RANGE"
+        val result = merged.values.toList()
+        cache = result
+        cacheCode = "WINDOW"
         notifyWidgetFeed()
         val ctx = appContext
         if (ctx != null) {
-            list.groupBy { it.competition?.code ?: "" }.forEach { (code, ms) ->
-                if (code.isNotBlank()) runCatching { WidgetFeed.refresh(ctx, code, ms) }
+            result.groupBy { it.competition?.code ?: "" }.forEach { (c, ms) ->
+                if (c.isNotBlank()) runCatching { WidgetFeed.refresh(ctx, c, ms) }
             }
         }
-        return list to false
+        return result
+    }
+
+    /** One league of the window — never throws; failures degrade to cache/skip. */
+    private suspend fun fetchLeagueWindow(
+        code: String,
+        leagueKey: String,
+        fromDay: String,
+        toDay: String,
+        type: Type
+    ): List<Match> {
+        var attempt = runCatching {
+            api.competitionMatchesRange(code, fromDay, toDay).matches ?: emptyList()
+        }
+        if (attempt.isFailure && attempt.exceptionOrNull() is HttpException &&
+            (attempt.exceptionOrNull() as HttpException).code() == 429
+        ) {
+            delay(RETRY_429_DELAY_MS)
+            attempt = runCatching {
+                api.competitionMatchesRange(code, fromDay, toDay).matches ?: emptyList()
+            }
+        }
+        attempt.getOrNull()?.let {
+            remember(leagueKey, it, type)
+            return it
+        }
+        val e = attempt.exceptionOrNull()
+        if (e is HttpException && (e.code() == 403 || e.code() == 404)) {
+            // Endpoint not on this plan / league not in season: remember the
+            // empty result so this window never re-asks.
+            remember(leagueKey, emptyList<Match>(), type)
+            return emptyList()
+        }
+        val stale = anyCached<List<Match>>(leagueKey) ?: loadDisk<List<Match>>(leagueKey, type)
+        if (stale != null) markStale(leagueKey)
+        return stale ?: emptyList()
     }
 
     /**
@@ -222,7 +299,14 @@ object MatchRepository {
             api.teamMatches(teamId).matches ?: emptyList()
         } catch (e: Exception) {
             val stale = anyCached<List<Match>>(key) ?: loadDisk<List<Match>>(key, type)
-            if (stale != null) { markStale(key); stale } else throw e
+            // v1.6.0 fallback: derive what we can from the already-loaded
+            // window (real data, just limited to the loaded days) instead of
+            // showing "unavailable" for an endpoint hiccup.
+            if (stale != null) { markStale(key); stale }
+            else {
+                val derived = cache.filter { it.homeTeam.id == teamId || it.awayTeam.id == teamId }
+                if (derived.isNotEmpty()) derived else throw e
+            }
         }
         remember(key, list, type)
         return list

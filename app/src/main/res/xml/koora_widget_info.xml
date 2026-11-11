@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Koora home-screen widget: live + upcoming scores, refreshed from the
      app's own data (30-min system floor; instant refresh whenever the app
-     itself loads fresh data). -->
+     itself loads fresh data). previewImage covers Android 8-11 launchers;
+     previewLayout covers API 31+ pickers. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
     android:minHeight="110dp"
@@ -9,6 +10,7 @@
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/koora_widget"
+    android:previewImage="@drawable/widget_preview"
     android:previewLayout="@layout/koora_widget"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"

@@ -73,9 +73,15 @@ interface FootballDataApi {
         @Query("status") status: String = "SCHEDULED,TIMED,LIVE,IN_PLAY,FINISHED"
     ): MatchesResponse
 
-    /** v1.5.6: ONE call covers every competition for a date window (Today+Tomorrow). */
-    @GET("v4/matches")
-    suspend fun matchesRange(
+    /**
+     * v1.6.0: the free tier proved NOT to serve the all-competitions
+     * /v4/matches endpoint (real installs came back empty), so the window
+     * is now assembled per competition with THIS endpoint — the same
+     * resource v1.5.5 used successfully, narrowed with dateFrom/dateTo.
+     */
+    @GET("v4/competitions/{code}/matches")
+    suspend fun competitionMatchesRange(
+        @Path("code") competition: String,
         @Query("dateFrom") dateFrom: String,
         @Query("dateTo") dateTo: String,
         @Query("status") status: String = "SCHEDULED,TIMED,LIVE,IN_PLAY,FINISHED"

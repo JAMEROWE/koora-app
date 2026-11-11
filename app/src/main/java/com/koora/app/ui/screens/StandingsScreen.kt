@@ -41,6 +41,7 @@ import com.koora.app.R
 import com.koora.app.ads.AdBanner
 import com.koora.app.data.MatchRepository
 import com.koora.app.data.TableRow
+import com.koora.app.ui.Competition
 import com.koora.app.ui.components.SkeletonList
 import com.koora.app.ui.components.TeamBadge
 import java.text.SimpleDateFormat

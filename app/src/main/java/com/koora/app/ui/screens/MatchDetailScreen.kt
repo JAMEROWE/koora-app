@@ -135,9 +135,18 @@ fun MatchDetailScreen(
     // Stats load automatically — free, no ad gate
     LaunchedEffect(matchId) { vm.loadStats(matchId) }
 
-    // Deep stats (events, lineups, bars) — demo sample or API-Football
+    // Deep stats (events, lineups, bars) — demo sample or API-Football.
+    // v1.6.0: the league code comes from the MATCH itself (the window
+    // merged every competition, so the global cache tag no longer tells
+    // which league this fixture belongs to).
     LaunchedEffect(matchId) {
-        match?.let { vm.loadDeepStats(it, MatchRepository.cacheCode, !MatchRepository.hasKey) }
+        match?.let {
+            vm.loadDeepStats(
+                it,
+                it.competition?.code?.takeIf { c -> c.isNotBlank() } ?: MatchRepository.cacheCode,
+                !MatchRepository.hasKey
+            )
+        }
     }
 
     // The ONE capped interstitial: only on live matches, only per AdsManager rules

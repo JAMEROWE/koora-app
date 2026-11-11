@@ -8,12 +8,40 @@ import java.util.Locale
 import java.util.TimeZone
 
 /*
- * RULES LAYER (v1.5.6) — plain logic with no screens and no network.
- * The Matches screen only renders what these pure functions return, so a
- * sorting or day-split bug is fixed once, here, and covered by tests.
+ * RULES LAYER (v1.5.6, extended v1.6.0) — plain logic with no screens and
+ * no network. The Live and Results screens only render what these pure
+ * functions return, so a sorting, day-split or section bug is fixed once,
+ * here, and covered by tests.
  *
  * Everything is unit-testable: no Android classes, injectable "now".
  */
+
+data class Competition(val code: String, val label: String)
+
+/**
+ * Real competitions, in display order. Botola Pro first — our home
+ * audience. BOT has no football-data.org resource yet (demo stamps it
+ * locally; the API-Football upgrade brings the real one).
+ */
+val ALL_COMPETITIONS = listOf(
+    Competition("BOT", "Botola Pro"),
+    Competition("CL", "Champions League"),
+    Competition("PL", "Premier League"),
+    Competition("PD", "La Liga"),
+    Competition("SA", "Serie A"),
+    Competition("BL1", "Bundesliga"),
+    Competition("FL1", "Ligue 1"),
+    Competition("ELC", "Championship"),
+    Competition("DED", "Eredivisie"),
+    Competition("PPL", "Primeira Liga"),
+    Competition("BSA", "Brasileirão"),
+    Competition("CLI", "Copa Libertadores"),
+    Competition("WC", "World Cup"),
+    Competition("EC", "Euro")
+)
+
+/** Code -> human league name (fallback when a match carries no name). */
+val competitionLabels = ALL_COMPETITIONS.associate { it.code to it.label }
 
 private val utcParser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
     timeZone = TimeZone.getTimeZone("UTC")
@@ -113,9 +141,31 @@ fun next5Last5(all: List<Match>, teamId: Long, nowMs: Long, count: Int = 5): Pai
 /**
  * Group matches into per-league blocks by the competition code each match
  * carries (football-data.org embeds it). Matches without a competition
- * reference (demo data) never produce a fake league block.
+ * reference never produce a fake league block.
  */
 fun leagueBlocks(matches: List<Match>): Map<String, List<Match>> =
     matches
         .filter { !it.competition?.code.isNullOrBlank() }
         .groupBy { it.competition!!.code }
+
+// ---- Day sections (v1.6.0 — the Live/Results screen structure) -----------
+
+/** One league block of a day's matches (rendered under a LeagueHeader). */
+data class LeagueSection(val code: String, val matches: List<Match>)
+
+/**
+ * The day grouped per league: ALL_COMPETITIONS order first (Botola Pro,
+ * CL, PL, ...), unknown leagues after, matches without a competition
+ * (should not happen, but demo/odd feeds) in the very first block so a
+ * screen is never empty-shaped.
+ */
+fun daySections(dayMatches: List<Match>): List<LeagueSection> =
+    dayMatches.groupBy { it.competition?.code ?: "" }
+        .map { (code, ms) -> LeagueSection(code, ms) }
+        .sortedBy { sec ->
+            when {
+                sec.code.isEmpty() -> -1
+                else -> ALL_COMPETITIONS.indexOfFirst { it.code == sec.code }
+                    .let { if (it >= 0) it else 999 }
+            }
+        }

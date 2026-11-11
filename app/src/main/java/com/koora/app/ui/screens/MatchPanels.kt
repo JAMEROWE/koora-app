@@ -1,5 +1,6 @@
 package com.koora.app.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -47,7 +48,7 @@ import com.koora.app.ui.voteLocked
 import com.koora.app.ui.VotePick
 
 /*
- * BOTTOM PANELS (v1.5.6 "comfortable" design).
+ * BOTTOM PANELS (v1.5.6, extended v1.6.0).
  *
  * VotePanel  — tap an upcoming (or live) match: pick Home / Draw / Away.
  *              Stage 1 keeps the pick on the phone; the community
@@ -55,10 +56,13 @@ import com.koora.app.ui.VotePick
  *              kick-off. Closes on swipe-down or the Close button; system
  *              back always closes one step (ModalBottomSheet default).
  *
- * TeamPanel  — tap a team circle: next 5 matches (any competition) and
- *              last 5 results, from v4/teams/{id}/matches (6h cache).
- *              If the endpoint is not available on the current plan the
- *              panel says so instead of showing invented data.
+ * TeamPanel  — tap a team circle: next 5 matches (any competition, each
+ *              row labeled with ITS league) and last 5 results. Rows are
+ *              TAPPABLE: an upcoming fixture opens the prematch poll, a
+ *              finished one opens the full match page with statistics.
+ *              Data from v4/teams/{id}/matches (6h cache); if the
+ *              endpoint is not on the current plan the panel says so
+ *              instead of showing invented data.
  */
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -199,7 +203,9 @@ fun VotePanel(
 @Composable
 fun TeamPanel(
     team: Team,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onMatch: (Long) -> Unit = {},
+    onVote: (Match) -> Unit = {}
 ) {
     var fixtures by remember { mutableStateOf<List<Match>?>(null) }
     var failed by remember { mutableStateOf(false) }
@@ -250,8 +256,16 @@ fun TeamPanel(
 
                 else -> {
                     val (next, recent) = next5Last5(fixtures ?: emptyList(), team.id, System.currentTimeMillis())
-                    TeamSection(stringResource(R.string.team_next), next)
-                    TeamSection(stringResource(R.string.team_recent), recent)
+                    TeamSection(
+                        stringResource(R.string.team_next), next,
+                        onRow = { m ->
+                            if (m.status.equals("FINISHED", true)) onMatch(m.id) else onVote(m)
+                        }
+                    )
+                    TeamSection(
+                        stringResource(R.string.team_recent), recent,
+                        onRow = { m -> onMatch(m.id) }
+                    )
                 }
             }
 
@@ -264,7 +278,7 @@ fun TeamPanel(
 }
 
 @Composable
-private fun TeamSection(title: String, list: List<Match>) {
+private fun TeamSection(title: String, list: List<Match>, onRow: (Match) -> Unit) {
     Spacer(Modifier.height(12.dp))
     Text(
         title,
@@ -285,6 +299,7 @@ private fun TeamSection(title: String, list: List<Match>) {
                 Row(
                     Modifier
                         .fillMaxWidth()
+                        .clickable(onClick = { onRow(m) })
                         .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
