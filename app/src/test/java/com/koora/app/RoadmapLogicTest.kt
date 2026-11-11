@@ -9,11 +9,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.annotation.Config
 
 /**
- * v1.8.0 roadmap release — pure logic locks:
+ * v1.8.0 roadmap release — pure logic locks (plain JUnit: no Android APIs
+ * under test, so no Robolectric needed):
  *
  *  - minuteValue: the 90' timeline positions events by real minute;
  *    anything unparseable must return null (never a guessed position).
@@ -24,8 +23,6 @@ import org.robolectric.annotation.Config
  *    checklist — channel allowlist, processed, public, embeddable,
  *    region restriction.
  */
-@RunWith(AndroidJUnit4::class)
-@Config(sdk = [34])
 class RoadmapLogicTest {
 
     // ---------- minuteValue ----------
