@@ -16,6 +16,9 @@
     <string name="tab_live">مباشر</string>
     <string name="tab_news">الأخبار</string>
     <string name="tab_settings">الإعدادات</string>
+    <string name="tab_highlights">الملخصات</string>
+    <string name="hub_empty">لا توجد ملخصات رسمية منشورة بعد. تظهر الفيديوهات هنا فور نشرها من قبل الدوريات — اضغط التحديث لإعادة المحاولة.</string>
+    <string name="hub_refresh">تحديث الملخصات</string>
     <string name="fav_tab">المفضلة</string>
     <string name="fav_empty">لا توجد مباريات مفضلة. اضغط على النجمة في أي مباراة لمتابعتها.</string>
     <string name="fav_count">المباريات المحفوظة: %1$d</string>

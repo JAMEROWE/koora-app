@@ -94,10 +94,9 @@ import kotlinx.coroutines.launch
  * Finished matches offer official video highlights watched IN-APP
  * (HighlightsScreen) since v1.4.2.
  *
- * v1.8.0 roadmap release:
- *  - Highlights button exists ONLY when a verified official video is
- *    confirmed available (roadmap P0) — otherwise the section is fully
- *    hidden, never a placeholder or disabled state.
+ * v1.8.0 roadmap release (owner-revised):
+ *  - Highlights button on every FINISHED match (always visible, one
+ *    predictable entry); the player lists only verified official videos.
  *  - Team-colored stadium hero (home left / away right, subtle lerp).
  *  - 90-minute event timeline above the event list.
  *  - Dual-sided stat bars in each team's kit color.
@@ -303,19 +302,13 @@ fun MatchDetailScreen(
                 }
 
                 // Official video highlights, watched INSIDE the app.
-                // v1.8.0 (roadmap P0): the section exists ONLY when a verified
-                // official video is confirmed available — checked once per
-                // fixture (VideoCache serves it), hidden from the UI tree
-                // otherwise. No placeholder, no disabled state, no fallback.
-                var videoReady by remember(matchId) { mutableStateOf(false) }
-                LaunchedEffect(matchId) {
-                    if (match.status == "FINISHED") {
-                        videoReady = HighlightsSource.hasVideo(
-                            context, match.homeTeam.name, match.awayTeam.name
-                        )
-                    }
-                }
-                if (videoReady) {
+                // v1.8.0 owner revision: the button is ALWAYS visible for
+                // finished matches — a predictable, independent entry point,
+                // not dependent on a pre-check. The player screen it opens
+                // lists ONLY verified official releases; when nothing is
+                // published yet it shows the honest "not available" state
+                // with a retry — never a fake or placeholder video.
+                if (match.status == "FINISHED") {
                     Spacer(Modifier.height(16.dp))
                     Button(
                         onClick = { onWatchHighlights(match.homeTeam.name, match.awayTeam.name) }

@@ -3,8 +3,10 @@ package com.koora.app.ui.screens
 import android.content.Context
 import com.google.gson.Gson
 import com.koora.app.BuildConfig
+import com.koora.app.data.Match
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
@@ -85,6 +87,95 @@ object HighlightsSource {
     /** Roadmap P0 gate: is a VERIFIED official video available right now? */
     suspend fun hasVideo(context: Context?, home: String, away: String): Boolean =
         resolve(context, home, away).isNotEmpty()
+}
+
+// ---------------------------------------------------------------------------
+// Tier 3 — HIGHLIGHTS HUB (v1.8.0): released videos for known fixtures
+// ---------------------------------------------------------------------------
+
+/**
+ * The independent Highlights tab. Scans the OFFICIAL CHANNEL FEEDS once
+ * per load and pairs every released video with a finished fixture the
+ * app knows, by team-name matching.
+ *
+ * Compliance is identical to the RSS tier: entries come from the
+ * allowlisted channels themselves, so provenance is exact — no search
+ * results are ever opened. The Data API is deliberately NOT used here
+ * (one search per fixture would burn quota; feeds are 6 cheap GETs).
+ *
+ * The no-fake rules cut BOTH ways:
+ *  - a released video that cannot be paired with a KNOWN fixture is NOT
+ *    shown (the tab contains only released matches, never a link dump);
+ *  - a known fixture without a released video is NOT shown either (no
+ *    placeholders, no "coming soon" rows).
+ */
+object HighlightsHub {
+
+    data class Row(val match: Match, val video: YtEntry)
+
+    /** Feed scan is cheap but not free — serve the list for 15 minutes. */
+    private const val TTL_MS = 15L * 60 * 1000
+
+    @Volatile private var cachedAt: Long = 0L
+    @Volatile private var cache: List<Row> = emptyList()
+
+    /**
+     * Pairs released official videos with [fixtures] (already FINISHED).
+     * Also seeds VideoCache so tapping a row opens the player instantly.
+     */
+    suspend fun resolve(context: Context?, fixtures: List<Match>): List<Row> {
+        val now = System.currentTimeMillis()
+        cache.takeIf { now - cachedAt <= TTL_MS }?.let { return it }
+        val rows = withContext(Dispatchers.IO) {
+            val finished = fixtures
+                .filter { it.status == "FINISHED" }
+                .sortedByDescending { it.utcDate }   // newest fixture wins a tie
+            if (finished.isEmpty()) return@withContext emptyList<Row>()
+            coroutineScope {
+                OFFICIAL_CHANNELS.map { (id, name) ->
+                    async { runCatching { fetchChannelFeed(id, name) }.getOrDefault(emptyList()) }
+                }.awaitAll()
+            }
+                .flatten()
+                .sortedByDescending { it.published }     // newest release first
+                .mapNotNull { e -> pairWithFixture(e, finished)?.let { Row(it.second, e) } }
+                .distinctBy { it.video.videoId }         // one video = one row
+        }
+        if (context != null) {
+            rows.forEach { r ->
+                runCatching {
+                    // Seed only when the per-fixture cache has nothing or a
+                    // fresh miss — never clobber a richer resolved list.
+                    val existing = VideoCache.get(context, r.match.homeTeam.name, r.match.awayTeam.name)
+                    if (existing.isNullOrEmpty()) {
+                        VideoCache.putFound(context, r.match.homeTeam.name, r.match.awayTeam.name, listOf(r.video))
+                    }
+                }
+            }
+        }
+        cache = rows
+        cachedAt = now
+        return rows
+    }
+
+    /**
+     * Pure pairing rule: the feed entry must name BOTH teams of one
+     * fixture (token match, same as the per-fixture tier). [fixtures] are
+     * sorted newest-first, so a rematch window pairs with the latest.
+     */
+    internal fun pairWithFixture(entry: YtEntry, fixtures: List<Match>): Pair<YtEntry, Match>? {
+        if (entry.videoId.isBlank()) return null
+        val m = fixtures.firstOrNull { f ->
+            titleMatches(entry.title, f.homeTeam.name) && titleMatches(entry.title, f.awayTeam.name)
+        } ?: return null
+        return entry to m
+    }
+
+    /** Test hook + manual refresh: forget the in-memory list. */
+    fun invalidate() {
+        cachedAt = 0L
+        cache = emptyList()
+    }
 }
 
 // ---------------------------------------------------------------------------

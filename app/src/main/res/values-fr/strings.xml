@@ -16,6 +16,9 @@
     <string name="tab_live">Direct</string>
     <string name="tab_news">Actus</string>
     <string name="tab_settings">Réglages</string>
+    <string name="tab_highlights">Résumés</string>
+    <string name="hub_empty">Aucun résumé officiel publié pour le moment. Les vidéos apparaissent ici dès que les ligues les publient — touchez Actualiser pour revérifier.</string>
+    <string name="hub_refresh">Actualiser les résumés</string>
     <string name="fav_tab">Favoris</string>
     <string name="fav_empty">Aucun match favori. Touchez l\'étoile sur un match pour le suivre.</string>
     <string name="fav_count">Matchs enregistrés : %1$d</string>

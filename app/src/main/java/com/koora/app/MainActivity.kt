@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FiberManualRecord
+import androidx.compose.material.icons.filled.OndemandVideo
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material3.Icon
@@ -29,6 +30,7 @@ import androidx.navigation.compose.rememberNavController
 import com.google.android.ump.ConsentInformation
 import com.google.android.ump.UserMessagingPlatform
 import com.koora.app.ui.screens.ArticleReader
+import com.koora.app.ui.screens.HighlightsHubScreen
 import com.koora.app.ui.screens.HighlightsScreen
 import com.koora.app.ui.screens.LiveScreen
 import com.koora.app.ui.screens.MatchDetailScreen
@@ -83,6 +85,7 @@ private fun KooraRoot() {
         TabItem("live", Icons.Filled.FiberManualRecord, R.string.tab_live),
         TabItem("matches", Icons.Filled.SportsSoccer, R.string.tab_matches),
         TabItem("standings", Icons.Filled.EmojiEvents, R.string.tab_standings),
+        TabItem("highlights", Icons.Filled.OndemandVideo, R.string.tab_highlights),
         TabItem("news", Icons.Filled.Article, R.string.tab_news),
         TabItem("settings", Icons.Filled.Settings, R.string.tab_settings)
     )
@@ -128,6 +131,11 @@ private fun KooraRoot() {
                 LiveScreen(onMatchClick = { id -> nav.navigate("match/$id") })
             }
             composable("standings") { StandingsScreen() }
+            composable("highlights") {
+                HighlightsHubScreen(onWatch = { home, away ->
+                    nav.navigate("video?home=${Uri.encode(home)}&away=${Uri.encode(away)}")
+                })
+            }
             composable("news") { NewsScreen(onArticleClick = { item ->
                 nav.navigate("article?url=${Uri.encode(item.link)}&title=${Uri.encode(item.title)}")
             }) }
