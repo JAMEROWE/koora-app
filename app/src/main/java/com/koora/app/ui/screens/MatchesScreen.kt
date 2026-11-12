@@ -23,6 +23,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,13 +44,15 @@ import com.koora.app.data.Match
 import com.koora.app.data.MatchRepository
 import com.koora.app.data.Team
 import com.koora.app.ui.LeagueSection
-import com.koora.app.ui.components.LeagueHeader
+import com.koora.app.ui.components.ExpandCollapseRow
+import com.koora.app.ui.components.LeagueHeaderCard
 import com.koora.app.ui.components.MatchDivider
 import com.koora.app.ui.components.MatchRow
 import com.koora.app.ui.components.SkeletonList
 import com.koora.app.ui.competitionLabels
 import com.koora.app.ui.daySections
 import com.koora.app.ui.localDayKeyAt
+import com.koora.app.ui.sectionExpandedDefault
 import com.koora.app.ui.sortResultsNewestFirst
 import kotlinx.coroutines.launch
 
@@ -126,6 +129,8 @@ fun MatchesScreen(
 
     var voteFor by remember { mutableStateOf<Match?>(null) }
     var teamFor by remember { mutableStateOf<Team?>(null) }
+    // v1.10.0 (spec §2.2): the Results feed uses the same league accordions.
+    val sectionExpanded = remember { mutableStateMapOf<String, Boolean>() }
     val onToggleFavorite: (Match) -> Unit = { m ->
         FavoritesStore.toggle(context, m)
         vm.bumpFavorites()
@@ -181,11 +186,26 @@ fun MatchesScreen(
                 }
 
                 LazyColumn(Modifier.fillMaxSize()) {
+                    item(key = "exp-toggle") {
+                        ExpandCollapseRow(
+                            onExpandAll = {
+                                daySections(finishedMatches(vm)).forEach {
+                                    sectionExpanded["r-sec-${it.code}"] = true
+                                }
+                            },
+                            onCollapseAll = {
+                                daySections(finishedMatches(vm)).forEach {
+                                    sectionExpanded["r-sec-${it.code}"] = false
+                                }
+                            }
+                        )
+                    }
                     resultsBlock(
                         tag = "r",
                         sections = daySections(finishedMatches(vm)),
                         titles = titles,
                         favIds = favIds,
+                        sectionExpanded = sectionExpanded,
                         onMatchClick = onMatchClick,
                         onTeam = { teamFor = it },
                         onToggleFavorite = onToggleFavorite
@@ -254,6 +274,7 @@ private fun LazyListScope.resultsBlock(
     sections: List<LeagueSection>,
     titles: Map<String, String>,
     favIds: Set<Long>,
+    sectionExpanded: androidx.compose.runtime.SnapshotStateMap<String, Boolean>,
     onMatchClick: (Long) -> Unit,
     onTeam: (Team) -> Unit,
     onToggleFavorite: (Match) -> Unit
@@ -273,21 +294,32 @@ private fun LazyListScope.resultsBlock(
         return
     }
     sections.forEach { sec ->
-        item(key = "$tag-sec-${sec.code}") {
-            LeagueHeader(
+        val key = "$tag-sec-${sec.code}"
+        val expanded = sectionExpanded[key] ?: sectionExpandedDefault(
+            hasLive = false,                       // results are finished matches
+            hasFavorite = sec.matches.any { it.id in favIds },
+            sectionsInBlock = sections.size
+        )
+        item(key = "$key-header") {
+            LeagueHeaderCard(
                 title = titles[sec.code] ?: competitionLabels[sec.code] ?: sec.code,
-                count = sec.matches.size
+                count = sec.matches.size,
+                live = false,
+                expanded = expanded,
+                onToggle = { sectionExpanded[key] = !expanded }
             )
         }
-        items(sec.matches, key = { "$tag-m-${sec.code}-${it.id}" }) { m ->
-            MatchRow(
-                m = m,
-                isFavorite = m.id in favIds,
-                onToggleFavorite = { onToggleFavorite(m) },
-                onMatch = { onMatchClick(m.id) },
-                onTeam = onTeam
-            )
-            MatchDivider()
+        if (expanded) {
+            items(sec.matches, key = { "$tag-m-${sec.code}-${it.id}" }) { m ->
+                MatchRow(
+                    m = m,
+                    isFavorite = m.id in favIds,
+                    onToggleFavorite = { onToggleFavorite(m) },
+                    onMatch = { onMatchClick(m.id) },
+                    onTeam = onTeam
+                )
+                MatchDivider()
+            }
         }
     }
 }

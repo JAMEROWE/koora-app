@@ -138,6 +138,49 @@ fun voteLocked(m: Match, nowMs: Long): Boolean {
     return t <= nowMs
 }
 
+// ---- Votes stage 2 (v1.10.0, spec §2.3): reactions + post-match check ----
+
+/**
+ * Spec §2.3 quick reaction chips. They are the USER'S OWN reactions,
+ * stored on the phone like the pick — the community variant arrives only
+ * with a real backend, and until then nothing here pretends otherwise.
+ */
+val VOTE_REACTIONS = listOf("clean_sheet", "goal_fest", "upset_alert")
+
+/**
+ * Was the pick right at full time? null while the result is unknown
+ * (match not finished, or the provider never gave a final score).
+ */
+fun pickResult(m: Match, pick: String?): Boolean? {
+    if (pick == null) return null
+    if (!m.status.equals("FINISHED", true)) return null
+    val h = m.score.fullTime?.home ?: return null
+    val a = m.score.fullTime?.away ?: return null
+    return when (pick) {
+        VotePick.HOME.key -> h > a
+        VotePick.AWAY.key -> a > h
+        VotePick.DRAW.key -> h == a
+        else -> null
+    }
+}
+
+/**
+ * Personal prediction accuracy over every pick that HAS a final result:
+ * (correct, counted). Unresolved picks are never counted — no fake score.
+ */
+fun accuracyOf(picks: Map<Long, String>, matches: List<Match>): Pair<Int, Int> {
+    var correct = 0
+    var counted = 0
+    matches.forEach { m ->
+        when (pickResult(m, picks[m.id])) {
+            true -> { correct++; counted++ }
+            false -> counted++
+            null -> {}
+        }
+    }
+    return correct to counted
+}
+
 // ---- Team panel ----------------------------------------------------------
 
 /**
@@ -189,3 +232,16 @@ fun daySections(dayMatches: List<Match>): List<LeagueSection> =
                     .let { if (it >= 0) it else 999 }
             }
         }
+
+// ---- Accordion default state (v1.10.0, spec §2.2) -------------------------
+
+/**
+ * Smart default for a league section: EXPAND when it holds a live match
+ * (the user opened Live to watch something) or a favorited match, and
+ * also when the whole block is small (three sections or fewer — a quiet
+ * matchday must not hide its matches behind three taps). Everything else
+ * stays collapsed by default, exactly as spec §2.2 prescribes. Pure,
+ * unit-tested.
+ */
+fun sectionExpandedDefault(hasLive: Boolean, hasFavorite: Boolean, sectionsInBlock: Int): Boolean =
+    hasLive || hasFavorite || sectionsInBlock <= 3

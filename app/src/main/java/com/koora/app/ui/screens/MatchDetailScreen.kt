@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,26 +29,33 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.SwapVert
-import androidx.compose.material3.Card
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -84,11 +92,17 @@ import com.koora.app.data.StatsLineup
 import com.koora.app.data.StatsPlayer
 import com.koora.app.data.Team
 import com.koora.app.data.TeamColors
+import com.koora.app.data.VotesStore
+import com.koora.app.ui.VOTE_REACTIONS
+import com.koora.app.ui.VotePick
+import com.koora.app.ui.accuracyOf
 import com.koora.app.ui.components.LivePulseDot
 import com.koora.app.ui.components.TeamBadge
 import com.koora.app.ui.dateLabel
 import com.koora.app.ui.formationRows
 import com.koora.app.ui.isLive
+import com.koora.app.ui.next5Last5
+import com.koora.app.ui.pickResult
 import com.koora.app.ui.playerMatches
 import com.koora.app.ui.positionLabel
 import com.koora.app.ui.scoreLabel
@@ -96,6 +110,7 @@ import com.koora.app.ui.statNumberColor
 import com.koora.app.ui.statusLabel
 import com.koora.app.ui.theme.LiveRed
 import com.koora.app.ui.theme.PitchGreen
+import com.koora.app.ui.voteLocked
 import kotlinx.coroutines.launch
 
 /*
@@ -128,6 +143,8 @@ class MatchDetailViewModel : ViewModel() {
         private set
     var deepStats by mutableStateOf<MatchStats?>(null)
         private set
+    var teamMatches by mutableStateOf<Map<Long, List<Match>>>(emptyMap())
+        private set
 
     fun loadStats(matchId: Long) {
         if (stats !is StatsUiState.Idle) return
@@ -150,6 +167,22 @@ class MatchDetailViewModel : ViewModel() {
             deepStats = runCatching {
                 MatchStatsRepository.statsFor(match, compCode, demo)
             }.getOrNull()
+        }
+    }
+
+    /**
+     * Form tab (spec §3.4): each team's fixtures from the SAME 6h-cached
+     * endpoint the team panel uses — never extra pressure on the free
+     * tier. Failures leave that side out; the tab shows the honest state.
+     */
+    fun loadTeamMatches(homeId: Long, awayId: Long) {
+        if (teamMatches.isNotEmpty()) return
+        viewModelScope.launch {
+            val map = mutableMapOf<Long, List<Match>>()
+            for (id in listOf(homeId, awayId)) {
+                runCatching { MatchRepository.teamFixtures(id) }.getOrNull()?.let { map[id] = it }
+            }
+            teamMatches = map
         }
     }
 }
@@ -183,6 +216,11 @@ fun MatchDetailScreen(
         }
     }
 
+    // v1.10.0 (spec §3.4): last-5 / next-5 per team for the Form tab.
+    LaunchedEffect(matchId) {
+        match?.let { vm.loadTeamMatches(it.homeTeam.id, it.awayTeam.id) }
+    }
+
     // The ONE capped interstitial: only on live matches, only per AdsManager rules
     LaunchedEffect(matchId) {
         val live = match != null && isLive(match)
@@ -214,15 +252,16 @@ fun MatchDetailScreen(
                 Text(stringResource(R.string.match_not_found))
             }
         } else {
+            // v1.10.0 (spec §3): the score hero stays on top, the sticky
+            // SecondaryTabRow sits directly below it, and each tab scrolls
+            // its own content — Overview | Lineup | Stats | Form.
+            var detailTab by remember(matchId) { mutableIntStateOf(0) }
             Column(
                 Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
                 // v1.8.0 "stadium hero" — floodlit scoreboard card tinted with
                 // the two teams' kit colors (subtle, theme-aware lerp: home
                 // left, away right, neutral center).
@@ -233,6 +272,7 @@ fun MatchDetailScreen(
                 Box(
                     Modifier
                         .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
                         .clip(RoundedCornerShape(20.dp))
                         .background(
                             Brush.horizontalGradient(
@@ -313,56 +353,323 @@ fun MatchDetailScreen(
                     }
                 }
 
-                // Official video highlights, watched INSIDE the app.
-                // v1.8.0 owner revision: the button is ALWAYS visible for
-                // finished matches — a predictable, independent entry point,
-                // not dependent on a pre-check. The player screen it opens
-                // lists ONLY verified official releases; when nothing is
-                // published yet it shows the honest "not available" state
-                // with a retry — never a fake or placeholder video.
-                if (match.status == "FINISHED") {
-                    Spacer(Modifier.height(16.dp))
-                    Button(
-                        onClick = { onWatchHighlights(match.homeTeam.name, match.awayTeam.name) }
-                    ) {
-                        Icon(Icons.Filled.PlayCircle, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.highlights_button))
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    // Roadmap §3.4 inline attribution — shown whenever the
-                    // button is visible.
-                    Text(
-                        stringResource(R.string.highlights_attribution),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
+                // v1.10.0 (spec §3): sticky secondary tab bar under the hero.
+                SecondaryTabRow(selectedTabIndex = detailTab) {
+                    Tab(
+                        selected = detailTab == 0,
+                        onClick = { detailTab = 0 },
+                        text = { Text(stringResource(R.string.detail_overview), maxLines = 1) }
+                    )
+                    Tab(
+                        selected = detailTab == 1,
+                        onClick = { detailTab = 1 },
+                        text = { Text(stringResource(R.string.detail_lineup), maxLines = 1) }
+                    )
+                    Tab(
+                        selected = detailTab == 2,
+                        onClick = { detailTab = 2 },
+                        text = { Text(stringResource(R.string.detail_stats), maxLines = 1) }
+                    )
+                    Tab(
+                        selected = detailTab == 3,
+                        onClick = { detailTab = 3 },
+                        text = { Text(stringResource(R.string.detail_form), maxLines = 1) }
                     )
                 }
-
-                Spacer(Modifier.height(28.dp))
-                StatsContent(match, vm.stats)
-
-                // Deep stats v1.8.0 — timeline, events, kit-colored bars,
-                // 2D formation pitch (hidden when no data, as always)
-                vm.deepStats?.let { ds ->
-                    if (ds.events.isNotEmpty()) {
-                        Spacer(Modifier.height(20.dp))
-                        EventsCard(match, ds)
-                    }
-                    if (ds.bars.isNotEmpty()) {
-                        Spacer(Modifier.height(16.dp))
-                        StatsBarsCard(match, ds)
-                    }
-                    if (ds.lineups.isNotEmpty()) {
-                        Spacer(Modifier.height(16.dp))
-                        LineupsSection(match, ds)
-                    }
+                when (detailTab) {
+                    0 -> OverviewTab(match, vm.stats, onWatchHighlights)
+                    1 -> LineupTab(match, vm.deepStats)
+                    2 -> StatsTab(match, vm.deepStats)
+                    else -> FormTab(match, vm.teamMatches)
                 }
-
-                Spacer(Modifier.height(24.dp))
             }
         }
+    }
+}
+
+// ---- Tab contents (spec §3, v1.10.0) ----------------------------------------
+
+/** §3.1 Overview: voting card, match info, highlights, H2H + meetings. */
+@Composable
+private fun OverviewTab(
+    match: Match,
+    state: StatsUiState,
+    onWatchHighlights: (home: String, away: String) -> Unit
+) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        VotingCard(match)
+        Spacer(Modifier.height(14.dp))
+        MatchInfoCard(match)
+
+        // Official video highlights, watched INSIDE the app.
+        // v1.8.0 owner revision: the button is ALWAYS visible for
+        // finished matches — a predictable, independent entry point,
+        // not dependent on a pre-check. The player screen it opens
+        // lists ONLY verified official releases; when nothing is
+        // published yet it shows the honest "not available" state
+        // with a retry — never a fake or placeholder video.
+        if (match.status == "FINISHED") {
+            Spacer(Modifier.height(14.dp))
+            Button(
+                onClick = { onWatchHighlights(match.homeTeam.name, match.awayTeam.name) }
+            ) {
+                Icon(Icons.Filled.PlayCircle, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.highlights_button))
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.highlights_attribution),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        Spacer(Modifier.height(14.dp))
+        StatsContent(match, state)
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** §3.2 Lineup: the unified pitch, bench strip, and the full event record. */
+@Composable
+private fun LineupTab(match: Match, ds: MatchStats?) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (ds == null || ds.lineups.isEmpty()) {
+            Text(
+                stringResource(R.string.lineup_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp)
+            )
+            if (ds != null && ds.events.isNotEmpty()) {
+                EventsCard(match, ds)
+            }
+        } else {
+            LineupsSection(match, ds)
+            // The accessible, full-detail record of the match (spec §3.2
+            // keeps the events integrated on the pitch; this list stays as
+            // the screen-reader-friendly record).
+            if (ds.events.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                EventsCard(match, ds)
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** §3.3 Stats: crest header + kit-colored dual bars (honest when empty). */
+@Composable
+private fun StatsTab(match: Match, ds: MatchStats?) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (ds != null && ds.bars.isNotEmpty()) {
+            StatsBarsCard(match, ds)
+        } else {
+            Text(
+                stringResource(R.string.no_stats),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp)
+            )
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/**
+ * §3.4 Form: each team's last 5 (W/D/L + opponent + score + date) and
+ * next 5 (opponent + competition + full local date/kickoff). Data comes
+ * from the shared 6h-cached team endpoint; a side with no data is left
+ * out — never invented.
+ */
+@Composable
+private fun FormTab(match: Match, teamMatches: Map<Long, List<Match>>) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        val homeList = teamMatches[match.homeTeam.id]
+        val awayList = teamMatches[match.awayTeam.id]
+        if (homeList == null && awayList == null) {
+            Text(
+                stringResource(R.string.team_fixtures_unavailable),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp)
+            )
+        } else {
+            homeList?.let {
+                TeamFormCard(match.homeTeam, match.homeTeam.id, it)
+                Spacer(Modifier.height(16.dp))
+            }
+            awayList?.let {
+                TeamFormCard(match.awayTeam, match.awayTeam.id, it)
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun TeamFormCard(team: Team, teamId: Long, fixtures: List<Match>) {
+    val (next, recent) = next5Last5(fixtures, teamId, System.currentTimeMillis())
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TeamBadge(team.name, team.tla, 22.dp)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    team.shortName ?: team.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                stringResource(R.string.team_recent),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(4.dp))
+            if (recent.isEmpty()) {
+                Text(
+                    stringResource(R.string.team_fixtures_unavailable),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                recent.forEach { FormMatchRow(it, teamId, showResult = true) }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                stringResource(R.string.team_next),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(4.dp))
+            if (next.isEmpty()) {
+                Text(
+                    stringResource(R.string.team_fixtures_unavailable),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                next.forEach { FormMatchRow(it, teamId, showResult = false) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FormMatchRow(m: Match, teamId: Long, showResult: Boolean) {
+    val opponent = if (m.homeTeam.id == teamId) m.awayTeam else m.homeTeam
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (showResult) {
+            ResultPill(m, teamId)
+            Spacer(Modifier.width(8.dp))
+        }
+        TeamBadge(opponent.name, opponent.tla, 22.dp)
+        Spacer(Modifier.width(6.dp))
+        Text(
+            opponent.shortName ?: opponent.name,
+            Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        if (!showResult) {
+            Text(
+                m.competition?.name ?: "",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(
+            dateLabel(m),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (showResult) {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                scoreLabel(m),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+/** W/D/L circle computed from the REAL final score of this fixture. */
+@Composable
+private fun ResultPill(m: Match, teamId: Long) {
+    val home = m.score.fullTime?.home
+    val away = m.score.fullTime?.away
+    val letter: Char
+    val bg: Color
+    if (home == null || away == null) {
+        letter = '-'; bg = Color(0xFF8A9A93)
+    } else {
+        val forTeam = if (m.homeTeam.id == teamId) home else away
+        val against = if (m.homeTeam.id == teamId) away else home
+        when {
+            forTeam > against -> { letter = 'W'; bg = PitchGreen }
+            forTeam < against -> { letter = 'L'; bg = LiveRed }
+            else -> { letter = 'D'; bg = Color(0xFF8A9A93) }
+        }
+    }
+    Surface(shape = CircleShape, color = bg) {
+        Text(
+            letter.toString(),
+            Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+            color = Color.White,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -390,11 +697,188 @@ private fun StatsContent(match: Match, state: StatsUiState) {
             HeadToHeadCard(match, state.meetings)
             Spacer(Modifier.height(16.dp))
             LastMeetingsCard(state.meetings)
-            Spacer(Modifier.height(16.dp))
-            FormCard(match)
         }
 
         StatsUiState.Idle -> {}
+    }
+}
+
+/**
+ * Spec §3.1 pre-match voting card, v1.10.0. Local, honest stage:
+ *  - open before kick-off (voteLocked is the single rule);
+ *  - one pick, saved on the phone, changeable until kick-off;
+ *  - quick reaction chips (Clean sheet / Goal fest / Upset alert) — the
+ *    user's OWN reactions, stored locally, locked at kick-off;
+ *  - at full time the pick is checked against the REAL final score and
+ *    the personal accuracy line counts only resolved picks;
+ *  - community percentage bars need a backend — until one exists the
+ *    honest placeholder line stays, exactly as in the vote panel.
+ */
+@Composable
+private fun VotingCard(match: Match) {
+    val context = LocalContext.current
+    val now = remember(match.id) { System.currentTimeMillis() }
+    var pick by remember(match.id) { mutableStateOf(VotesStore.pick(context, match.id)) }
+    var reactions by remember(match.id) { mutableStateOf(VotesStore.reactions(context, match.id)) }
+    val locked = voteLocked(match, now)
+    val finished = match.status.equals("FINISHED", true)
+
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                stringResource(R.string.vote_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(10.dp))
+
+            if (!locked) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    VotePick.entries.forEach { option ->
+                        val selected = pick == option.key
+                        val label = when (option) {
+                            VotePick.HOME -> stringResource(R.string.vote_home)
+                            VotePick.DRAW -> stringResource(R.string.vote_draw)
+                            VotePick.AWAY -> stringResource(R.string.vote_away)
+                        }
+                        if (selected) {
+                            Button(
+                                onClick = { },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors()
+                            ) { Text(label, maxLines = 1) }
+                        } else {
+                            OutlinedButton(
+                                onClick = {
+                                    pick = option.key
+                                    VotesStore.setPick(context, match.id, option.key)
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) { Text(label, maxLines = 1) }
+                        }
+                    }
+                }
+            } else if (finished && pick != null) {
+                val ok = pickResult(match, pick)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Filled.CheckCircle,
+                        contentDescription = null,
+                        tint = if (ok == true) PitchGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(if (ok == true) R.string.vote_correct else R.string.vote_missed),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            } else {
+                Text(
+                    stringResource(R.string.vote_locked),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Reaction chips (spec §2.3) — before kick-off only.
+            if (!locked) {
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    VOTE_REACTIONS.forEach { key ->
+                        val label = when (key) {
+                            "clean_sheet" -> stringResource(R.string.vote_chip_clean_sheet)
+                            "goal_fest" -> stringResource(R.string.vote_chip_goal_fest)
+                            else -> stringResource(R.string.vote_chip_upset_alert)
+                        }
+                        FilterChip(
+                            selected = key in reactions,
+                            onClick = {
+                                VotesStore.toggleReaction(context, match.id, key)
+                                reactions = VotesStore.reactions(context, match.id)
+                            },
+                            label = { Text(label, maxLines = 1) }
+                        )
+                    }
+                }
+            }
+
+            pick?.let { p ->
+                Spacer(Modifier.height(10.dp))
+                val label = when (p) {
+                    VotePick.HOME.key -> stringResource(R.string.vote_home)
+                    VotePick.DRAW.key -> stringResource(R.string.vote_draw)
+                    else -> stringResource(R.string.vote_away)
+                }
+                Text(
+                    stringResource(R.string.vote_your_pick, label),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            if (finished) {
+                Spacer(Modifier.height(8.dp))
+                val (correct, counted) = accuracyOf(VotesStore.picks(context), MatchRepository.cache)
+                if (counted > 0) {
+                    Text(
+                        stringResource(R.string.vote_accuracy, correct, counted),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.vote_community),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/**
+ * Spec §3.1 match info — ONLY what the free model actually carries:
+ * the competition and the local kick-off. Venue and referee are not in
+ * the football-data.org free payload; rendering them would mean
+ * inventing them, so they stay out until a provider supplies them.
+ */
+@Composable
+private fun MatchInfoCard(match: Match) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                stringResource(R.string.match_info_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    match.competition?.name ?: "",
+                    Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    dateLabel(match),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
@@ -520,65 +1004,6 @@ private fun LastMeetingsCard(meetings: List<Match>) {
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FormCard(match: Match) {
-    val homeForm = MatchRepository.teamForm(MatchRepository.cache, match.homeTeam.id)
-    val awayForm = MatchRepository.teamForm(MatchRepository.cache, match.awayTeam.id)
-    if (homeForm.isEmpty() && awayForm.isEmpty()) return
-
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Text(
-                stringResource(R.string.form_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.height(12.dp))
-            FormRow(match.homeTeam.shortName ?: match.homeTeam.name, homeForm)
-            Spacer(Modifier.height(10.dp))
-            FormRow(match.awayTeam.shortName ?: match.awayTeam.name, awayForm)
-        }
-    }
-}
-
-@Composable
-private fun FormRow(teamName: String, form: List<Char>) {
-    Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            teamName,
-            Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Spacer(Modifier.width(8.dp))
-        Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
-            form.forEach { c ->
-                val bg = when (c) {
-                    'W' -> PitchGreen
-                    'L' -> LiveRed
-                    else -> Color(0xFF8A9A93)
-                }
-                Surface(shape = CircleShape, color = bg) {
-                    Text(
-                        c.toString(),
-                        Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-            if (form.isEmpty()) {
-                Text("–", style = MaterialTheme.typography.bodyMedium)
             }
         }
     }

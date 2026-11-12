@@ -13,11 +13,15 @@ import com.koora.app.ui.localDayKeyAt
 import com.koora.app.ui.matchesOnDay
 import com.koora.app.ui.next5Last5
 import com.koora.app.ui.paginate
+import com.koora.app.ui.pickResult
+import com.koora.app.ui.accuracyOf
+import com.koora.app.ui.sectionExpandedDefault
 import com.koora.app.ui.sortMixed
 import com.koora.app.ui.sortResultsNewestFirst
 import com.koora.app.ui.sortUpcomingSoonestFirst
 import com.koora.app.ui.screens.VideoCache
 import com.koora.app.ui.voteLocked
+import com.koora.app.ui.VotePick
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -269,4 +273,58 @@ class MatchRulesTest {
         // timestamps from the future are never trusted
         assertFalse(VideoCache.isFresh(found = true, at = now + hour, now = now))
     }
+
+    // ---- v1.10.0 (spec §2.3): pick validation + personal accuracy --------------------
+
+    @Test
+    fun pickResult_checksRealFinalScore() {
+        val finished = match(60, "Arsenal", "Chelsea", "FINISHED", utc(now() - hour()), 2, 1)
+        val draw = match(61, "Raja", "Wydad", "FINISHED", utc(now() - hour()), 1, 1)
+        assertTrue(pickResult(finished, VotePick.HOME.key) == true)
+        assertTrue(pickResult(finished, VotePick.AWAY.key) == false)
+        assertTrue(pickResult(draw, VotePick.DRAW.key) == true)
+        assertTrue(pickResult(draw, VotePick.HOME.key) == false)
+        // Unknown pick keys can never be counted
+        assertEquals(null, pickResult(finished, "MAYBE"))
+    }
+
+    @Test
+    fun pickResult_unresolvedWhenNoFinalScoreYet() {
+        val upcoming = match(62, "Arsenal", "Chelsea", "TIMED", utc(now() + hour()))
+        val live = match(63, "Raja", "Wydad", "IN_PLAY", utc(now()), 1, 0)
+        val noScore = match(64, "PSG", "OM", "FINISHED", utc(now() - hour()))
+        // Not finished -> unresolved; finished but scoreless -> still unresolved
+        assertEquals(null, pickResult(upcoming, VotePick.HOME.key))
+        assertEquals(null, pickResult(live, VotePick.HOME.key))
+        assertEquals(null, pickResult(noScore, VotePick.HOME.key))
+    }
+
+    @Test
+    fun accuracyOf_countsOnlyResolvedPicks() {
+        val win = match(65, "Arsenal", "Chelsea", "FINISHED", utc(now() - 3 * hour()), 2, 0)
+        val loss = match(66, "Raja", "Wydad", "FINISHED", utc(now() - 2 * hour()), 0, 1)
+        val pending = match(67, "PSG", "OM", "TIMED", utc(now() + hour()))
+        val picks = mapOf(65L to VotePick.HOME.key, 66L to VotePick.HOME.key, 67L to VotePick.AWAY.key)
+        val (correct, counted) = accuracyOf(picks, listOf(win, loss, pending))
+        // 1 correct (Arsenal) + 1 missed (Raja); the pending pick is NOT counted
+        assertEquals(1, correct)
+        assertEquals(2, counted)
+        // A pickless history counts nothing at all
+        assertEquals(0 to 0, accuracyOf(emptyMap(), listOf(win, loss)))
+    }
+
+    // ---- v1.10.0 (spec §2.2): accordion smart default --------------------------------
+
+    @Test
+    fun sectionExpanded_smartDefault() {
+        // live section always opens, favorites always open
+        assertTrue(sectionExpandedDefault(hasLive = true, hasFavorite = false, sectionsInBlock = 9))
+        assertTrue(sectionExpandedDefault(hasLive = false, hasFavorite = true, sectionsInBlock = 9))
+        // small blocks stay open (a quiet matchday hides nothing)
+        assertTrue(sectionExpandedDefault(hasLive = false, hasFavorite = false, sectionsInBlock = 3))
+        // a big block keeps non-live, unfavorited leagues collapsed (spec §2.2)
+        assertFalse(sectionExpandedDefault(hasLive = false, hasFavorite = false, sectionsInBlock = 4))
+    }
+
+    private fun hour(): Long = 3_600_000L
 }

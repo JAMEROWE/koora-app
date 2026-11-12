@@ -1,5 +1,6 @@
 package com.koora.app.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -10,19 +11,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -40,9 +48,11 @@ import com.koora.app.ui.theme.LiveRed
  * SHARED MATCH LIST PIECES (v1.6.0) — the Live tab and the Results tab
  * render the exact same section anatomy, so the pieces live here once:
  *
- *   DayTitle      — big label between day blocks (Today / Tomorrow).
- *   LeagueHeader  — green brand bar + real league name + match count.
- *   MatchRow      — one fixture: badges, score, status, favorite star.
+ *   DayTitle          — big label between day blocks (Today / Tomorrow).
+ *   LeagueHeaderCard  — accordion header: green brand bar + league name
+ *                       + LIVE pill + match count + chevron (spec §2.2).
+ *   ExpandCollapseRow — the top Expand All / Collapse All toggle.
+ *   MatchRow          — one fixture: badges, score, status, favorite star.
  */
 
 /** Big day label between day blocks (Today / Tomorrow). */
@@ -71,15 +81,29 @@ internal fun DayEmptyLine(text: String) {
 }
 
 /**
- * Section header: green brand bar + real league name + match count.
- * This is what makes fixtures and results clearly grouped per league —
- * never a flat, unlabeled list.
+ * Section header (spec §2.2, v1.10.0): green brand bar + league name +
+ * pulsing LIVE pill when the section holds live matches + match count
+ * badge + expand/collapse chevron. Tapping the header toggles the
+ * accordion; the chevron rotation is animated. League crest images are
+ * NOT rendered — the free providers give no emblem URLs, and a drawn
+ * fake crest would break the no-fake rule.
  */
 @Composable
-internal fun LeagueHeader(title: String, count: Int) {
+internal fun LeagueHeaderCard(
+    title: String,
+    count: Int,
+    live: Boolean,
+    expanded: Boolean,
+    onToggle: () -> Unit
+) {
+    val rotation by animateFloatAsState(
+        targetValue = if (expanded) 0f else 180f,
+        label = "chevron"
+    )
     Row(
         Modifier
             .fillMaxWidth()
+            .clickable(onClick = onToggle)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -100,12 +124,66 @@ internal fun LeagueHeader(title: String, count: Int) {
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false)
         )
+        if (live) {
+            Spacer(Modifier.width(8.dp))
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = LiveRed.copy(alpha = 0.16f)
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LivePulseDot()
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "LIVE",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = LiveRed
+                    )
+                }
+            }
+        }
         Spacer(Modifier.width(8.dp))
-        Text(
-            count.toString(),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Text(
+                count.toString(),
+                Modifier.padding(horizontal = 8.dp, vertical = 1.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(Modifier.width(4.dp))
+        Icon(
+            if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.graphicsLayer { rotationZ = rotation }
         )
+    }
+}
+
+/**
+ * Spec §2.2: the top Expand All / Collapse All toggle for the whole
+ * feed (Live and Results). Two small stateless buttons — the screen
+ * owns the collapsed-state map.
+ */
+@Composable
+internal fun ExpandCollapseRow(onExpandAll: () -> Unit, onCollapseAll: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End
+    ) {
+        TextButton(onClick = onExpandAll) {
+            Text(stringResource(R.string.expand_all), style = MaterialTheme.typography.labelMedium)
+        }
+        TextButton(onClick = onCollapseAll) {
+            Text(stringResource(R.string.collapse_all), style = MaterialTheme.typography.labelMedium)
+        }
     }
 }
 

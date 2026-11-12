@@ -107,6 +107,23 @@
     <string name="vote_your_pick">Your pick: %1$s</string>
     <string name="vote_locked">Voting is locked at kick-off.</string>
     <string name="vote_community">Community percentages will appear here when available.</string>
+    <!-- v1.10.0 — master spec §2/§3: accordions, calendar, voting stage 2, 4-tab detail -->
+    <string name="expand_all">Expand all</string>
+    <string name="collapse_all">Collapse all</string>
+    <string name="calendar_pick">Pick a day</string>
+    <string name="date_pick_confirm">Show</string>
+    <string name="vote_chip_clean_sheet">Clean sheet</string>
+    <string name="vote_chip_goal_fest">Goal fest</string>
+    <string name="vote_chip_upset_alert">Upset alert</string>
+    <string name="vote_correct">Correct prediction</string>
+    <string name="vote_missed">Missed</string>
+    <string name="vote_accuracy">Score: %1$d of %2$d predictions correct</string>
+    <string name="detail_overview">Overview</string>
+    <string name="detail_lineup">Lineup</string>
+    <string name="detail_stats">Stats</string>
+    <string name="detail_form">Form</string>
+    <string name="lineup_empty">No lineup published for this match</string>
+    <string name="match_info_title">Match info</string>
     <string name="full_match_page">Full match page</string>
     <string name="panel_close">Close</string>
     <string name="team_next">Next matches</string>
