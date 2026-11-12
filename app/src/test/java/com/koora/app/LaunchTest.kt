@@ -101,11 +101,11 @@ class LaunchTest {
         // waiting for the line.
         rule.onNodeWithTag("live_feed").performTouchInput {
             // Finger from lower half to upper half = the list scrolls up and
-            // reveals the items below the fold.
-            swipe(
-                start = Offset(x = width / 2f, y = height * 0.8f),
-                end = Offset(x = width / 2f, y = height * 0.2f)
-            )
+            // reveals the items below the fold. Built from the primitive
+            // down/moveBy/up members (the swipe* helpers differ per version).
+            down(Offset(x = width / 2f, y = height * 0.8f))
+            moveBy(Offset(x = 0f, y = -height * 0.6f), delayMillis = 200L)
+            up()
         }
         try {
             rule.waitUntil(timeoutMillis = 10_000) {
