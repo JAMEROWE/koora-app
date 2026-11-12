@@ -5,6 +5,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.semantics.getOrNull
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.koora.app.data.MatchRepository
 import org.junit.Before
@@ -90,9 +91,28 @@ class LaunchTest {
         // feed to the day-after block, which honestly reports empty in demo
         // mode (never a fake fixture).
         rule.onNodeWithText(rule.activity.getString(R.string.day_after)).performClick()
-        rule.waitUntil(timeoutMillis = 10_000) {
-            rule.onAllNodesWithText(rule.activity.getString(R.string.empty_day_after))
-                .fetchSemanticsNodes().isNotEmpty()
+        try {
+            rule.waitUntil(timeoutMillis = 10_000) {
+                rule.onAllNodesWithText(rule.activity.getString(R.string.empty_day_after))
+                    .fetchSemanticsNodes().isNotEmpty()
+            }
+        } catch (e: Exception) {
+            // v1.10.0 diagnostics: on timeout, dump every text node the
+            // screen holds so the CI log shows what the day-after view
+            // ACTUALLY rendered. The message lands in the test XML and the
+            // workflow prints it.
+            val dump = runCatching {
+                val sb = StringBuilder("KOORA-DEBUG texts: ")
+                rule.onAllNodesWithText("", substring = true)
+                    .fetchSemanticsNodes()
+                    .forEach { n ->
+                        val t = n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text)
+                            ?.joinToString("|")
+                        if (!t.isNullOrBlank()) sb.append('[').append(t).append("] ")
+                    }
+                sb.toString()
+            }.getOrDefault("KOORA-DEBUG: semantics dump failed")
+            throw AssertionError(dump, e)
         }
     }
 
