@@ -96,11 +96,12 @@ class LaunchTest {
                 rule.onAllNodesWithText(rule.activity.getString(R.string.empty_day_after))
                     .fetchSemanticsNodes().isNotEmpty()
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // v1.10.0 diagnostics: on timeout, dump every text node the
             // screen holds so the CI log shows what the day-after view
             // ACTUALLY rendered. The message lands in the test XML and the
-            // workflow prints it.
+            // workflow prints it. (Throwable: the compose timeout type is
+            // not reliably an Exception subclass on every version.)
             val dump = runCatching {
                 val sb = StringBuilder("KOORA-DEBUG texts: ")
                 rule.onAllNodesWithText("", substring = true)
