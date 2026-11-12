@@ -20,7 +20,7 @@ android {
         applicationId = "com.koora.app"
         minSdk = 24
         targetSdk = 36 // Google Play: new apps must target API 36 since Aug 31, 2026
-        versionCode = 22
+        versionCode = 23
         versionName = "1.10.0"
         buildConfigField(
             "String",
