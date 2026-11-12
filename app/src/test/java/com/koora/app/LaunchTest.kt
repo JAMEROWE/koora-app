@@ -6,9 +6,9 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.geometry.Offset
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.koora.app.data.MatchRepository
 import org.junit.Before
@@ -99,14 +99,10 @@ class LaunchTest {
         // the empty-state line fell below the fold. Scroll the LIST (tagged
         // live_feed; the v1.9.0 lesson: never swipe the chip row) before
         // waiting for the line.
-        rule.onNodeWithTag("live_feed").performTouchInput {
-            // Finger from lower half to upper half = the list scrolls up and
-            // reveals the items below the fold. Built from the primitive
-            // down/moveBy/up members (the swipe* helpers differ per version).
-            down(Offset(x = width / 2f, y = height * 0.8f))
-            moveBy(Offset(x = 0f, y = -height * 0.6f), delayMillis = 200L)
-            up()
-        }
+        rule.onNodeWithTag("live_feed")
+            // Canonical scroll: drives the LazyColumn's own ScrollToNode
+            // semantics action — no touch-simulation quirks.
+            .performScrollToNode(hasText(rule.activity.getString(R.string.empty_day_after)))
         try {
             rule.waitUntil(timeoutMillis = 10_000) {
                 rule.onAllNodesWithText(rule.activity.getString(R.string.empty_day_after))
