@@ -8,6 +8,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.geometry.Offset
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.koora.app.data.MatchRepository
 import org.junit.Before
@@ -98,7 +99,14 @@ class LaunchTest {
         // the empty-state line fell below the fold. Scroll the LIST (tagged
         // live_feed; the v1.9.0 lesson: never swipe the chip row) before
         // waiting for the line.
-        rule.onNodeWithTag("live_feed").performTouchInput { swipeUp() }
+        rule.onNodeWithTag("live_feed").performTouchInput {
+            // Finger from lower half to upper half = the list scrolls up and
+            // reveals the items below the fold.
+            swipe(
+                start = Offset(x = width / 2f, y = height * 0.8f),
+                end = Offset(x = width / 2f, y = height * 0.2f)
+            )
+        }
         try {
             rule.waitUntil(timeoutMillis = 10_000) {
                 rule.onAllNodesWithText(rule.activity.getString(R.string.empty_day_after))
