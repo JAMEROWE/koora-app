@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -36,40 +37,38 @@ import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 
 /*
- * OFFICIAL IN-APP YOUTUBE PLAYER (v1.9.0, master spec §7.2) — the Error
+ * OFFICIAL IN-APP YOUTUBE PLAYER (v1.9.0, master spec §6.4) — the Error
  * 153 fix, replacing the raw embed-URL WebView.
  *
  * WHY THIS EXISTS: loading https://www.youtube.com/embed/<id> directly in
  * a WebView sends NO Referer/Origin for the player's own XHR calls, and
  * YouTube answers with error 153 ("video cannot be played in this
- * player"). The fix is to bootstrap the OFFICIAL IFrame API from an HTML
- * document whose base URL IS https://www.youtube.com, and to pass
- * 'origin' in playerVars — exactly how YouTube's own docs prescribe
- * embedding outside a real browser tab.
+ * player") — a silent BLACK BOX, often without any JS error callback.
  *
- * Policy baked in (spec §7.1):
+ * THE v1.10.0 BLACK-BOX FIX (owner report: the box persisted on real
+ * devices): the IFrame API script creates the player iframe itself, and
+ * the created iframe carries NO referrerpolicy — on WebView versions that
+ * send no referrer header for data-loaded documents, YouTube rejects the
+ * player BEFORE the API handshake, so neither onReady nor onError ever
+ * fires. Per the Feb-2026 advisory on error 153, the fix is to hand-write
+ * the <iframe> with referrerpolicy="strict-origin" (the parent document
+ * IS https://www.youtube.com via loadDataWithBaseURL, so the origin is
+ * sent as the referrer) and attach the IFrame API to it afterwards for
+ * onReady / onStateChange / onError.
+ *
+ * Policy baked in (spec §6.1):
  *  - the IFrame API script is the only script; playback stays 100% in-app;
  *  - main-frame navigation is refused for every host outside
  *    youtube.com / youtube-nocookie.com / ytimg.com / googlevideo.com,
  *    so logo / share / redirect taps can never turn the screen into
  *    YouTube's website (VideoPolicy's promise, host-level form);
- *  - the JS bridge reports IFrame onError (100/101/150/153...) to
- *    Compose: the caller hides the player (GONE) and moves on — never an
- *    error box, never an external app;
+ *  - the JS bridge reports IFrame onError (100/101/150/153...) AND the
+ *    playback state to Compose: a player that never reports ready in 4s,
+ *    a renderer crash, or a player that never actually PLAYS within 12s
+ *    hands the video to the caller (GONE) — never a lingering black box;
  *  - mixed content is never allowed; the WebView UA is the normal
  *    browser UA (the "; wv" token removed) so YouTube serves the full
  *    embed experience.
- *
- * v1.9.1 (master spec v5 §6.1, the black-box fix):
- *  - the bridge also reports onReady; a calm spinner shows until it
- *    fires, so the user never stares into a silent black box;
- *  - a 4-second stall guard hands a player that neither reports ready
- *    nor errors to the Koora-themed IN-APP Chrome Custom Tab — the
- *    sanctioned fallback (HighlightCustomTab.kt) that keeps playback
- *    100% in-app even when a rights-holder sets embeddable=false or
- *    geo-blocks the inline embed;
- *  - the view is keyed by videoId, so picking another video in the
- *    "More highlights" panel always swaps in the freshly built player.
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -78,7 +77,7 @@ fun OfficialInAppYouTubePlayer(
     modifier: Modifier = Modifier,
     onEnterFullscreen: ((View, WebChromeClient.CustomViewCallback) -> Unit)? = null,
     onExitFullscreen: (() -> Unit)? = null,
-    // v1.9.1: now carries the FAILED videoId so the caller can hide that
+    // v1.9.1: carries the FAILED videoId so the caller can hide that
     // candidate and hand the same video to the in-app Custom Tab.
     onEmbedBlockedOrFailed: (String) -> Unit
 ) {
@@ -88,6 +87,12 @@ fun OfficialInAppYouTubePlayer(
     // A spinner shows meanwhile; if nothing reports within 4s (stalled
     // black box) the in-app Custom Tab fallback takes over.
     var isPlayerReady by remember(videoId) { mutableStateOf(false) }
+
+    // v1.10.0: onReady alone is NOT proof of picture — the notorious
+    // black-box-with-audio case reports ready and never actually plays.
+    // PLAYING state (1) is the only honest "you are watching" signal.
+    var sawPlaying by remember(videoId) { mutableStateOf(false) }
+
     val latestOnBlocked by rememberUpdatedState(onEmbedBlockedOrFailed)
 
     val webView = remember(videoId) {
@@ -114,6 +119,11 @@ fun OfficialInAppYouTubePlayer(
                     @JavascriptInterface
                     fun onPlayerReady() {
                         post { isPlayerReady = true }
+                    }
+
+                    @JavascriptInterface
+                    fun onPlayerState(state: Int) {
+                        post { if (state == 1) sawPlaying = true }
                     }
 
                     @JavascriptInterface
@@ -148,6 +158,17 @@ fun OfficialInAppYouTubePlayer(
                         host.endsWith("googlevideo.com")
                     return !isAllowedEmbed
                 }
+
+                // v1.10.0: a crashed WebView renderer is the ultimate black
+                // box — absorb it (return true keeps Koora alive) and hand
+                // the video to the in-app Custom Tab fallback.
+                override fun onRenderProcessGone(
+                    view: WebView,
+                    detail: RenderProcessGoneDetail
+                ): Boolean {
+                    view.post { onEmbedBlockedOrFailed(videoId) }
+                    return true
+                }
             }
 
             val safeId = videoId.replace(Regex("[^A-Za-z0-9_-]"), "")
@@ -159,30 +180,37 @@ fun OfficialInAppYouTubePlayer(
                     <style>
                         * { margin: 0; padding: 0; box-sizing: border-box; }
                         html, body { width: 100%; height: 100%; background-color: #000000; overflow: hidden; }
-                        #player { width: 100%; height: 100%; }
+                        #player { width: 100%; height: 100%; border: 0; }
                     </style>
                 </head>
                 <body>
-                    <div id="player"></div>
+                    <!-- v1.10.0 Error-153 fix: the iframe is hand-written with
+                         referrerpolicy="strict-origin" — the parent document's
+                         base IS https://www.youtube.com, so the origin reaches
+                         YouTube as the referrer even on WebViews that send no
+                         referrer for data-loaded pages. enablejsapi=1 lets the
+                         IFrame API attach below for onReady/state/error. -->
+                    <iframe
+                        id="player"
+                        src="https://www.youtube.com/embed/$safeId?autoplay=1&rel=0&playsinline=1&enablejsapi=1&origin=https%3A%2F%2Fwww.youtube.com"
+                        referrerpolicy="strict-origin"
+                        allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                        allowfullscreen
+                        frameborder="0"></iframe>
                     <script src="https://www.youtube.com/iframe_api"></script>
                     <script>
                         var player;
                         function onYouTubeIframeAPIReady() {
                             player = new YT.Player('player', {
-                                videoId: '$safeId',
-                                host: 'https://www.youtube.com',
-                                playerVars: {
-                                    'autoplay': 1,
-                                    'playsinline': 1,
-                                    'rel': 0,
-                                    'modestbranding': 1,
-                                    'fs': 1,
-                                    'origin': 'https://www.youtube.com'
-                                },
                                 events: {
                                     'onReady': function() {
                                         if (window.KooraPlayerBridge) {
                                             window.KooraPlayerBridge.onPlayerReady();
+                                        }
+                                    },
+                                    'onStateChange': function(event) {
+                                        if (window.KooraPlayerBridge) {
+                                            window.KooraPlayerBridge.onPlayerState(event.data);
                                         }
                                     },
                                     'onError': function(event) {
@@ -215,6 +243,15 @@ fun OfficialInAppYouTubePlayer(
     LaunchedEffect(videoId) {
         delay(4_000L)
         if (!isPlayerReady) latestOnBlocked(videoId)
+    }
+
+    // v1.10.0: the no-playback guard. onReady can fire while the video
+    // never actually renders (black box with audio, autoplay blocked by
+    // an OEM WebView, silent 153) — if PLAYING is never seen within 12s,
+    // the in-app Custom Tab takes over. The user watches, always.
+    LaunchedEffect(videoId) {
+        delay(12_000L)
+        if (!sawPlaying) latestOnBlocked(videoId)
     }
 
     DisposableEffect(webView) {

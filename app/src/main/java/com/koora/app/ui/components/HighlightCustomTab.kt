@@ -1,6 +1,7 @@
 package com.koora.app.ui.components
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabColorSchemeParams
@@ -42,5 +43,14 @@ fun openHighlightInAppCustomTab(context: Context, videoId: String) {
         .setUrlBarHidingEnabled(true)
         .build()
 
-    customTabsIntent.launchUrl(context, uri)
+    // v1.10.0 hardening: a device without any Custom-Tabs-capable browser
+    // must never dead-end (or crash) — the plain browser view of the SAME
+    // official watch URL is the last resort.
+    try {
+        customTabsIntent.launchUrl(context, uri)
+    } catch (_: Exception) {
+        runCatching {
+            context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+        }
+    }
 }
