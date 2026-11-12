@@ -35,6 +35,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.SnapshotStateMap
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -366,6 +367,7 @@ fun LiveScreen(
                 val todayEmpty = stringResource(R.string.empty_today, tomorrowCount)
                 val tomorrowEmpty = stringResource(R.string.empty_tomorrow)
                 val dayAfterEmpty = stringResource(R.string.empty_day_after)
+                val calendarEmpty = stringResource(R.string.league_results_empty)
 
                 LazyColumn(Modifier.fillMaxSize()) {
                     // v1.10.0 (spec §2.2): the top Expand All / Collapse All
@@ -437,7 +439,7 @@ fun LiveScreen(
                         dayBlock(
                             tag = "cd",
                             title = prettyDayKey(customDayKey!!),
-                            emptyText = stringResource(R.string.league_results_empty),
+                            emptyText = calendarEmpty,
                             sections = daySections(matchesOnDay(vm.window, customDayKey!!)),
                             titles = titles,
                             favIds = favIds,
@@ -566,7 +568,7 @@ private fun LazyListScope.dayBlock(
     sections: List<LeagueSection>,
     titles: Map<String, String>,
     favIds: Set<Long>,
-    sectionExpanded: androidx.compose.runtime.SnapshotStateMap<String, Boolean>,
+    sectionExpanded: SnapshotStateMap<String, Boolean>,
     onMatchClick: (Long) -> Unit,
     onVote: (Match) -> Unit,
     onTeam: (Team) -> Unit,

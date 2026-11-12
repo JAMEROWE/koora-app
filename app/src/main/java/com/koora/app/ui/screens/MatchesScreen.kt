@@ -23,6 +23,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.SnapshotStateMap
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -274,7 +275,7 @@ private fun LazyListScope.resultsBlock(
     sections: List<LeagueSection>,
     titles: Map<String, String>,
     favIds: Set<Long>,
-    sectionExpanded: androidx.compose.runtime.SnapshotStateMap<String, Boolean>,
+    sectionExpanded: SnapshotStateMap<String, Boolean>,
     onMatchClick: (Long) -> Unit,
     onTeam: (Team) -> Unit,
     onToggleFavorite: (Match) -> Unit
