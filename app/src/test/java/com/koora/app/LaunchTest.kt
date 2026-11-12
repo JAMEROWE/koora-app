@@ -3,8 +3,10 @@ package com.koora.app
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.semantics.getOrNull
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.koora.app.data.MatchRepository
@@ -91,6 +93,12 @@ class LaunchTest {
         // feed to the day-after block, which honestly reports empty in demo
         // mode (never a fake fixture).
         rule.onNodeWithText(rule.activity.getString(R.string.day_after)).performClick()
+        // v1.10.0: the Expand/Collapse row now sits first in the feed, and on
+        // Robolectric's 470px window the Live list composes only ~2 items —
+        // the empty-state line fell below the fold. Scroll the LIST (tagged
+        // live_feed; the v1.9.0 lesson: never swipe the chip row) before
+        // waiting for the line.
+        rule.onNodeWithTag("live_feed").performTouchInput { swipeUp() }
         try {
             rule.waitUntil(timeoutMillis = 10_000) {
                 rule.onAllNodesWithText(rule.activity.getString(R.string.empty_day_after))

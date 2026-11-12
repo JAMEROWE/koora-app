@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -369,7 +370,9 @@ fun LiveScreen(
                 val dayAfterEmpty = stringResource(R.string.empty_day_after)
                 val calendarEmpty = stringResource(R.string.league_results_empty)
 
-                LazyColumn(Modifier.fillMaxSize()) {
+                // testTag: LaunchTest scrolls THIS list on Robolectric's tiny
+                // window before asserting below-the-fold items.
+                LazyColumn(Modifier.fillMaxSize().testTag("live_feed")) {
                     // v1.10.0 (spec §2.2): the top Expand All / Collapse All
                     // toggle operates on exactly the sections the current
                     // filter shows.
