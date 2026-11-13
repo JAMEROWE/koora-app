@@ -208,9 +208,10 @@ class RoadmapLogicTest {
 
     @Test
     fun pitchBadges_stableMinutesWithinSameKind() {
-        val goals = listOf(ev("90", "goal"), ev("7", "goal"), ev("34", "goal"))
+        val goals = listOf(ev("7", "goal"), ev("34", "goal"), ev("90", "goal"))
         val picked = pitchBadges(goals)
-        // Stable sort: equal priority keeps the original chronological order.
+        // Stable sort: equal priority keeps the PROVIDER's own event order
+        // (events arrive chronological) — we never re-order the story.
         assertEquals(listOf("7", "34"), picked.map { it.minute })
     }
 
