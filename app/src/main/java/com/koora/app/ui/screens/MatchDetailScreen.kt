@@ -46,7 +46,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -254,18 +254,25 @@ fun MatchDetailScreen(
             }
         } else {
             // v1.10.0 (spec §3): the score hero stays on top, the sticky
-            // SecondaryTabRow sits directly below it, and each tab scrolls
-            // its own content — Overview | Lineup | Stats | Form.
+            // tab row sits directly below it, and each tab scrolls
+            // its own content — Overview | Lineup | Events | Stats | Form.
             var detailTab by remember(matchId) { mutableIntStateOf(0) }
             Column(
                 Modifier
                     .fillMaxSize()
                     .padding(padding)
             ) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
                 // v1.8.0 "stadium hero" — floodlit scoreboard card tinted with
                 // the two teams' kit colors (subtle, theme-aware lerp: home
                 // left, away right, neutral center).
+                // v1.10.4 (owner report: the four stacked rows ate half the
+                // screen, so every tab's first card sat below the fold and
+                // the user scrolled on every visit): ONE compact row — badge
+                // + name | score | name + badge — with the status line and
+                // the half-time score as small lines. The card now takes a
+                // fraction of the height, so the tab row and the first
+                // content card are visible the moment the screen opens.
                 val heroBase = MaterialTheme.colorScheme.surfaceContainerHigh
                 val heroEdge = MaterialTheme.colorScheme.surface
                 val homeKit = Color(TeamColors.colorsFor(match.homeTeam.name).bg)
@@ -290,7 +297,7 @@ fun MatchDetailScreen(
                             MaterialTheme.colorScheme.outlineVariant,
                             RoundedCornerShape(20.dp)
                         )
-                        .padding(horizontal = 16.dp, vertical = 20.dp)
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
                 ) {
                     Column(
                         Modifier.fillMaxWidth(),
@@ -307,43 +314,42 @@ fun MatchDetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Spacer(Modifier.height(18.dp))
+                        Spacer(Modifier.height(10.dp))
                         Row(
                             Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            TeamBadge(match.homeTeam.name, match.homeTeam.tla, 44.dp)
+                            TeamBadge(match.homeTeam.name, match.homeTeam.tla, 40.dp)
                             Spacer(Modifier.width(10.dp))
                             Text(
                                 match.homeTeam.name,
                                 Modifier.weight(1f),
                                 style = MaterialTheme.typography.titleMedium,
-                                textAlign = TextAlign.Center
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
-                        }
-                        Spacer(Modifier.height(10.dp))
-                        Text(
-                            scoreLabel(match),
-                            style = MaterialTheme.typography.displaySmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                scoreLabel(match),
+                                style = MaterialTheme.typography.headlineLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.width(12.dp))
                             Text(
                                 match.awayTeam.name,
                                 Modifier.weight(1f),
                                 style = MaterialTheme.typography.titleMedium,
-                                textAlign = TextAlign.Center
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Spacer(Modifier.width(10.dp))
-                            TeamBadge(match.awayTeam.name, match.awayTeam.tla, 44.dp)
+                            TeamBadge(match.awayTeam.name, match.awayTeam.tla, 40.dp)
                         }
                         match.score.halfTime?.home?.let { htHome ->
                             match.score.halfTime?.away?.let { htAway ->
-                                Spacer(Modifier.height(8.dp))
+                                Spacer(Modifier.height(6.dp))
                                 Text(
                                     stringResource(R.string.ht_label, htHome, htAway),
                                     style = MaterialTheme.typography.bodySmall,
@@ -354,8 +360,16 @@ fun MatchDetailScreen(
                     }
                 }
 
-                // v1.10.0 (spec §3): sticky secondary tab bar under the hero.
-                SecondaryTabRow(selectedTabIndex = detailTab) {
+                // v1.10.0 (spec §3): sticky tab bar under the hero.
+                // v1.10.4 (owner report: the first tab rendered as "Overvi" —
+                // the fixed-width SecondaryTabRow splits the bar into equal
+                // fifths and clips "Overview" on narrow screens): a
+                // ScrollableTabRow gives every label its full natural width
+                // and scrolls if they ever exceed the screen.
+                ScrollableTabRow(
+                    selectedTabIndex = detailTab,
+                    edgePadding = 0.dp
+                ) {
                     Tab(
                         selected = detailTab == 0,
                         onClick = { detailTab = 0 },

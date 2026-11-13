@@ -37,6 +37,7 @@
     <string name="highlights_button">شاهد ملخص المباراة</string>
     <string name="highlights_attribution">فيديوهات رسمية عبر يوتيوب • قنوات دوريات وأندية موثقة</string>
     <string name="video_attribution">فيديو رسمي عبر يوتيوب • %1$s</string>
+    <string name="video_attribution_plain">فيديو رسمي عبر يوتيوب</string>
     <string name="legal_notice">كورة هو تطبيق مستقل للنتائج المباشرة والإحصائيات الرياضية. جميع ملخصات المباريات هي فيديوهات رسمية تُستضاف وتُبث مباشرة عبر يوتيوب من قبل أصحاب الحقوق المعنيين. كورة لا تستضيف أو ترفع أو تدّعي ملكية أي بث فيديو أو شعارات دوريات أو علامات تجارية للأندية.</string>
     <string name="news_empty">لا توجد أخبار حالياً. اضغط التحديث لإعادة المحاولة.</string>
     <string name="news_refresh">تحديث الأخبار</string>

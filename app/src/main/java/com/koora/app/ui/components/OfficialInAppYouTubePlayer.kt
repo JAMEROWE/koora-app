@@ -28,6 +28,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -76,16 +77,48 @@ import kotlinx.coroutines.delay
  * player served by YouTube's own endpoint; no stream is fetched, scraped
  * or cached, so the embed-only promise (spec §6.1) is intact.
  *
+ * THE v1.10.4 MID-PLAY DEATH FIX (owner report: "it starts playing but
+ * while running it shut down and replies retry / couldn't find video" —
+ * and the 152-4 card STAYED on screen with our spinner on top): two gaps.
+ *
+ * Gap 1 — YouTube's newer refusal screens (the 152-x "This video is
+ * unavailable" family) are rendered by the embed document itself and
+ * frequently fire NO IFrame onError event; the API has no event for them.
+ * Until the 6s no-ready backstop rotated the candidate, the card sat
+ * there — and it carries a "Watch video on YouTube" button, i.e. a
+ * tap-out to YouTube's site INSIDE our player box, which VideoPolicy
+ * forbids in spirit. Two fixes:
+ *   - an in-page poller (same-origin: both this document and the embed
+ *     iframe are https://www.youtube.com) checks the iframe every 600ms
+ *     for the card's '.ytp-error' overlay or its literal "Error code"
+ *     text — tight signals a healthy player never renders — and reports
+ *     it through the bridge EXACTLY like onError. Detection drops from
+ *     ~6s to ~1s, the card is hidden instantly, and the next candidate
+ *     auto-plays. If the iframe ever becomes unreadable the exception is
+ *     swallowed and the 6s stall guard remains the backstop.
+ *   - onError, the stall/no-play guards and the poller all set a local
+ *     `embedErrored` flag that removes the WebView from composition
+ *     IMMEDIATELY (black + spinner) — YouTube's error card and its
+ *     tap-out button are never left visible for even one frame.
+ *
+ * Gap 2 — after PLAYING was observed, a WebView RENDERER CRASH (memory
+ * pressure on 4G devices) marked the candidate failed outright. Renderer
+ * kills are usually transient: the player now silently rebuilds itself
+ * for the SAME video once (fresh `attempt`, fresh WebView, fresh guards)
+ * and only reports the candidate as failed if it crashes again.
+ *
  * Policy baked in (spec §6.1):
  *  - the IFrame API script is the only script; playback stays 100% in-app;
  *  - main-frame navigation is refused for every host outside
  *    youtube.com / youtube-nocookie.com / ytimg.com / googlevideo.com,
  *    so logo / share / redirect taps can never turn the screen into
  *    YouTube's website (VideoPolicy's promise, host-level form);
- *  - the JS bridge reports IFrame onError (100/101/150/153...) AND the
- *    playback state to Compose: a player that never reports ready in 4s,
- *    a renderer crash, or a player that never actually PLAYS within 12s
- *    hands the video to the caller (GONE) — never a lingering black box;
+ *  - the JS bridge reports IFrame onError (100/101/150/153...), the
+ *    same-origin error-card poller, AND the playback state to Compose:
+ *    a player that never reports ready in 6s, a renderer crash (after
+ *    one silent rebuild), or a player that never actually PLAYS within
+ *    12s hands the video to the caller (GONE) — never a lingering black
+ *    box, never an error card with a tap-out to YouTube's site;
  *  - mixed content is never allowed; the WebView UA is the normal
  *    browser UA (the "; wv" token removed) so YouTube serves the full
  *    embed experience.
@@ -103,19 +136,32 @@ fun OfficialInAppYouTubePlayer(
 ) {
     val context = LocalContext.current
 
+    // v1.10.4: renderer-crash resilience — attempt 0 is the first build of
+    // this candidate; attempt 1 is the ONE silent rebuild after a renderer
+    // crash (same video, fresh WebView and fresh guards). A second crash
+    // reports the candidate as failed. Remember/key scopes include `attempt`
+    // so every rebuild starts with clean state.
+    var attempt by remember(videoId) { mutableIntStateOf(0) }
+
     // v1.9.1 (spec §6.1): false until the IFrame player reports onReady.
-    // A spinner shows meanwhile; if nothing reports within 4s (stalled
-    // black box) the in-app Custom Tab fallback takes over.
-    var isPlayerReady by remember(videoId) { mutableStateOf(false) }
+    // A spinner shows meanwhile; if nothing reports within 6s (stalled
+    // black box) the next candidate takes over.
+    var isPlayerReady by remember(videoId, attempt) { mutableStateOf(false) }
 
     // v1.10.0: onReady alone is NOT proof of picture — the notorious
     // black-box-with-audio case reports ready and never actually plays.
     // PLAYING state (1) is the only honest "you are watching" signal.
-    var sawPlaying by remember(videoId) { mutableStateOf(false) }
+    var sawPlaying by remember(videoId, attempt) { mutableStateOf(false) }
+
+    // v1.10.4: a refusal screen was detected (IFrame onError, the
+    // same-origin error-card poller, or a guard). The WebView leaves the
+    // composition the moment this flips — YouTube's error card and its
+    // "Watch video on YouTube" tap-out are never left on screen.
+    var embedErrored by remember(videoId, attempt) { mutableStateOf(false) }
 
     val latestOnBlocked by rememberUpdatedState(onEmbedBlockedOrFailed)
 
-    val webView = remember(videoId) {
+    val webView = remember(videoId, attempt) {
         WebView(context).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -146,9 +192,16 @@ fun OfficialInAppYouTubePlayer(
                         post { if (state == 1) sawPlaying = true }
                     }
 
+                    // v1.10.4: hide the WebView BEFORE reporting — the caller
+                    // needs a moment to resolve the next candidate, and during
+                    // that gap YouTube's error card (with its tap-out to
+                    // YouTube's site) must not stay on screen.
                     @JavascriptInterface
                     fun onPlayerError(errorCode: Int) {
-                        post { onEmbedBlockedOrFailed(videoId) }
+                        post {
+                            embedErrored = true
+                            onEmbedBlockedOrFailed(videoId)
+                        }
                     }
                 },
                 "KooraPlayerBridge"
@@ -196,14 +249,24 @@ fun OfficialInAppYouTubePlayer(
                     }.getOrNull()
                 }
 
-                // v1.10.0: a crashed WebView renderer is the ultimate black
-                // box — absorb it (return true keeps Koora alive) and hand
-                // the video to the in-app Custom Tab fallback.
+                // v1.10.4: a crashed WebView renderer is the ultimate black
+                // box — absorb it (return true keeps Koora alive). Renderer
+                // kills are usually transient memory pressure, so the FIRST
+                // crash silently rebuilds the same video (fresh WebView, fresh
+                // guards via `attempt`); only a second crash gives up on the
+                // candidate and lets the next one play.
                 override fun onRenderProcessGone(
                     view: WebView,
                     detail: RenderProcessGoneDetail
                 ): Boolean {
-                    view.post { onEmbedBlockedOrFailed(videoId) }
+                    view.post {
+                        if (attempt == 0) {
+                            attempt = 1
+                        } else {
+                            embedErrored = true
+                            onEmbedBlockedOrFailed(videoId)
+                        }
+                    }
                     return true
                 }
             }
@@ -244,6 +307,26 @@ fun OfficialInAppYouTubePlayer(
                     <script src="https://www.youtube.com/iframe_api"></script>
                     <script>
                         var player;
+                        // v1.10.4: refusal screens of the 152-x family render
+                        // YouTube's own error card WITHOUT firing the IFrame
+                        // API's onError — the API has no event for them. This
+                        // document and the embed iframe share the origin
+                        // https://www.youtube.com, so the card is detectable
+                        // from here: poll for the '.ytp-error' overlay or the
+                        // literal "Error code" text (signals a healthy player
+                        // never renders), report through the bridge exactly
+                        // like onError, and the candidate cascade rotates
+                        // within ~1s instead of ~6s. Polling stops on PLAYING
+                        // (state 1), on onError, after 50 rounds (~30s), or on
+                        // any read failure — the stall guard is the backstop.
+                        var errorPoll = null;
+                        var errorPollRounds = 0;
+                        function stopErrorPoll() {
+                            if (errorPoll !== null) {
+                                clearInterval(errorPoll);
+                                errorPoll = null;
+                            }
+                        }
                         function onYouTubeIframeAPIReady() {
                             player = new YT.Player('player', {
                                 events: {
@@ -253,17 +336,44 @@ fun OfficialInAppYouTubePlayer(
                                         }
                                     },
                                     'onStateChange': function(event) {
+                                        if (event.data === 1) {
+                                            stopErrorPoll();
+                                        }
                                         if (window.KooraPlayerBridge) {
                                             window.KooraPlayerBridge.onPlayerState(event.data);
                                         }
                                     },
                                     'onError': function(event) {
+                                        stopErrorPoll();
                                         if (window.KooraPlayerBridge) {
                                             window.KooraPlayerBridge.onPlayerError(event.data);
                                         }
                                     }
                                 }
                             });
+                            errorPoll = setInterval(function() {
+                                errorPollRounds++;
+                                if (errorPollRounds > 50) {
+                                    stopErrorPoll();
+                                    return;
+                                }
+                                try {
+                                    var frame = document.getElementById('player');
+                                    if (!frame) return;
+                                    var doc = frame.contentDocument;
+                                    if (!doc || !doc.body) return;
+                                    var text = doc.body.innerText || '';
+                                    if (doc.querySelector('.ytp-error') || text.indexOf('Error code') !== -1) {
+                                        stopErrorPoll();
+                                        if (window.KooraPlayerBridge) {
+                                            window.KooraPlayerBridge.onPlayerError(152);
+                                        }
+                                    }
+                                } catch (e) {
+                                    // iframe not readable from here — the 6s
+                                    // stall guard still catches a dead player.
+                                }
+                            }, 600);
                         }
                     </script>
                 </body>
@@ -285,10 +395,15 @@ fun OfficialInAppYouTubePlayer(
     // video to the next candidate — playback continues, never a lingering
     // black box. (6s: v1.10.2 raises it from 4s because the embed document
     // now takes the intercept+proxy hop, and a slow network must not skip
-    // a video that is about to play.)
-    LaunchedEffect(videoId) {
+    // a video that is about to play.) v1.10.4: the stalled WebView also
+    // hides the moment the guard fires — during the candidate-swap gap
+    // nothing stale stays on screen.
+    LaunchedEffect(videoId, attempt) {
         delay(6_000L)
-        if (!isPlayerReady) latestOnBlocked(videoId)
+        if (!isPlayerReady) {
+            embedErrored = true
+            latestOnBlocked(videoId)
+        }
     }
 
     // v1.10.0: the no-playback guard. onReady alone is NOT proof of picture
@@ -296,9 +411,12 @@ fun OfficialInAppYouTubePlayer(
     // actually plays. PLAYING state (1) is the only honest "you are
     // watching" signal — if it is never seen within 12s, the next
     // candidate takes over. The user watches, always.
-    LaunchedEffect(videoId) {
+    LaunchedEffect(videoId, attempt) {
         delay(12_000L)
-        if (!sawPlaying) latestOnBlocked(videoId)
+        if (!sawPlaying) {
+            embedErrored = true
+            latestOnBlocked(videoId)
+        }
     }
 
     DisposableEffect(webView) {
@@ -308,11 +426,15 @@ fun OfficialInAppYouTubePlayer(
         }
     }
 
-    // key(videoId): AndroidView invokes its factory once per node —
-    // without the key, picking another video in "More highlights" would
-    // keep the old (already destroyed) WebView on screen. The key swaps
-    // in the freshly built player for every candidate.
-    key(videoId) {
+    // key(videoId, attempt): AndroidView invokes its factory once per node
+    // — without the key, picking another video in "More highlights" would
+    // keep the old (already destroyed) WebView on screen. The key swaps in
+    // a freshly built player for every candidate AND for the v1.10.4
+    // post-crash rebuild. embedErrored removes the WebView from composition
+    // the instant a refusal screen is detected — YouTube's error card and
+    // its "Watch video on YouTube" tap-out are never left visible; the
+    // spinner holds the frame until the next candidate is ready.
+    key(videoId, attempt) {
         Box(
             modifier = modifier
                 .fillMaxWidth()
@@ -321,10 +443,12 @@ fun OfficialInAppYouTubePlayer(
                 .background(androidx.compose.ui.graphics.Color.Black),
             contentAlignment = Alignment.Center
         ) {
-            AndroidView(
-                factory = { webView },
-                modifier = Modifier.fillMaxSize()
-            )
+            if (!embedErrored) {
+                AndroidView(
+                    factory = { webView },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
             if (!isPlayerReady) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }

@@ -225,13 +225,18 @@ fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
                     ) {
                         // v1.8.0 attribution (roadmap §3.4) — shown whenever the
                         // player is visible: official video, streamed by YouTube.
+                        // v1.10.4: an unknown channel no longer renders the
+                        // platform name twice ("via YouTube • YouTube") — the
+                        // plain attribution is used when the channel is blank
+                        // (e.g. a cached entry from an older release).
                         val currentChannel = videos
                             .firstOrNull { it.videoId == currentId }?.channel
                         Text(
-                            stringResource(
-                                R.string.video_attribution,
-                                currentChannel?.takeIf { it.isNotBlank() } ?: "YouTube"
-                            ),
+                            if (currentChannel.isNullOrBlank()) {
+                                stringResource(R.string.video_attribution_plain)
+                            } else {
+                                stringResource(R.string.video_attribution, currentChannel)
+                            },
                             Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
