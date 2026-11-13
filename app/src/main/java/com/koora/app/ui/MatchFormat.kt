@@ -2,6 +2,7 @@ package com.koora.app.ui
 
 import com.koora.app.data.Match
 import com.koora.app.data.StatsEvent
+import com.koora.app.data.StatsPlayer
 import com.koora.app.data.TeamColors
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -99,23 +100,28 @@ internal fun playerMatches(eventPlayer: String, starterName: String): Boolean {
 }
 
 /**
- * v1.10.1 (owner report: pitch badges collided with players) — a starter
- * can carry several events (goal + yellow + sub). The pitch slot shows at
- * most [max] pills, chosen by match-story priority: goal first, then red,
- * then yellow, then the sub arrow. NOTHING is dropped from the record —
- * every event stays in the Match events section and the player sheet;
- * this only decides what fits on the pitch. Stable sort keeps minutes in
- * order within one kind. Pure, tested.
+ * v1.10.2 (owner report: the match events must be INDEPENDENT of the
+ * lineup) — the pitch no longer carries event badges at all. The badge
+ * selection logic (pitchBadges) is gone with them: the pitch is now the
+ * pure lineup — jerseys and names, nothing else — and the whole event
+ * record lives in its own titled Match events card and the player sheet.
+ * No badge can ever collide with a player again, because no badge exists
+ * on the pitch.
  */
-internal fun pitchBadges(events: List<StatsEvent>, max: Int = 2): List<StatsEvent> {
-    if (events.size <= max) return events
-    fun rank(kind: String) = when (kind) {
-        "goal" -> 0
-        "red" -> 1
-        "yellow" -> 2
-        else -> 3
+
+/**
+ * v1.10.2 (owner report: "no substitutes for the upper team") — pairs the
+ * announced bench with the real substitution events: a bench player who
+ * actually came on carries the minute of their entry ("⬆ 46'"), everyone
+ * else is listed as an unused substitute. Both are provider facts — we
+ * only JOIN them. Matching uses the same surname rule as the pitch did.
+ * Pure, tested.
+ */
+internal fun benchRows(bench: List<StatsPlayer>, subEvents: List<StatsEvent>): List<Pair<StatsPlayer, String?>> {
+    return bench.map { p ->
+        val entered = subEvents.firstOrNull { ev -> playerMatches(ev.player, p.name) }
+        p to entered?.minute
     }
-    return events.sortedBy { rank(it.kind) }.take(max)
 }
 
 /**

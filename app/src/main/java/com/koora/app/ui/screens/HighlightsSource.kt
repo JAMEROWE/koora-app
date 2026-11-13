@@ -139,6 +139,14 @@ object HighlightsHub {
                 .flatten()
                 .sortedByDescending { it.published }     // newest release first
                 .mapNotNull { e -> pairWithFixture(e, finished)?.let { Row(it.second, e) } }
+                // v1.10.2: hub rows are oembed-verified too — a video whose
+                // embedding YouTube refuses never seeds the player, so the
+                // detail screen's cascade starts on playable ground.
+                .let { rows ->
+                    val ok = rows.map { async { oembedAllows(it.video.videoId) } }
+                        .map { it.await() }
+                    rows.filterIndexed { i, _ -> ok[i] }
+                }
                 .distinctBy { it.video.videoId }         // one video = one row
         }
         if (context != null) {
@@ -295,7 +303,56 @@ private suspend fun viaOfficialChannels(home: String, away: String): List<YtEntr
             .flatMap { it.await() }
             .filter { titleMatches(it.title, home) && titleMatches(it.title, away) }
             .sortedByDescending { it.published }  // newest highlights first
+            // v1.10.2 (owner report: error 152-4 at playback): every
+            // candidate is verified against YouTube's public oEmbed
+            // endpoint BEFORE it reaches the player — a video whose
+            // embedding YouTube refuses never becomes a candidate at all.
+            // Zero quota, no key, fail-open on network errors.
+            .take(EMBED_CHECK_CAP)
+            .let { candidates ->
+                val ok = candidates.map { e -> async { oembedAllows(e.videoId) } }
+                    .map { it.await() }
+                candidates.filterIndexed { i, _ -> ok[i] }
+            }
     }
+
+/** Bound on oembed checks per resolve — title matches are few, but never
+ *  more than this many network probes per fixture. */
+private const val EMBED_CHECK_CAP = 8
+
+/**
+ * v1.10.2 — YouTube's public oEmbed endpoint as the free embeddability
+ * oracle: it serves metadata (HTTP 200) for videos that may be embedded
+ * and refuses (HTTP 401/403/404) exactly when the owner disabled
+ * embedding or the video is gone. Catching those candidates here means
+ * the player only ever sees videos YouTube is WILLING to embed.
+ *
+ * Network failure returns TRUE (fail-open): a temporary oembed outage
+ * must not hide playable highlights — and if the video really is blocked,
+ * the player's own error bridge + candidate cascade handle it honestly.
+ * Pure decision logic: [oembedStatusAllows]. Tested.
+ */
+internal fun oembedStatusAllows(httpCode: Int?): Boolean =
+    httpCode == null || httpCode == 200
+
+private fun oembedAllows(videoId: String): Boolean {
+    val id = videoId.replace(Regex("[^A-Za-z0-9_-]"), "")
+    if (id.isBlank()) return false
+    val watch = URLEncoder.encode("https://www.youtube.com/watch?v=$id", "UTF-8")
+    val code = runCatching {
+        val conn = URL("https://www.youtube.com/oembed?url=$watch&format=json")
+            .openConnection() as HttpURLConnection
+        conn.connectTimeout = 6_000
+        conn.readTimeout = 8_000
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; KooraApp/1.5)")
+        try {
+            conn.responseCode
+        } finally {
+            conn.disconnect()
+        }
+    }.getOrNull()
+    return oembedStatusAllows(code)
+}
 
 private fun fetchChannelFeed(channelId: String, channelName: String): List<YtEntry> {
     val text = httpGet("https://www.youtube.com/feeds/videos.xml?channel_id=$channelId")

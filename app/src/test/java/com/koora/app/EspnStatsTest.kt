@@ -78,13 +78,19 @@ class EspnStatsTest {
         assertEquals("Romain Perraud", sub.player)
         assertEquals("Calvin Verdonk", sub.other)
 
-        // Lineups: home first, formation + XI + bench size
+        // Lineups: home first, formation + XI + the real announced bench
+        // (v1.10.2: bench NAMES are parsed, not just a count — the
+        // Substitutions card lists them per team).
         assertEquals(2, stats.lineups.size)
         val homeLu = stats.lineups[0]
         assertEquals("Stade Rennais", homeLu.team)
         assertEquals("3-5-2", homeLu.formation)
         assertEquals(11, homeLu.starters.size)
-        assertEquals(9, homeLu.subsCount)
+        assertEquals(9, homeLu.bench.size)
+        assertTrue(homeLu.bench.any { it.name == "Mousa Al-Tamari" })
+        assertTrue(homeLu.bench.any { it.name == "Ludovic Blas" })
+        assertEquals(9, stats.lineups[1].bench.size)
+        assertTrue(stats.lineups[1].bench.any { it.name == "Olivier Giroud" })
         assertEquals("4-3-3", stats.lineups[1].formation)
         assertEquals("Lille", stats.lineups[1].team)
 

@@ -61,7 +61,13 @@ data class StatsLineup(
     val formation: String?,
     val coach: String?,
     val starters: List<StatsPlayer>,
-    val subsCount: Int
+    // v1.10.2 (owner report: "no substitutes for the upper team"): the
+    // ANNOUNCED substitutes with their real names — ESPN roster entries
+    // with starter != true, API-Football's substitutes array. The old
+    // subsCount was a bare number nobody could read; the bench card now
+    // lists these names per team. Empty = provider announced no bench
+    // (the section then hides — we never invent one).
+    val bench: List<StatsPlayer>
 )
 
 data class StatsBar(val label: String, val home: String, val away: String, val homeFraction: Float?)
@@ -147,14 +153,18 @@ object MatchStatsRepository {
                 listOf(
                     StatsPlayer("1", "M. El Kamel"), StatsPlayer("3", "Y. Belammari"), StatsPlayer("4", "A. Sbai"), StatsPlayer("5", "M. Benama"), StatsPlayer("2", "H. Mouaddib"), StatsPlayer("8", "O. Marzouki"), StatsPlayer("6", "N. Zouheiry"), StatsPlayer("10", "M. Zabiri"), StatsPlayer("7", "H. Rakraki"), StatsPlayer("9", "M. Rabeh"), StatsPlayer("11", "Y. El Fahimi")
                 ),
-                7
+                listOf(
+                    StatsPlayer("16", "A. Tagnaouti"), StatsPlayer("12", "S. Khalfi"), StatsPlayer("14", "O. Belrhazi"), StatsPlayer("15", "Y. Alaoui"), StatsPlayer("17", "M. Nahri"), StatsPlayer("18", "A. Mardaci"), StatsPlayer("20", "H. Moudden")
+                )
             ),
             StatsLineup(
                 match.awayTeam.shortName ?: match.awayTeam.name, "4-2-3-1", "R. El Amrani",
                 listOf(
                     StatsPlayer("1", "A. Lekrati"), StatsPlayer("26", "Y. Atouch"), StatsPlayer("18", "J. Nkoma"), StatsPlayer("4", "B. Martaud"), StatsPlayer("5", "V. Betoukoumi"), StatsPlayer("6", "M. El Moussaoui"), StatsPlayer("8", "A. Abahaf"), StatsPlayer("10", "C. Bangre"), StatsPlayer("7", "G. Kanga"), StatsPlayer("11", "S. Tiaib"), StatsPlayer("9", "E. Aguerd")
                 ),
-                5
+                listOf(
+                    StatsPlayer("22", "M. Hanaf"), StatsPlayer("13", "R. Ben Ali"), StatsPlayer("14", "O. Jouida"), StatsPlayer("16", "A. Naji"), StatsPlayer("19", "Y. Chibi")
+                )
             )
         ),
         bars = listOf(
@@ -281,7 +291,9 @@ object MatchStatsRepository {
                 starters = l.startXI.take(11).mapNotNull { x ->
                     x.player?.name?.let { StatsPlayer(x.player?.number, it) }
                 },
-                subsCount = l.subs.size
+                bench = l.subs.mapNotNull { x ->
+                    x.player?.name?.let { StatsPlayer(x.player?.number, it) }
+                }
             )
         }.let { pair ->
             // order [home, away]
@@ -440,7 +452,13 @@ object MatchStatsRepository {
                     formation = r.formation?.takeUnless { it.isBlank() },
                     coach = r.coach?.fullName,
                     starters = starters.take(11),
-                    subsCount = r.roster.count { it.starter != true }
+                    bench = r.roster
+                        .filter { it.starter != true }
+                        .mapNotNull { p ->
+                            p.athlete?.displayName?.let {
+                                StatsPlayer(p.jersey?.takeUnless { it.isBlank() }, it)
+                            }
+                        }
                 )
             }
             .filter { it.team.isNotBlank() }

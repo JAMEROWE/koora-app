@@ -1,12 +1,14 @@
 package com.koora.app
 
 import com.koora.app.data.StatsEvent
+import com.koora.app.data.StatsPlayer
 import com.koora.app.ui.formationRows
 import com.koora.app.ui.minuteValue
-import com.koora.app.ui.pitchBadges
+import com.koora.app.ui.benchRows
 import com.koora.app.ui.playerMatches
 import com.koora.app.ui.positionLabel
 import com.koora.app.ui.statNumberColor
+import com.koora.app.ui.screens.oembedStatusAllows
 import com.koora.app.ui.screens.regionAllows
 import com.koora.app.ui.screens.verifyDataApiVideo
 import org.junit.Assert.assertEquals
@@ -173,46 +175,71 @@ class RoadmapLogicTest {
         assertFalse(playerMatches("Jamie Vardy", "Jordan Ayew"))
     }
 
-    // ---------- v1.10.1: pitchBadges (non-colliding on-pitch badges) ----------
+    // ---------- v1.10.2: benchRows (per-team labeled substitutes card) ----------
 
-    private fun ev(minute: String, kind: String, side: Int = 0) =
-        StatsEvent(minute = minute, side = side, kind = kind, detail = "", player = "P", other = null)
+    private fun ev(minute: String, kind: String, side: Int = 0, player: String = "P") =
+        StatsEvent(minute = minute, side = side, kind = kind, detail = "", player = player, other = null)
 
-    @Test
-    fun pitchBadges_underLimit_everythingFitsOnPitch() {
-        val two = listOf(ev("23", "goal"), ev("67", "yellow"))
-        assertEquals(two, pitchBadges(two))
-        assertEquals(2, pitchBadges(two).size)
-    }
+    private fun benchP(name: String) = StatsPlayer(number = null, name = name)
 
     @Test
-    fun pitchBadges_overLimit_priorityGoalThenCardsThenSub() {
-        // A busy starter: 3 goals + 2 yellows + a sub in the record. The
-        // pitch slot shows the match story in priority order (goal, red,
-        // yellow, sub) and caps at two pills; the events section keeps all.
-        val busy = listOf(
-            ev("12", "yellow"), ev("40", "sub"), ev("23", "goal"),
-            ev("55", "goal"), ev("78", "goal")
+    fun benchRows_playerWhoCameOn_carriesEntryMinute() {
+        val bench = listOf(benchP("Ayden Heaven"), benchP("Mason Mount"))
+        val subs = listOf(
+            ev("45", "sub", side = 0, player = "Ayden Heaven"),
+            ev("66", "sub", side = 0, player = "Mason Mount")
         )
-        val picked = pitchBadges(busy)
-        assertEquals(listOf("23", "55"), picked.map { it.minute })
-        assertTrue(picked.all { it.kind == "goal" })
+        val rows = benchRows(bench, subs)
+        assertEquals(listOf("45", "66"), rows.map { it.second })
     }
 
     @Test
-    fun pitchBadges_prefersGoalOverYellow_overRedOverSub() {
-        val mixed = listOf(ev("30", "sub"), ev("10", "yellow"), ev("60", "red"), ev("5", "goal"))
-        val picked = pitchBadges(mixed)
-        assertEquals(setOf("goal", "red"), picked.map { it.kind }.toSet())
+    fun benchRows_unusedSubstitute_listsNameWithoutMinute() {
+        val bench = listOf(benchP("Altay Bayindir"), benchP("Ayden Heaven"))
+        val subs = listOf(ev("45", "sub", side = 0, player = "Ayden Heaven"))
+        val rows = benchRows(bench, subs)
+        assertEquals("Altay Bayindir", rows[0].first.name)
+        assertEquals(null, rows[0].second)
+        assertEquals("45", rows[1].second)
     }
 
     @Test
-    fun pitchBadges_stableMinutesWithinSameKind() {
-        val goals = listOf(ev("7", "goal"), ev("34", "goal"), ev("90", "goal"))
-        val picked = pitchBadges(goals)
-        // Stable sort: equal priority keeps the PROVIDER's own event order
-        // (events arrive chronological) — we never re-order the story.
-        assertEquals(listOf("7", "34"), picked.map { it.minute })
+    fun benchRows_surnameRule_matchesAbbreviatedEventNames() {
+        // ESPN events sometimes abbreviate the first name — the surname
+        // rule must still attach the minute to the right bench player.
+        val bench = listOf(benchP("Amad Diallo"))
+        val subs = listOf(ev("83", "sub", side = 1, player = "A. Diallo"))
+        val rows = benchRows(bench, subs)
+        assertEquals("83", rows[0].second)
+    }
+
+    @Test
+    fun benchRows_emptyBenchOrNoSubs_stillReturnsEveryBenchName() {
+        val rows = benchRows(listOf(benchP("X"), benchP("Y")), emptyList())
+        assertEquals(2, rows.size)
+        assertTrue(rows.all { it.second == null })
+    }
+
+    // ---------- v1.10.2: oembedStatusAllows (free embeddability oracle) ----------
+
+    @Test
+    fun oembedStatus_servedMetadata_meansEmbeddable() {
+        assertTrue(oembedStatusAllows(200))
+    }
+
+    @Test
+    fun oembedStatus_refusedCodes_meanEmbeddingDisabled() {
+        assertFalse(oembedStatusAllows(401))
+        assertFalse(oembedStatusAllows(403))
+        assertFalse(oembedStatusAllows(404))
+        assertFalse(oembedStatusAllows(500))
+    }
+
+    @Test
+    fun oembedStatus_networkFailure_failsOpen() {
+        // A temporary oembed outage must never hide playable highlights —
+        // the player's own guards handle a genuinely blocked video.
+        assertTrue(oembedStatusAllows(null))
     }
 
     // ---------- v1.9.0: statNumberColor (WCAG-safe numbers) ----------

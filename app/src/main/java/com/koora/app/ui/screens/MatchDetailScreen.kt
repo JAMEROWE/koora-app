@@ -103,7 +103,7 @@ import com.koora.app.ui.formationRows
 import com.koora.app.ui.isLive
 import com.koora.app.ui.next5Last5
 import com.koora.app.ui.pickResult
-import com.koora.app.ui.pitchBadges
+import com.koora.app.ui.benchRows
 import com.koora.app.ui.playerMatches
 import com.koora.app.ui.positionLabel
 import com.koora.app.ui.scoreLabel
@@ -1260,17 +1260,15 @@ private data class PlayerSpot(
     val events: List<StatsEvent>
 )
 
-// v1.10.1 pitch slot geometry (owner report: badges collided with players).
-// Every player is drawn inside a FIXED-size slot; the slot — not its widest
-// child — is centered on the formation anchor, so a wide badge pill or a
-// long surname can never push the jersey sideways into a neighbour, and a
-// reserved badge zone keeps every jersey in a row aligned. Slot anatomy:
-// [badge zone 26dp][2][jersey 22dp][1][name 12dp] = 63dp tall; the jersey
-// center sits 39dp below the slot top (BADGE_ZONE + 2 + 11).
+// v1.10.2 pitch slot geometry — the pitch is the PURE lineup: every
+// player draws inside a FIXED-size slot centered on the formation anchor
+// (jersey + surname), and NOTHING else renders on the pitch — the owner
+// reported event badges as interference twice, so v1.10.2 removes them
+// from the pitch entirely: no badge can collide with a player that does
+// not exist. The whole event record lives in the Match events card below.
 private val SLOT_W = 64.dp
-private val SLOT_H = 63.dp
-private val BADGE_ZONE = 26.dp
-private val JERSEY_CENTER_Y = BADGE_ZONE + 2.dp + 11.dp
+private val SLOT_H = 40.dp
+private val JERSEY_CENTER_Y = 11.dp
 
 @Composable
 private fun LineupsSection(match: Match, ds: MatchStats) {
@@ -1435,10 +1433,11 @@ private fun UnifiedPitch(
     }
     Spacer(Modifier.height(8.dp))
     TeamAnchor(match.awayTeam, ds.lineups[1])
-    BenchStrip(match, ds.events)
+    BenchStrip(match, ds)
 }
 
-/** One team's players + their event badges, placed by formation rows. */
+/** One team's players on the pitch, placed by formation rows (pure lineup —
+ *  the `events` feed only enriches the tap-sheet, nothing renders here). */
 @Composable
 private fun BoxScope.PitchTeam(
     lineup: StatsLineup,
@@ -1474,15 +1473,11 @@ private fun BoxScope.PitchTeam(
                 posKey = positionLabel(rows, idx),
                 events = mine
             )
-            // v1.10.1: the slot box is centered on the anchor point. The old
-            // math subtracted only the 22dp jersey half-width from the anchor,
-            // so any child wider than the jersey (a badge pill, a surname)
-            // shifted the whole column sideways and collided with neighbours.
-            // Centering the fixed-size SLOT instead makes every position exact.
+            // v1.10.2: the player node is the whole story on the pitch —
+            // jersey, number, surname. Events live in their own section.
             PlayerNode(
                 p = p,
                 color = kit,
-                badges = pitchBadges(mine),
                 modifier = Modifier.offset(
                     x = pitchW * xFrac - SLOT_W / 2,
                     y = pitchH * yFrac - JERSEY_CENTER_Y
@@ -1494,18 +1489,16 @@ private fun BoxScope.PitchTeam(
 }
 
 /**
- * One player slot (v1.10.1): FIXED 64×63dp, so the geometry above holds
- * exactly. Inside: a reserved badge zone (identical height for every
- * player — jerseys in a row stay aligned whether or not they carry
- * events), the jersey circle, the surname. At most two badge pills render
- * here, chosen by pitchBadges priority; the full event record lives in
- * the Match events section and the player sheet — nothing is lost.
+ * One player slot (v1.10.2): FIXED 64×40dp so every jersey in a row sits
+ * at the same height and the same spacing. Inside: the jersey circle with
+ * the shirt number and the surname below. Nothing else — no badges, no
+ * pills (owner decision: the lineup must be independent of the match
+ * events). Tap opens the max-info sheet.
  */
 @Composable
 private fun PlayerNode(
     p: StatsPlayer,
     color: Color,
-    badges: List<StatsEvent>,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -1515,16 +1508,6 @@ private fun PlayerNode(
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Reserved badge zone — fixed height, never pushes anything around.
-        Box(Modifier.height(BADGE_ZONE), contentAlignment = Alignment.TopCenter) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                badges.groupBy { if (it.kind == "sub") "sub" else it.kind }
-                    .values
-                    .take(2)
-                    .forEach { group -> EventBadge(group, color) }
-            }
-        }
-        Spacer(Modifier.height(2.dp))
         Surface(
             shape = CircleShape,
             color = color,
@@ -1554,53 +1537,20 @@ private fun PlayerNode(
     }
 }
 
-/** One grouped badge pill: minute(s) + kind glyph, colored by kind.
- *  v1.10.1: capped to the slot width so even "⚽ 45+2', 90+4'" can never
- *  grow wider than the player's own space. */
-@Composable
-private fun EventBadge(group: List<StatsEvent>, kit: Color) {
-    val kind = group.first().kind
-    val minutes = group.joinToString(", ") { "${it.minute}'" }
-    val bg = when (kind) {
-        "yellow" -> Color(0xFFF2C94C)
-        "red" -> Color(0xFFEB5757)
-        "sub" -> MaterialTheme.colorScheme.outlineVariant
-        else -> kit
-    }
-    val fg = when (kind) {
-        "yellow" -> Color(0xFF3B2F00)
-        else -> Color.White
-    }
-    val glyph = if (kind == "sub") "⬇" else if (kind == "goal") "⚽" else ""
-    Surface(
-        modifier = Modifier.widthIn(max = SLOT_W - 6.dp),
-        shape = RoundedCornerShape(5.dp),
-        color = bg,
-        border = if (kind == "goal") BorderStroke(0.5.dp, Color.White) else null
-    ) {
-        Text(
-            ("$glyph $minutes").trim(),
-            Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-            fontSize = 7.sp,
-            fontWeight = FontWeight.Bold,
-            color = fg,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
 /**
- * Bench strip (spec §4.2): the players who came ON, with their minute,
- * in their own titled card — v1.10.1 owner fix: every section of the
- * Lineup tab (pitch, bench, match events) occupies its own place.
- * Built ONLY from real substitution events — no subs in the data, no
- * strip (we never invent a bench).
+ * Substitutions card (spec §4.2) — v1.10.2 owner fix: "no substitutes for
+ * the upper team". The old bench strip rendered two UNLABELED columns fed
+ * only by substitution events, so the upper team's players read as part
+ * of the lower team's block (and vanished entirely when the provider sent
+ * no sub events). Now each team gets its own LABELLED column — crest +
+ * short name — listing the ANNOUNCED BENCH (real names from the provider
+ * roster), and a player who actually came on carries the minute of their
+ * entry. The card shows when at least one bench exists; nothing invented.
  */
 @Composable
-private fun BenchStrip(match: Match, events: List<StatsEvent>) {
-    val subs = events.filter { it.kind == "sub" }
-    if (subs.isEmpty()) return
+private fun BenchStrip(match: Match, ds: MatchStats) {
+    if (ds.lineups.all { it.bench.isEmpty() }) return
+    val subEvents = ds.events.filter { it.kind == "sub" }
     Spacer(Modifier.height(12.dp))
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
@@ -1613,11 +1563,15 @@ private fun BenchStrip(match: Match, events: List<StatsEvent>) {
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
-                    subs.filter { it.side == 0 }.forEach { BenchRow(it) }
+                    BenchTeamHeader(match.homeTeam)
+                    benchRows(ds.lineups[0].bench, subEvents.filter { it.side == 0 })
+                        .forEach { BenchRow(it) }
                 }
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    subs.filter { it.side == 1 }.forEach { BenchRow(it) }
+                    BenchTeamHeader(match.awayTeam)
+                    benchRows(ds.lineups[1].bench, subEvents.filter { it.side == 1 })
+                        .forEach { BenchRow(it) }
                 }
             }
         }
@@ -1625,9 +1579,28 @@ private fun BenchStrip(match: Match, events: List<StatsEvent>) {
 }
 
 @Composable
-private fun BenchRow(e: StatsEvent) {
+private fun BenchTeamHeader(team: Team) {
+    Row(
+        Modifier.fillMaxWidth().padding(bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TeamBadge(team.name, team.tla, 14.dp)
+        Spacer(Modifier.width(6.dp))
+        Text(
+            team.shortName ?: team.name,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun BenchRow(row: Pair<StatsPlayer, String?>) {
+    val (p, minute) = row
     Text(
-        "⬆ ${e.minute}'  ${e.player}",
+        if (minute != null) "⬆ ${minute}'  ${p.name}" else p.name,
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 1,
@@ -1795,7 +1768,7 @@ private fun LineupTextColumn(lu: StatsLineup, modifier: Modifier = Modifier) {
             }
         }
         Text(
-            stringResource(R.string.stats_subs, lu.subsCount),
+            stringResource(R.string.stats_subs, lu.bench.size),
             Modifier.padding(top = 6.dp),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
