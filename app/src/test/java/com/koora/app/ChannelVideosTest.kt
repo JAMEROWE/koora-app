@@ -3,6 +3,7 @@ package com.koora.app
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.koora.app.ui.screens.clubChannelsFor
 import com.koora.app.ui.screens.extractChannelVideos
+import com.koora.app.ui.screens.titleMatches
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -27,15 +28,24 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class ChannelVideosTest {
 
-    private fun lockup(id: String, title: String) =
-        """{"lockupViewModel":{"contentId":"$id","contentType":"VIDEO","""" +
-            """"contentImage":{"thumbnailViewModel":{"image":{"sources":[{"url":"""" +
-            """"https://i.ytimg.com/vi/$id/hq720.jpg"}]}}},"metadata":{"lockupMetadataViewModel":{"""" +
-            """"title":{"content":"$title"}}}}}"""
+    // Multi-line raw strings: JSON tolerates whitespace between tokens, so
+    // every value stays on one line and no concatenation gymnastics are
+    // needed — the shapes mirror the live lockupViewModel layout.
+    private fun lockup(id: String, title: String) = """
+        {"lockupViewModel":
+            {"contentId":"$id","contentType":"VIDEO",
+            "contentImage":{"thumbnailViewModel":{"image":{"sources":[
+                {"url":"https://i.ytimg.com/vi/$id/hq720.jpg"}]}}},
+            "metadata":{"lockupMetadataViewModel":
+                {"title":{"content":"$title"}}}}}
+        """
 
-    private fun playlistLockup(listId: String, title: String) =
-        """{"lockupViewModel":{"contentId":"$listId","contentType":"PLAYLIST","""" +
-            """"metadata":{"lockupMetadataViewModel":{"title":{"content":"$title"}}}}}"""
+    private fun playlistLockup(listId: String, title: String) = """
+        {"lockupViewModel":
+            {"contentId":"$listId","contentType":"PLAYLIST",
+            "metadata":{"lockupMetadataViewModel":
+                {"title":{"content":"$title"}}}}}
+        """
 
     private fun page(items: String) =
         """<html><script>var ytInitialData = {"contents":{"grid":{"items":[$items]}}};</script></html>"""
@@ -88,8 +98,8 @@ class ChannelVideosTest {
         val html = page(lockup("15hGtRJ3aFk", "FIORENTINA-JUVENTUS 2-2 | EXTENDED HIGHLIGHTS | SERIE A 2026/27"))
         val entries = extractChannelVideos(html)
         val e = entries.single()
-        assertTrue(com.koora.app.ui.screens.titleMatches(e.title, "ACF Fiorentina"))
-        assertTrue(com.koora.app.ui.screens.titleMatches(e.title, "Juventus FC"))
+        assertTrue(titleMatches(e.title, "ACF Fiorentina"))
+        assertTrue(titleMatches(e.title, "Juventus FC"))
     }
 
     // ---- club channel lookup ------------------------------------------------

@@ -97,16 +97,17 @@ class ScreensTest {
                 .fetchSemanticsNodes().isNotEmpty()
         }
         rule.onNodeWithText(activityString(R.string.detail_lineup)).performClick()
+        // v1.10.3: the LINEUP tab is purely the lineup — the pitch renders
+        // surnames ("Sbai"); the full-name rows moved with the record to
+        // the EVENTS tab, so wait for the formation instead.
         rule.waitUntil(timeoutMillis = 10_000) {
-            rule.onAllNodesWithText("A. Sbai")
+            rule.onAllNodesWithText("4-3-3", substring = true)
                 .fetchSemanticsNodes().isNotEmpty()
         }
-        // v1.10.3: the LINEUP tab shows the pitch players (and bench) and
-        // nothing event-shaped — the record moved to the EVENTS tab.
         // (A player can appear in BOTH the events timeline and the lineup
         // pitch, so assert presence via onAllNodesWithText, not uniqueness.)
-        rule.onAllNodesWithText("A. Sbai")[0].assertExists()
-        // v1.9.0: the formation now renders inside the team anchor together
+        rule.onAllNodesWithText("Sbai", substring = true)[0].assertExists()
+        // v1.9.0: the formation renders inside the team anchor together
         // with the coach ("4-3-3  •  J. Sektioui"), so match by substring.
         rule.onAllNodesWithText("4-3-3", substring = true)[0].assertExists()
         // v1.10.3: the full match record lives on the EVENTS tab.
