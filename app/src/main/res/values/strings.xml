@@ -46,6 +46,7 @@
     <string name="video_title">Highlights</string>
     <string name="stats_events">Match events</string>
     <string name="stats_lineups">Lineups</string>
+    <string name="bench_title">Substitutions</string>
     <string name="stats_match">Match stats</string>
     <string name="stats_subs">and %1$d substitutes</string>
     <string name="stats_coach">Coach</string>
@@ -81,9 +82,6 @@
     <string name="video_finding">Finding official highlights…</string>
     <string name="video_none_title">No highlights published yet</string>
     <string name="video_none_body">Official videos for this match have not been published. Check again later.</string>
-    <!-- v1.9.1 (master spec §6.1): the verified video exists but YouTube
-         refused the inline embed — one tap reopens it in the in-app tab -->
-    <string name="video_open_tab">Watch in in-app tab</string>
     <string name="video_more">More highlights</string>
     <string name="standings_legend_europe">European places</string>
     <string name="standings_legend_relegation">Relegation</string>

@@ -1,7 +1,9 @@
 package com.koora.app
 
+import com.koora.app.data.StatsEvent
 import com.koora.app.ui.formationRows
 import com.koora.app.ui.minuteValue
+import com.koora.app.ui.pitchBadges
 import com.koora.app.ui.playerMatches
 import com.koora.app.ui.positionLabel
 import com.koora.app.ui.statNumberColor
@@ -169,6 +171,47 @@ class RoadmapLogicTest {
         // Two Haleys in one match are rare; the surname rule is the best
         // honest signal available — but a DIFFERENT surname never matches.
         assertFalse(playerMatches("Jamie Vardy", "Jordan Ayew"))
+    }
+
+    // ---------- v1.10.1: pitchBadges (non-colliding on-pitch badges) ----------
+
+    private fun ev(minute: String, kind: String, side: Int = 0) =
+        StatsEvent(minute = minute, side = side, kind = kind, detail = "", player = "P", other = null)
+
+    @Test
+    fun pitchBadges_underLimit_everythingFitsOnPitch() {
+        val two = listOf(ev("23", "goal"), ev("67", "yellow"))
+        assertEquals(two, pitchBadges(two))
+        assertEquals(2, pitchBadges(two).size)
+    }
+
+    @Test
+    fun pitchBadges_overLimit_priorityGoalThenCardsThenSub() {
+        // A busy starter: 3 goals + 2 yellows + a sub in the record. The
+        // pitch slot shows the match story in priority order (goal, red,
+        // yellow, sub) and caps at two pills; the events section keeps all.
+        val busy = listOf(
+            ev("12", "yellow"), ev("40", "sub"), ev("23", "goal"),
+            ev("55", "goal"), ev("78", "goal")
+        )
+        val picked = pitchBadges(busy)
+        assertEquals(listOf("23", "55"), picked.map { it.minute })
+        assertTrue(picked.all { it.kind == "goal" })
+    }
+
+    @Test
+    fun pitchBadges_prefersGoalOverYellow_overRedOverSub() {
+        val mixed = listOf(ev("30", "sub"), ev("10", "yellow"), ev("60", "red"), ev("5", "goal"))
+        val picked = pitchBadges(mixed)
+        assertEquals(setOf("goal", "red"), picked.map { it.kind }.toSet())
+    }
+
+    @Test
+    fun pitchBadges_stableMinutesWithinSameKind() {
+        val goals = listOf(ev("90", "goal"), ev("7", "goal"), ev("34", "goal"))
+        val picked = pitchBadges(goals)
+        // Stable sort: equal priority keeps the original chronological order.
+        assertEquals(listOf("7", "34"), picked.map { it.minute })
     }
 
     // ---------- v1.9.0: statNumberColor (WCAG-safe numbers) ----------

@@ -17,12 +17,14 @@ package com.koora.app.ui
  * stays — YouTube's terms require it, and that is what keeps embedding
  * legal.
  *
- * v1.9.1 — the Chrome Custom Tab fallback (master spec v5 §6.1,
- * HighlightCustomTab.kt) is the SANCTIONED exception: when YouTube
- * itself refuses the inline embed (embeddable=false / geo-block /
- * stall), the official watch URL opens in an in-app tab that renders
- * YouTube's own web player inside Koora's task window. This policy
- * still governs the embedded WebView exactly as before.
+ * v1.10.1 — the v1.9.1 Chrome Custom Tab exception was REMOVED (owner
+ * report: youtube.com inside a tab still IS YouTube — cookie walls,
+ * sign-in prompts, and on devices without a Custom Tabs provider it
+ * leaked to the real browser). The embed IS the player: a candidate
+ * that refuses inline playback is hidden (GONE) and the next candidate
+ * auto-plays; when none plays, the honest branded state. Koora never
+ * opens YouTube's website, app or browser. This policy still governs
+ * the embedded WebView exactly as before.
  */
 object VideoPolicy {
 

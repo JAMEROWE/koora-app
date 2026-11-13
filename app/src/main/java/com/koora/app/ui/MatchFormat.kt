@@ -1,6 +1,7 @@
 package com.koora.app.ui
 
 import com.koora.app.data.Match
+import com.koora.app.data.StatsEvent
 import com.koora.app.data.TeamColors
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -95,6 +96,26 @@ internal fun playerMatches(eventPlayer: String, starterName: String): Boolean {
     val s = toks(starterName)
     if (e.isEmpty() || s.isEmpty()) return false
     return e.last() == s.last()
+}
+
+/**
+ * v1.10.1 (owner report: pitch badges collided with players) — a starter
+ * can carry several events (goal + yellow + sub). The pitch slot shows at
+ * most [max] pills, chosen by match-story priority: goal first, then red,
+ * then yellow, then the sub arrow. NOTHING is dropped from the record —
+ * every event stays in the Match events section and the player sheet;
+ * this only decides what fits on the pitch. Stable sort keeps minutes in
+ * order within one kind. Pure, tested.
+ */
+internal fun pitchBadges(events: List<StatsEvent>, max: Int = 2): List<StatsEvent> {
+    if (events.size <= max) return events
+    fun rank(kind: String) = when (kind) {
+        "goal" -> 0
+        "red" -> 1
+        "yellow" -> 2
+        else -> 3
+    }
+    return events.sortedBy { rank(it.kind) }.take(max)
 }
 
 /**

@@ -46,6 +46,7 @@
     <string name="video_title">Résumé vidéo</string>
     <string name="stats_events">Faits du match</string>
     <string name="stats_lineups">Compositions</string>
+    <string name="bench_title">Remplacements</string>
     <string name="stats_match">Statistiques</string>
     <string name="stats_subs">et %1$d remplaçants</string>
     <string name="stats_coach">Entraîneur</string>
@@ -81,7 +82,6 @@
     <string name="video_finding">Recherche des résumés officiels…</string>
     <string name="video_none_title">Pas encore de résumé publié</string>
     <string name="video_none_body">Les vidéos officielles de ce match ne sont pas encore publiées. Revenez plus tard.</string>
-    <string name="video_open_tab">Regarder dans un onglet intégré</string>
     <string name="video_more">Plus de résumés</string>
     <string name="standings_legend_europe">Places européennes</string>
     <string name="standings_legend_relegation">Relégation</string>

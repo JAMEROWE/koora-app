@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +22,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -103,6 +103,7 @@ import com.koora.app.ui.formationRows
 import com.koora.app.ui.isLive
 import com.koora.app.ui.next5Last5
 import com.koora.app.ui.pickResult
+import com.koora.app.ui.pitchBadges
 import com.koora.app.ui.playerMatches
 import com.koora.app.ui.positionLabel
 import com.koora.app.ui.scoreLabel
@@ -1259,34 +1260,49 @@ private data class PlayerSpot(
     val events: List<StatsEvent>
 )
 
+// v1.10.1 pitch slot geometry (owner report: badges collided with players).
+// Every player is drawn inside a FIXED-size slot; the slot — not its widest
+// child — is centered on the formation anchor, so a wide badge pill or a
+// long surname can never push the jersey sideways into a neighbour, and a
+// reserved badge zone keeps every jersey in a row aligned. Slot anatomy:
+// [badge zone 26dp][2][jersey 22dp][1][name 12dp] = 63dp tall; the jersey
+// center sits 39dp below the slot top (BADGE_ZONE + 2 + 11).
+private val SLOT_W = 64.dp
+private val SLOT_H = 63.dp
+private val BADGE_ZONE = 26.dp
+private val JERSEY_CENTER_Y = BADGE_ZONE + 2.dp + 11.dp
+
 @Composable
 private fun LineupsSection(match: Match, ds: MatchStats) {
     // v1.9.0 (spec §4): ONE unified pitch — home top half, away bottom half,
-    // events as badges with minutes above each player, subs on a bench
-    // strip, tap any player for the max-info sheet. Rendered ONLY when both
-    // XIs are complete (11 starters each, formation rows sum to 10 outfield
-    // players) — anything less falls back to the text list; positions are
-    // NEVER invented (no-fake rule).
+    // badges in each player's reserved zone, subs on their own card, tap any
+    // player for the max-info sheet. Rendered ONLY when both XIs are complete
+    // (11 starters each, formation rows sum to 10 outfield players) —
+    // anything less falls back to the text list; positions are NEVER invented
+    // (no-fake rule).
     val pitchable = ds.lineups.size == 2 && ds.lineups.all { lu ->
         lu.starters.size == 11 && formationRows(lu.formation)?.sum() == 11
     }
     var playerFor by remember { mutableStateOf<PlayerSpot?>(null) }
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp)) {
-            Text(
-                stringResource(R.string.stats_lineups),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            stringResource(R.string.stats_lineups),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(Modifier.height(12.dp))
+        if (pitchable) {
+            // v1.10.1 (owner fix): the pitch stands ALONE — full tab width,
+            // no card chrome stealing 32dp of it — so the lineups genuinely
+            // occupy the page. The match events get their own card below.
+            UnifiedPitch(
+                match = match,
+                ds = ds,
+                onPlayer = { playerFor = it }
             )
-            Spacer(Modifier.height(12.dp))
-            if (pitchable) {
-                UnifiedPitch(
-                    match = match,
-                    ds = ds,
-                    onPlayer = { playerFor = it }
-                )
-            } else {
-                Row(Modifier.fillMaxWidth()) {
+        } else {
+            Card(Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(16.dp)) {
                     ds.lineups.forEachIndexed { i, lu ->
                         if (i > 0) Spacer(Modifier.width(16.dp))
                         LineupTextColumn(lu, Modifier.weight(1f))
@@ -1333,6 +1349,12 @@ private fun TeamAnchor(team: Team, lu: StatsLineup) {
  * halfway line. Positions come from the formation rows mapped onto the
  * provider's GK-first starter order — the same verified mapping as v1.8.0.
  * The pitch is forced LTR: a mirrored pitch would lie about the game.
+ *
+ * v1.10.1 (owner fix): the pitch is the spec's full-height 620dp surface
+ * (it scrolls with the tab instead of squeezing both XIs into ~400dp), it
+ * stands alone without card chrome, and it carries real pitch MARKINGS —
+ * halfway line, center circle, penalty and goal boxes — which are drawing,
+ * not data, so the no-fake rule is untouched.
  */
 @Composable
 private fun UnifiedPitch(
@@ -1348,10 +1370,10 @@ private fun UnifiedPitch(
         BoxWithConstraints(
             Modifier
                 .fillMaxWidth()
-                .aspectRatio(0.85f)
-                .clip(RoundedCornerShape(12.dp))
-                .background(PitchGreen.copy(alpha = 0.10f))
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                .height(620.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(PitchGreen.copy(alpha = 0.14f))
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
         ) {
             val pitchLine = MaterialTheme.colorScheme.outlineVariant
             val pitchW = maxWidth
@@ -1369,9 +1391,26 @@ private fun UnifiedPitch(
             Box(
                 Modifier
                     .align(Alignment.Center)
-                    .size(46.dp)
+                    .size(pitchW * 0.20f)
                     .border(1.dp, pitchLine.copy(alpha = 0.5f), CircleShape)
             )
+            // penalty + goal boxes at both ends (visual markings only)
+            listOf(true, false).forEach { top ->
+                Box(
+                    Modifier
+                        .align(if (top) Alignment.TopCenter else Alignment.BottomCenter)
+                        .width(pitchW * 0.60f)
+                        .height(pitchH * 0.145f)
+                        .border(1.dp, pitchLine.copy(alpha = 0.4f))
+                )
+                Box(
+                    Modifier
+                        .align(if (top) Alignment.TopCenter else Alignment.BottomCenter)
+                        .width(pitchW * 0.30f)
+                        .height(pitchH * 0.055f)
+                        .border(1.dp, pitchLine.copy(alpha = 0.4f))
+                )
+            }
             PitchTeam(
                 lineup = ds.lineups[0],
                 side = 0,
@@ -1435,13 +1474,18 @@ private fun BoxScope.PitchTeam(
                 posKey = positionLabel(rows, idx),
                 events = mine
             )
+            // v1.10.1: the slot box is centered on the anchor point. The old
+            // math subtracted only the 22dp jersey half-width from the anchor,
+            // so any child wider than the jersey (a badge pill, a surname)
+            // shifted the whole column sideways and collided with neighbours.
+            // Centering the fixed-size SLOT instead makes every position exact.
             PlayerNode(
                 p = p,
                 color = kit,
-                badges = mine,
+                badges = pitchBadges(mine),
                 modifier = Modifier.offset(
-                    x = pitchW * (xFrac - 0.5f * (22.dp.value / pitchW.value)),
-                    y = pitchH * yFrac
+                    x = pitchW * xFrac - SLOT_W / 2,
+                    y = pitchH * yFrac - JERSEY_CENTER_Y
                 ),
                 onClick = { onPlayer(spot) }
             )
@@ -1449,6 +1493,14 @@ private fun BoxScope.PitchTeam(
     }
 }
 
+/**
+ * One player slot (v1.10.1): FIXED 64×63dp, so the geometry above holds
+ * exactly. Inside: a reserved badge zone (identical height for every
+ * player — jerseys in a row stay aligned whether or not they carry
+ * events), the jersey circle, the surname. At most two badge pills render
+ * here, chosen by pitchBadges priority; the full event record lives in
+ * the Match events section and the player sheet — nothing is lost.
+ */
 @Composable
 private fun PlayerNode(
     p: StatsPlayer,
@@ -1458,17 +1510,21 @@ private fun PlayerNode(
     onClick: () -> Unit
 ) {
     Column(
-        modifier.clickable(onClick = onClick),
+        modifier
+            .size(SLOT_W, SLOT_H)
+            .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Spec §4.2: event badges ABOVE the jersey, grouped per kind —
-        // "⚽ 23', 67'", cards and the sub arrow. Only real events, only
-        // real minutes; nothing is invented to fill the pitch.
-        badges.groupBy { if (it.kind == "sub") "sub" else it.kind }
-            .values
-            .take(3)
-            .forEach { group -> EventBadge(group, color) }
-        if (badges.isNotEmpty()) Spacer(Modifier.height(1.dp))
+        // Reserved badge zone — fixed height, never pushes anything around.
+        Box(Modifier.height(BADGE_ZONE), contentAlignment = Alignment.TopCenter) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                badges.groupBy { if (it.kind == "sub") "sub" else it.kind }
+                    .values
+                    .take(2)
+                    .forEach { group -> EventBadge(group, color) }
+            }
+        }
+        Spacer(Modifier.height(2.dp))
         Surface(
             shape = CircleShape,
             color = color,
@@ -1479,22 +1535,28 @@ private fun PlayerNode(
                     p.number ?: "·",
                     color = Color.White,
                     style = MaterialTheme.typography.labelSmall,
-                    fontSize = 9.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
         }
+        Spacer(Modifier.height(1.dp))
         Text(
             p.name.substringAfterLast(" ").take(10),
             style = MaterialTheme.typography.labelSmall,
-            fontSize = 7.sp,
+            fontSize = 8.sp,
             color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.width(SLOT_W)
         )
     }
 }
 
-/** One grouped badge pill: minute(s) + kind glyph, colored by kind. */
+/** One grouped badge pill: minute(s) + kind glyph, colored by kind.
+ *  v1.10.1: capped to the slot width so even "⚽ 45+2', 90+4'" can never
+ *  grow wider than the player's own space. */
 @Composable
 private fun EventBadge(group: List<StatsEvent>, kit: Color) {
     val kind = group.first().kind
@@ -1511,6 +1573,7 @@ private fun EventBadge(group: List<StatsEvent>, kit: Color) {
     }
     val glyph = if (kind == "sub") "⬇" else if (kind == "goal") "⚽" else ""
     Surface(
+        modifier = Modifier.widthIn(max = SLOT_W - 6.dp),
         shape = RoundedCornerShape(5.dp),
         color = bg,
         border = if (kind == "goal") BorderStroke(0.5.dp, Color.White) else null
@@ -1521,13 +1584,16 @@ private fun EventBadge(group: List<StatsEvent>, kit: Color) {
             fontSize = 7.sp,
             fontWeight = FontWeight.Bold,
             color = fg,
-            maxLines = 1
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
 
 /**
- * Bench strip (spec §4.2): the players who came ON, with their minute.
+ * Bench strip (spec §4.2): the players who came ON, with their minute,
+ * in their own titled card — v1.10.1 owner fix: every section of the
+ * Lineup tab (pitch, bench, match events) occupies its own place.
  * Built ONLY from real substitution events — no subs in the data, no
  * strip (we never invent a bench).
  */
@@ -1535,18 +1601,25 @@ private fun EventBadge(group: List<StatsEvent>, kit: Color) {
 private fun BenchStrip(match: Match, events: List<StatsEvent>) {
     val subs = events.filter { it.kind == "sub" }
     if (subs.isEmpty()) return
-    Spacer(Modifier.height(10.dp))
-    HorizontalDivider(
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-    )
-    Spacer(Modifier.height(8.dp))
-    Row(Modifier.fillMaxWidth()) {
-        Column(Modifier.weight(1f)) {
-            subs.filter { it.side == 0 }.forEach { BenchRow(it) }
-        }
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            subs.filter { it.side == 1 }.forEach { BenchRow(it) }
+    Spacer(Modifier.height(12.dp))
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp)) {
+            Text(
+                stringResource(R.string.bench_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth()) {
+                Column(Modifier.weight(1f)) {
+                    subs.filter { it.side == 0 }.forEach { BenchRow(it) }
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    subs.filter { it.side == 1 }.forEach { BenchRow(it) }
+                }
+            }
         }
     }
 }

@@ -46,6 +46,7 @@
     <string name="video_title">ملخص المباراة</string>
     <string name="stats_events">أحداث المباراة</string>
     <string name="stats_lineups">التشكيلة</string>
+    <string name="bench_title">التبديلات</string>
     <string name="stats_match">إحصائيات المباراة</string>
     <string name="stats_subs">و %1$d بديلاً</string>
     <string name="stats_coach">المدرب</string>
@@ -81,7 +82,6 @@
     <string name="video_finding">جارٍ البحث عن الملخصات الرسمية…</string>
     <string name="video_none_title">لا يوجد ملخص منشور بعد</string>
     <string name="video_none_body">لم يتم نشر الفيديوهات الرسمية لهذه المباراة بعد. عد لاحقًا.</string>
-    <string name="video_open_tab">شاهد في علامة تبويب داخل التطبيق</string>
     <string name="video_more">مزيد من الملخصات</string>
     <string name="standings_legend_europe">مراكز أوروبية</string>
     <string name="standings_legend_relegation">الهبوط</string>

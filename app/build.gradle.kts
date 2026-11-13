@@ -20,8 +20,8 @@ android {
         applicationId = "com.koora.app"
         minSdk = 24
         targetSdk = 36 // Google Play: new apps must target API 36 since Aug 31, 2026
-        versionCode = 23
-        versionName = "1.10.0"
+        versionCode = 24
+        versionName = "1.10.1"
         buildConfigField(
             "String",
             "FOOTBALL_DATA_TOKEN",
@@ -129,11 +129,11 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
-    // v1.9.1 (master spec §6.1): Chrome Custom Tabs — the in-app fallback
-    // when a rights-holder refuses inline embedding (status.embeddable=false).
-    // Renders YouTube's official web player inside Koora's own task window
-    // (single X returns to Koora) — never the external YouTube app.
-    implementation(libs.androidx.browser)
+    // v1.10.1: androidx.browser (Chrome Custom Tabs) REMOVED — the owner
+    // report showed the in-app tab still lands on youtube.com (cookie
+    // walls, sign-in prompts; external browser when no provider exists).
+    // The official embed is the only player; the YouTube-website escape
+    // is gone. See VideoPolicy.kt.
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
