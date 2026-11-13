@@ -9,15 +9,14 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import org.xmlpull.v1.XmlPullParser
-import org.xmlpull.v1.XmlPullParserFactory
-import java.io.ByteArrayInputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.text.Normalizer
+import java.util.concurrent.ConcurrentHashMap
 
 /*
- * OFFICIAL-HIGHLIGHT RESOLUTION — v1.8.0.
+ * OFFICIAL-HIGHLIGHT RESOLUTION — v1.10.3.
  *
  * Extracted from HighlightsScreen so the MATCH DETAIL screen can gate the
  * "Watch highlights" button on VERIFIED availability (roadmap P0):
@@ -25,22 +24,42 @@ import java.net.URLEncoder
  * whole section stays out of the UI tree otherwise — never a disabled
  * state, placeholder box or "not published yet" notice.
  *
+ * THE v1.10.3 DISCOVERY REBUILD (owner report, 5th occurrence: "no
+ * highlights are published yet" for matches whose videos are demonstrably
+ * on YouTube). ROOT CAUSE, verified live 2026-11-13: YouTube has
+ * DISCONTINUED the RSS feeds endpoint —
+ * https://www.youtube.com/feeds/videos.xml?channel_id=... returns HTTP 404
+ * for EVERY channel (verified: all six allowlisted league channels AND a
+ * control channel), while the channel pages themselves still serve. Every
+ * earlier fix downstream of discovery (parser, matching, oEmbed, player)
+ * could never help, because upstream there was never a single video to
+ * process. The discovery tier now reads each OFFICIAL channel's own public
+ * /videos page and extracts the video grid metadata (videoId + title) that
+ * YouTube embeds in that page's ytInitialData payload. NOTE: this payload
+ * is only present on the DESKTOP web shell — a mobile user-agent receives
+ * a shell without the video list, so the fetcher must send a desktop UA.
+ *
  * ALLOWLIST COMPLIANCE (roadmap §3.2). A video is surfaced ONLY when ALL
  * of these pass — enforced by [verifyDataApiVideo] for the Data API tier:
- *   1. snippet.channelId is in OFFICIAL_CHANNELS (verified rights-holders)
+ *   1. the channel is in OFFICIAL_CHANNELS or CLUB_CHANNELS (verified
+ *      rights-holders — league channels and official club channels,
+ *      each resolved live from its own public page on 2026-11-13)
  *   2. status.uploadStatus == "processed"
  *   3. status.privacyStatus == "public"
  *   4. status.embeddable == true
  *   5. contentDetails.regionRestriction does not block the device country
- * The channel-RSS tier is inherently compliant: entries come from the
- * allowlisted channels' own feeds, so their channel provenance is exact.
+ * The channel-page tier is compliant by construction: metadata comes from
+ * the allowlisted channels' own public pages, every candidate is again
+ * verified against YouTube's public oEmbed endpoint before playback, and
+ * the playback itself is YouTube's official embed. NOTHING here touches
+ * search results, third-party re-uploads, video streams, or media caching.
  *
  * NEVER: open YouTube search results without verification, third-party
  * re-upload channels, scraping video streams, or caching media. Only
- * metadata (title / videoId / published) is cached, in VideoCache.
+ * metadata (title / videoId) is cached, in VideoCache.
  */
 
-/** Official competition channels (verified live 2026-11-09), id -> name. */
+/** Official competition channels (ids re-verified live 2026-11-13). */
 internal val OFFICIAL_CHANNELS: List<Pair<String, String>> = listOf(
     "UCG5qGWdu8nIRZqJ_GgDwQ-w" to "Premier League",
     "UCTv-XvfzLX3i4IGWAm4sbmA" to "LaLiga",
@@ -49,6 +68,111 @@ internal val OFFICIAL_CHANNELS: List<Pair<String, String>> = listOf(
     "UC6UL29enLNe4mqwTfAyeNuw" to "Bundesliga",
     "UCBJeMCIeLQos7wacox4hmLQ" to "Serie A"
 )
+
+/**
+ * v1.10.3 — official CLUB channels, every one resolved live from its own
+ * public page and verified (title contains the club, videos page serves
+ * the video grid) on 2026-11-13. Clubs not verified live are NOT listed
+ * here — their fixtures still resolve through the league channel above;
+ * we never guess a channel.
+ *
+ * [tokens] are the ASCII, diacritic-free fragments that identify the club
+ * inside provider team names ("ACF Fiorentina", "Atlético Madrid",
+ * "1. FC Köln"). [clubChannelsFor] requires EVERY token to appear in the
+ * normalized team name, so "Manchester City FC" can never select
+ * Manchester United's channel and vice versa.
+ */
+data class ClubChannel(val club: String, val tokens: List<String>, val channelId: String)
+
+internal val CLUB_CHANNELS: List<ClubChannel> = listOf(
+    // Premier League
+    ClubChannel("Arsenal", listOf("arsenal"), "UCpryVRk_VDudG8SHXgWcG0w"),
+    ClubChannel("Aston Villa", listOf("villa"), "UCICNP0mvtr0prFwGUQIABfQ"),
+    ClubChannel("AFC Bournemouth", listOf("bournemouth"), "UCeOCuVSSweaEj6oVtJZEKQw"),
+    ClubChannel("Brentford", listOf("brentford"), "UCAalMUm3LIf504ItA3rqfug"),
+    ClubChannel("Brighton", listOf("brighton"), "UCf-cpC9WAdOsas19JHipukA"),
+    ClubChannel("Burnley", listOf("burnley"), "UChvUXuSDeEFSQZS8GcPMtkg"),
+    ClubChannel("Chelsea", listOf("chelsea"), "UCU2PacFf99vhb3hNiYDmxww"),
+    ClubChannel("Crystal Palace", listOf("palace"), "UCWB9N0012fG6bGyj486Qxmg"),
+    ClubChannel("Everton", listOf("everton"), "UCtK4QAczAN2mt2ow_jlGinQ"),
+    ClubChannel("Fulham", listOf("fulham"), "UC2VLfz92cTT8jHIFOecC-LA"),
+    ClubChannel("Leeds United", listOf("leeds"), "UCyQcJHDN4uYfPa1DHzKVSnw"),
+    ClubChannel("Liverpool", listOf("liverpool"), "UC9LQwHZoucFT94I2h6JOcjw"),
+    ClubChannel("Manchester City", listOf("manchester", "city"), "UCkzCjdRMrW2vXLx8mvPVLdQ"),
+    ClubChannel("Manchester United", listOf("manchester", "united"), "UC6yW44UGJJBvYTlfC7CRg2Q"),
+    ClubChannel("Newcastle United", listOf("newcastle"), "UCywGl_BPp9QhD0uAcP2HsJw"),
+    ClubChannel("Nottingham Forest", listOf("nottingham", "forest"), "UCyAxjuAr8f_BFDGCO3Htbxw"),
+    ClubChannel("Tottenham Hotspur", listOf("tottenham", "hotspur"), "UCEg25rdRZXg32iwai6N6l0w"),
+    // LaLiga
+    ClubChannel("Atlético de Madrid", listOf("atletico"), "UCuzKFwdh7z2GHcIOX_tXgxA"),
+    ClubChannel("FC Barcelona", listOf("barcelona"), "UC14UlmYlSNiQCBe9Eookf_A"),
+    ClubChannel("CA Osasuna", listOf("osasuna"), "UC1iCMq31GZ6Sv3qIIRhQ3Tg"),
+    ClubChannel("RCD Mallorca", listOf("mallorca"), "UCpBP0bYboEZVhHvQNIw-0XA"),
+    ClubChannel("Real Betis", listOf("betis"), "UCeB7JZwcar2fVoK2w2f9OwA"),
+    ClubChannel("RC Celta", listOf("celta"), "UCCJLVZYqRb_85b2Flpg04cg"),
+    ClubChannel("RCD Espanyol", listOf("espanyol"), "UClywhnD01yUU5kO6OgAeHUQ"),
+    ClubChannel("Girona FC", listOf("girona"), "UC6x5gKUZpXuKDujmaHc3Xhg"),
+    ClubChannel("Levante UD", listOf("levante"), "UCvOegN2N1FGPPv4xBNN2F9A"),
+    ClubChannel("Real Madrid", listOf("real", "madrid"), "UCWV3obpZVGgJ3j9FVhEjF2Q"),
+    ClubChannel("Sevilla FC", listOf("sevilla"), "UCLy9lmj_0cqffXUzbGHNmYA"),
+    ClubChannel("Valencia CF", listOf("valencia"), "UCgvyo5x49J8ht5H9imKfxMQ"),
+    ClubChannel("Villarreal CF", listOf("villarreal"), "UC0MLWyQ0L7uEZY8wbkDSTkw"),
+    // Serie A
+    ClubChannel("Atalanta", listOf("atalanta"), "UC0R-isVeRhMDe3vFTWP5Spg"),
+    ClubChannel("ACF Fiorentina", listOf("fiorentina"), "UC9nwpWq73kl4e2a51d1aCog"),
+    ClubChannel("Hellas Verona", listOf("verona"), "UCquN7Rmr2Hw-b3UkhtAMp_w"),
+    ClubChannel("Inter", listOf("inter"), "UCvXzEblUa0cfny4HAJ_ZOWw"),
+    ClubChannel("Juventus", listOf("juventus"), "UCLzKhsxrExAC6yAdtZ-BOWw"),
+    ClubChannel("SS Lazio", listOf("lazio"), "UCVtDCsB0UlIkDn2kjsva3WA"),
+    ClubChannel("AC Milan", listOf("milan"), "UCKcx1uK38H4AOkmfv4ywlrg"),
+    ClubChannel("SSC Napoli", listOf("napoli"), "UCTnCzHi0P6MH83er5OfZbzQ"),
+    ClubChannel("Parma Calcio", listOf("parma"), "UCXKXzx4PG8dcqExNJ5npUkg"),
+    ClubChannel("AS Roma", listOf("roma"), "UCLttSYJ6kPtlcurY96kXkQw"),
+    ClubChannel("US Sassuolo", listOf("sassuolo"), "UCok6j2Pw2VsM-QYP_bmwU6g"),
+    ClubChannel("Torino FC", listOf("torino"), "UCD-Q9QNPEmhrxyZb2yn3juA"),
+    ClubChannel("US Lecce", listOf("lecce"), "UCzc84VvVxLbeCQ2wYXV0VOg"),
+    ClubChannel("Pisa", listOf("pisa"), "UCsx5PLguyc68a_PoIwWJCEg"),
+    ClubChannel("AC Monza", listOf("monza"), "UCgFNZmFK4tLKPpXpvJGS9dQ"),
+    ClubChannel("Udinese", listOf("udinese"), "UCbz89vmhZ0uerNuVKxur9lA"),
+    // Bundesliga
+    ClubChannel("FC Augsburg", listOf("augsburg"), "UC5SqmvgOsmHJ8mV2mpO69PQ"),
+    ClubChannel("SV Werder Bremen", listOf("bremen", "werder"), "UCdjedrfgyFQEkqbkq1DJf3w"),
+    ClubChannel("Borussia Dortmund", listOf("dortmund"), "UCK8rTVgp3-MebXkmeJcQb1Q"),
+    ClubChannel("SC Freiburg", listOf("freiburg"), "UC_atVJpGbIdjIa9OC6E3yJA"),
+    ClubChannel("1. FC Köln", listOf("koln"), "UCQZhvmm636X6I5rrnLFBp1w"),
+    ClubChannel("RB Leipzig", listOf("leipzig"), "UCkZwB4IGoNBvRmVT2gaO4XA"),
+    ClubChannel("FC St. Pauli", listOf("pauli"), "UCmjYwKDykQSA9VtqaT-OVdA"),
+    ClubChannel("1. FSV Mainz 05", listOf("mainz"), "UCMT1hwsDgOEMhS2dIfD3e6A"),
+    ClubChannel("VfB Stuttgart", listOf("stuttgart"), "UCNjHTx_URHNiZvjW-uzIf4Q"),
+    ClubChannel("Hamburger SV", listOf("hamburger", "hsv"), "UCUegZz1N_lW_5mKORkYykCw"),
+    ClubChannel("Eintracht Frankfurt", listOf("frankfurt"), "UCDFp4bscTFm8hYxCBx-tIXg"),
+    ClubChannel("1. FC Union Berlin", listOf("union"), "UCexHeD0RsxZFZoKLhhR_IUQ"),
+    // Ligue 1
+    ClubChannel("LOSC Lille", listOf("lille", "losc"), "UCae9u1pNGzaklyZC8OKkeCQ"),
+    ClubChannel("Stade Brestois", listOf("brest"), "UC0IUjVIiL24hZx73DahzITA"),
+    ClubChannel("FC Lorient", listOf("lorient"), "UC1LeTxFgKYwMeQjRjLyGRTQ"),
+    ClubChannel("Olympique Lyonnais", listOf("lyon"), "UCzHCZXmqIdjqRnpdp0l_T6g"),
+    ClubChannel("AS Monaco", listOf("monaco"), "UCHy548EHHX9f-ETJlm18Jiw"),
+    ClubChannel("FC Nantes", listOf("nantes"), "UC4sn_Eq3_g9Al4JhdYysj0g"),
+    ClubChannel("OGC Nice", listOf("nice"), "UCAvm8jHWe-8K2kZK-7ynIHA"),
+    ClubChannel("Paris Saint-Germain", listOf("paris", "saint"), "UCt9a_qP9CqHCNwilf-iULag"),
+    ClubChannel("FC Metz", listOf("metz"), "UCRt4L6aPg6hOQBoxdE-bycw"),
+    ClubChannel("Toulouse FC", listOf("toulouse"), "UCYXs6c0q6Fdlltd5SyrQnjw")
+)
+
+/** Lowercased, diacritic-stripped form used for all club-name matching. */
+internal fun normalizedClubName(s: String): String = Normalizer.normalize(s, Normalizer.Form.NFKD)
+    .replace(Regex("\\p{M}+"), "")
+    .lowercase()
+
+/**
+ * The club channels whose EVERY identifying token appears in [team]'s
+ * normalized name. Pure, tested.
+ */
+internal fun clubChannelsFor(team: String): List<ClubChannel> {
+    val n = normalizedClubName(team)
+    return CLUB_CHANNELS.filter { c -> c.tokens.all { n.contains(it) } }
+}
 
 /* Public: returned by the public HighlightsSource.resolve(). */
 data class YtEntry(
@@ -94,14 +218,14 @@ object HighlightsSource {
 // ---------------------------------------------------------------------------
 
 /**
- * The independent Highlights tab. Scans the OFFICIAL CHANNEL FEEDS once
- * per load and pairs every released video with a finished fixture the
+ * The independent Highlights tab. Scans the OFFICIAL CHANNEL video pages
+ * once per load and pairs every released video with a finished fixture the
  * app knows, by team-name matching.
  *
- * Compliance is identical to the RSS tier: entries come from the
- * allowlisted channels themselves, so provenance is exact — no search
- * results are ever opened. The Data API is deliberately NOT used here
- * (one search per fixture would burn quota; feeds are 6 cheap GETs).
+ * Compliance is identical to the per-fixture tier: metadata comes from the
+ * allowlisted channels' own public pages, so provenance is exact — no
+ * search results are ever opened. The Data API is deliberately NOT used
+ * here (one search per fixture would burn quota; pages are 6 cached GETs).
  *
  * The no-fake rules cut BOTH ways:
  *  - a released video that cannot be paired with a KNOWN fixture is NOT
@@ -113,7 +237,7 @@ object HighlightsHub {
 
     data class Row(val match: Match, val video: YtEntry)
 
-    /** Feed scan is cheap but not free — serve the list for 15 minutes. */
+    /** Page scan is cheap but not free — serve the list for 15 minutes. */
     private const val TTL_MS = 15L * 60 * 1000
 
     @Volatile private var cachedAt: Long = 0L
@@ -133,11 +257,11 @@ object HighlightsHub {
             if (finished.isEmpty()) return@withContext emptyList<Row>()
             coroutineScope {
                 OFFICIAL_CHANNELS.map { (id, name) ->
-                    async { runCatching { fetchChannelFeed(id, name) }.getOrDefault(emptyList()) }
+                    async { runCatching { ChannelVideosStore.videos(id, name) }.getOrDefault(emptyList()) }
                 }.awaitAll()
             }
                 .flatten()
-                .sortedByDescending { it.published }     // newest release first
+                // page order on the videos tab is newest-release-first
                 .mapNotNull { e -> pairWithFixture(e, finished)?.let { Row(it.second, e) } }
                 // v1.10.2: hub rows are oembed-verified too — a video whose
                 // embedding YouTube refuses never seeds the player, so the
@@ -193,7 +317,7 @@ object HighlightsHub {
 /**
  * Search, then VERIFY every candidate against the roadmap checklist
  * before surfacing it. Returns null when nothing passes (the caller
- * falls back to the inherently-compliant RSS tier).
+ * falls back to the inherently-compliant channel-page tier).
  */
 private fun viaDataApi(home: String, away: String): List<YtEntry>? {
     val q = URLEncoder.encode("$home vs $away highlights", "UTF-8")
@@ -270,7 +394,9 @@ internal fun verifyDataApiVideo(
     allowed: List<String>,
     deviceCountry: String
 ): Boolean {
-    if (OFFICIAL_CHANNELS.none { it.first == channelId }) return false   // allowlist only
+    if (OFFICIAL_CHANNELS.none { it.first == channelId } &&
+        CLUB_CHANNELS.none { it.channelId == channelId }
+    ) return false   // allowlist only
     if (!uploadStatus.equals("processed", true)) return false
     if (!privacyStatus.equals("public", true)) return false
     if (embeddable != true) return false
@@ -292,17 +418,25 @@ internal fun deviceCountry(): String = runCatching {
 }.getOrDefault("")
 
 // ---------------------------------------------------------------------------
-// Tier 2 — allowlisted channels' own RSS feeds (no key, provenance exact)
+// Tier 2 — allowlisted channels' own video pages (no key, provenance exact)
 // ---------------------------------------------------------------------------
 
 private suspend fun viaOfficialChannels(home: String, away: String): List<YtEntry> =
     coroutineScope {
-        OFFICIAL_CHANNELS.map { (id, name) ->
-            async { runCatching { fetchChannelFeed(id, name) }.getOrDefault(emptyList()) }
-        }
-            .flatMap { it.await() }
+        val league = OFFICIAL_CHANNELS.map { (id, name) ->
+            async { ChannelVideosStore.videos(id, name) }
+        }.awaitAll().flatten()
+        val clubs = (clubChannelsFor(home) + clubChannelsFor(away))
+            .distinctBy { it.channelId }
+        val clubVideos = clubs.map { c ->
+            async { ChannelVideosStore.videos(c.channelId, c.club) }
+        }.awaitAll().flatten()
+        // League releases first (the canonical extended-highlights product),
+        // then the two clubs' own channels; every source stays in page order,
+        // which on YouTube's videos tab is newest-release-first.
+        (league + clubVideos)
             .filter { titleMatches(it.title, home) && titleMatches(it.title, away) }
-            .sortedByDescending { it.published }  // newest highlights first
+            .distinctBy { it.videoId }
             // v1.10.2 (owner report: error 152-4 at playback): every
             // candidate is verified against YouTube's public oEmbed
             // endpoint BEFORE it reaches the player — a video whose
@@ -354,60 +488,89 @@ private fun oembedAllows(videoId: String): Boolean {
     return oembedStatusAllows(code)
 }
 
-private fun fetchChannelFeed(channelId: String, channelName: String): List<YtEntry> {
-    val text = httpGet("https://www.youtube.com/feeds/videos.xml?channel_id=$channelId")
-        ?: return emptyList()
-    return parseChannelFeed(text).map { it.copy(channel = channelName) }
+/**
+ * v1.10.3 — the channel-page cache. A channel's /videos page is
+ * fixture-INDEPENDENT, so every fetch is memoized app-wide for 15 minutes:
+ * the Hub scan, a match-detail resolve and a player retry all share one
+ * copy. Only non-empty lists are cached — an empty result means the fetch
+ * or extraction failed this round, and the next resolve must retry rather
+ * than inherit a 15-minute hole.
+ */
+object ChannelVideosStore {
+
+    private const val TTL_MS = 15L * 60 * 1000
+
+    private class Slot(val at: Long, val entries: List<YtEntry>)
+
+    private val slots = ConcurrentHashMap<String, Slot>()
+
+    suspend fun videos(channelId: String, channelName: String): List<YtEntry> =
+        withContext(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            slots[channelId]?.takeIf { now - it.at <= TTL_MS }?.let { return@withContext it.entries }
+            val entries = runCatching { fetchChannelVideos(channelId, channelName) }
+                .getOrDefault(emptyList())
+            if (entries.isNotEmpty()) slots[channelId] = Slot(now, entries)
+            entries
+        }
+
+    /** Test hook + manual refresh. */
+    fun invalidate() {
+        slots.clear()
+    }
 }
 
+private fun fetchChannelVideos(channelId: String, channelName: String): List<YtEntry> {
+    val html = httpGet("https://www.youtube.com/channel/$channelId/videos") ?: return emptyList()
+    return extractChannelVideos(html).map { it.copy(channel = channelName) }
+}
+
+private val ytInitialDataPatterns = listOf(
+    Regex("""var ytInitialData = (\{.*?\});</script>""", setOf(RegexOption.DOT_MATCHES_ALL)),
+    Regex("""window\["ytInitialData"\]\s*=\s*(\{.*?\});""", setOf(RegexOption.DOT_MATCHES_ALL))
+)
+
+private val VIDEO_ID_SHAPE = Regex("^[A-Za-z0-9_-]{11}$")
+
 /**
- * Parses a YouTube channel Atom feed. THE FIX (v1.5.6): with namespace
- * processing disabled (Android default) the tag of <yt:videoId> arrives
- * as "yt:videoId" — the old code compared it to "videoid" and NEVER
- * matched, so official-channel highlights silently resolved to nothing.
- * We now strip the prefix before matching. A saved real-shaped feed is
- * unit-tested in HighlightsParserTest.
+ * Extracts the video list from a channel /videos page: parses the
+ * ytInitialData payload the page embeds, walks it for lockupViewModel
+ * entries (the current YouTube grid renderer) and returns videoId + title
+ * pairs IN PAGE ORDER (newest release first). Non-video lockups (walls,
+ * playlists) carry contentIds that do not match the 11-char video shape
+ * and are skipped. Pure, tested.
  */
-internal fun parseChannelFeed(text: String): List<YtEntry> {
-    val parser = XmlPullParserFactory.newInstance().newPullParser()
-    parser.setInput(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)), null)
-
-    val entries = mutableListOf<YtEntry>()
-    var inEntry = false
-    var tag: String? = null
-    var title = ""
-    var videoId = ""
-    var published = ""
-
-    while (parser.eventType != XmlPullParser.END_DOCUMENT) {
-        when (parser.eventType) {
-            XmlPullParser.START_TAG -> {
-                val name = parser.name ?: ""
-                if (name.equals("entry", true)) {
-                    inEntry = true
-                    title = ""; videoId = ""; published = ""
-                }
-                tag = name
-            }
-            XmlPullParser.TEXT -> if (inEntry) when (tag?.substringAfterLast(':')?.lowercase()) {
-                // Guard: <media:title> repeats <title> — capture only the first.
-                "title" -> if (title.isEmpty()) title += parser.text
-                "videoid" -> videoId += parser.text
-                "published" -> published += parser.text
-            }
-            XmlPullParser.END_TAG -> {
-                val name = parser.name ?: ""
-                if (name.equals("entry", true)) {
-                    inEntry = false
-                    if (videoId.isNotBlank()) {
-                        entries += YtEntry(title.trim(), videoId.trim(), published.trim())
-                    }
-                }
-            }
-        }
-        parser.next()
+internal fun extractChannelVideos(html: String): List<YtEntry> {
+    val json = ytInitialDataPatterns.firstNotNullOfOrNull { it.find(html)?.groupValues?.get(1) }
+        ?: return emptyList()
+    val root = runCatching { Gson().fromJson(json, Map::class.java) }.getOrNull()
+        ?: return emptyList()
+    val lockups = mutableListOf<Any>()
+    collectLockups(root, lockups)
+    val seen = mutableSetOf<String>()
+    val out = mutableListOf<YtEntry>()
+    for (raw in lockups) {
+        val lk = raw as? Map<*, *> ?: continue
+        val id = (lk["contentId"] as? String)?.trim() ?: continue
+        if (!VIDEO_ID_SHAPE.matches(id) || !seen.add(id)) continue
+        val title = (((lk["metadata"] as? Map<*, *>)
+            ?.get("lockupMetadataViewModel") as? Map<*, *>)
+            ?.get("title") as? Map<*, *>)
+            ?.get("content") as? String
+        if (title.isNullOrBlank()) continue
+        out += YtEntry(title.trim(), id, "")
     }
-    return entries
+    return out
+}
+
+private fun collectLockups(node: Any?, out: MutableList<Any>) {
+    when (node) {
+        is Map<*, *> -> {
+            node["lockupViewModel"]?.let { out += it }
+            node.values.forEach { collectLockups(it, out) }
+        }
+        is List<*> -> node.forEach { collectLockups(it, out) }
+    }
 }
 
 /** Token-based title matching tolerant of provider naming differences. */
@@ -432,12 +595,24 @@ internal fun titleMatches(title: String, team: String): Boolean {
     return full.isNotEmpty() && t.contains(full)
 }
 
+/**
+ * Desktop user-agent REQUIRED (v1.10.3): YouTube serves the mobile web
+ * shell without the ytInitialData video list to mobile UAs — the page
+ * arrives ~500 KB with zero video metadata. A desktop UA receives the
+ * full payload (~1.2 MB with the grid). googleapis endpoints ignore the
+ * UA; oembedAllows keeps its own identity header.
+ */
 internal fun httpGet(url: String): String? = runCatching {
     val conn = URL(url).openConnection() as HttpURLConnection
     conn.connectTimeout = 8_000
     conn.readTimeout = 12_000
     conn.instanceFollowRedirects = true
-    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; KooraApp/1.5)")
+    conn.setRequestProperty(
+        "User-Agent",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+            "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    )
+    conn.setRequestProperty("Accept-Language", "en-US,en;q=0.9")
     try {
         conn.inputStream.use { it.readBytes().decodeToString() }
     } finally {

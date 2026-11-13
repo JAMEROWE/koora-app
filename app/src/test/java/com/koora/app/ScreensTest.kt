@@ -89,25 +89,32 @@ class ScreensTest {
             }
         }
         // v1.10.0 (spec §3): the detail screen opens on OVERVIEW (voting,
-        // match info, H2H); events + lineups live on the LINEUP tab, the
-        // kit-colored bars on the STATS tab.
+        // match info, H2H); v1.10.3 (owner decision): the lineup tab is
+        // PURELY the lineup, the match record has its OWN events tab, and
+        // the kit-colored bars live on the STATS tab.
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodesWithText(activityString(R.string.match_info_title))
                 .fetchSemanticsNodes().isNotEmpty()
         }
         rule.onNodeWithText(activityString(R.string.detail_lineup)).performClick()
         rule.waitUntil(timeoutMillis = 10_000) {
-            rule.onAllNodesWithText(activityString(R.string.stats_events))
+            rule.onAllNodesWithText("A. Sbai")
                 .fetchSemanticsNodes().isNotEmpty()
         }
-        // v1.10.0 (spec §3): events + lineups live on the LINEUP tab now.
+        // v1.10.3: the LINEUP tab shows the pitch players (and bench) and
+        // nothing event-shaped — the record moved to the EVENTS tab.
         // (A player can appear in BOTH the events timeline and the lineup
         // pitch, so assert presence via onAllNodesWithText, not uniqueness.)
         rule.onAllNodesWithText("A. Sbai")[0].assertExists()
         // v1.9.0: the formation now renders inside the team anchor together
         // with the coach ("4-3-3  •  J. Sektioui"), so match by substring.
         rule.onAllNodesWithText("4-3-3", substring = true)[0].assertExists()
-        // §3.3: the kit-colored stat bars live on the STATS tab.
+        // v1.10.3: the full match record lives on the EVENTS tab.
+        rule.onNodeWithText(activityString(R.string.detail_events)).performClick()
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithText(activityString(R.string.stats_events))
+                .fetchSemanticsNodes().isNotEmpty()
+        }
         rule.onNodeWithText(activityString(R.string.detail_stats)).performClick()
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodesWithText("54%").fetchSemanticsNodes().isNotEmpty()

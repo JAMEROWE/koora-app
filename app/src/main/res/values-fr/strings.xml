@@ -35,7 +35,7 @@
     <string name="no_live">Aucun match en direct pour le moment. La page se rafraîchit automatiquement.</string>
     <string name="updated_at">Mis à jour %1$s</string>
     <string name="highlights_button">Voir le résumé vidéo</string>
-    <string name="highlights_attribution">Vidéos officielles via YouTube • chaînes de ligues vérifiées</string>
+    <string name="highlights_attribution">Vidéos officielles via YouTube • chaînes de ligues et de clubs vérifiées</string>
     <string name="video_attribution">Vidéo officielle via YouTube • %1$s</string>
     <string name="legal_notice">Koora est une application indépendante de scores en direct et de statistiques sportives. Tous les résumés vidéo sont des vidéos officielles hébergées et diffusées directement via YouTube par leurs détenteurs de droits respectifs. Koora n\'héberge, ne téléverse et ne revendique la propriété d\'aucune diffusion vidéo, logo de ligue ou marque de club.</string>
     <string name="news_empty">Pas d\'actualités pour le moment. Touchez Actualiser pour réessayer.</string>
@@ -45,6 +45,7 @@
     <string name="reader_open">Ouvrir dans le navigateur</string>
     <string name="video_title">Résumé vidéo</string>
     <string name="stats_events">Faits du match</string>
+    <string name="events_empty">Aucun fait de match enregistré pour l'instant.</string>
     <string name="stats_lineups">Compositions</string>
     <string name="bench_title">Remplacements</string>
     <string name="stats_match">Statistiques</string>
@@ -80,8 +81,8 @@
     <string name="col_points">Pts</string>
     <!-- v1.5.4 — lecteur vidéo intégré + zones du classement -->
     <string name="video_finding">Recherche des résumés officiels…</string>
-    <string name="video_none_title">Pas encore de résumé publié</string>
-    <string name="video_none_body">Les vidéos officielles de ce match ne sont pas encore publiées. Revenez plus tard.</string>
+    <string name="video_none_title">Aucune vidéo officielle trouvée pour l'instant</string>
+    <string name="video_none_body">Nous n'avons trouvé aucune vidéo officielle vérifiée pour ce match. Les vidéos apparaissent dès que les ligues ou les clubs les publient.</string>
     <string name="video_more">Plus de résumés</string>
     <string name="standings_legend_europe">Places européennes</string>
     <string name="standings_legend_relegation">Relégation</string>
@@ -117,6 +118,7 @@
     <string name="vote_accuracy">Score : %1$d pronostics corrects sur %2$d</string>
     <string name="detail_overview">Aperçu</string>
     <string name="detail_lineup">Compo</string>
+    <string name="detail_events">Événements</string>
     <string name="detail_stats">Stats</string>
     <string name="detail_form">Forme</string>
     <string name="lineup_empty">Aucune compo publiée pour ce match</string>

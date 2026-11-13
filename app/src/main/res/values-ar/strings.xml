@@ -35,7 +35,7 @@
     <string name="no_live">لا توجد مباريات مباشرة حالياً. عود قريباً — هذه الصفحة تُحدّث تلقائياً.</string>
     <string name="updated_at">آخر تحديث %1$s</string>
     <string name="highlights_button">شاهد ملخص المباراة</string>
-    <string name="highlights_attribution">فيديوهات رسمية عبر يوتيوب • قنوات الدوريات الموثقة</string>
+    <string name="highlights_attribution">فيديوهات رسمية عبر يوتيوب • قنوات دوريات وأندية موثقة</string>
     <string name="video_attribution">فيديو رسمي عبر يوتيوب • %1$s</string>
     <string name="legal_notice">كورة هو تطبيق مستقل للنتائج المباشرة والإحصائيات الرياضية. جميع ملخصات المباريات هي فيديوهات رسمية تُستضاف وتُبث مباشرة عبر يوتيوب من قبل أصحاب الحقوق المعنيين. كورة لا تستضيف أو ترفع أو تدّعي ملكية أي بث فيديو أو شعارات دوريات أو علامات تجارية للأندية.</string>
     <string name="news_empty">لا توجد أخبار حالياً. اضغط التحديث لإعادة المحاولة.</string>
@@ -45,6 +45,7 @@
     <string name="reader_open">فتح في المتصفح</string>
     <string name="video_title">ملخص المباراة</string>
     <string name="stats_events">أحداث المباراة</string>
+    <string name="events_empty">لا توجد أحداث مسجلة للمباراة حتى الآن.</string>
     <string name="stats_lineups">التشكيلة</string>
     <string name="bench_title">التبديلات</string>
     <string name="stats_match">إحصائيات المباراة</string>
@@ -80,8 +81,8 @@
     <string name="col_points">نقاط</string>
     <!-- v1.5.4 — مشغّل الفيديو المدمج ومناطق الترتيب -->
     <string name="video_finding">جارٍ البحث عن الملخصات الرسمية…</string>
-    <string name="video_none_title">لا يوجد ملخص منشور بعد</string>
-    <string name="video_none_body">لم يتم نشر الفيديوهات الرسمية لهذه المباراة بعد. عد لاحقًا.</string>
+    <string name="video_none_title">لم يُعثر على فيديو رسمي بعد</string>
+    <string name="video_none_body">لم نتمكن من العثور على فيديو رسمي موثّق لهذه المباراة. تظهر الفيديوهات هنا بمجرد نشرها من الدوريات أو الأندية.</string>
     <string name="video_more">مزيد من الملخصات</string>
     <string name="standings_legend_europe">مراكز أوروبية</string>
     <string name="standings_legend_relegation">الهبوط</string>
@@ -117,6 +118,7 @@
     <string name="vote_accuracy">النتيجة: %1$d من %2$d توقعات صحيحة</string>
     <string name="detail_overview">نظرة عامة</string>
     <string name="detail_lineup">التشكيلة</string>
+    <string name="detail_events">الأحداث</string>
     <string name="detail_stats">إحصائيات</string>
     <string name="detail_form">الأداء</string>
     <string name="lineup_empty">لم يُنشر تشكيل لهذه المباراة</string>

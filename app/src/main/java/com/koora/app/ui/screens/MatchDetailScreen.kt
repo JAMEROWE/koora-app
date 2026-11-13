@@ -366,21 +366,30 @@ fun MatchDetailScreen(
                         onClick = { detailTab = 1 },
                         text = { Text(stringResource(R.string.detail_lineup), maxLines = 1) }
                     )
+                    // v1.10.3 (owner decision): Match events get their OWN
+                    // tab, beside the others — the Lineup tab is purely the
+                    // lineup from here on.
                     Tab(
                         selected = detailTab == 2,
                         onClick = { detailTab = 2 },
-                        text = { Text(stringResource(R.string.detail_stats), maxLines = 1) }
+                        text = { Text(stringResource(R.string.detail_events), maxLines = 1) }
                     )
                     Tab(
                         selected = detailTab == 3,
                         onClick = { detailTab = 3 },
+                        text = { Text(stringResource(R.string.detail_stats), maxLines = 1) }
+                    )
+                    Tab(
+                        selected = detailTab == 4,
+                        onClick = { detailTab = 4 },
                         text = { Text(stringResource(R.string.detail_form), maxLines = 1) }
                     )
                 }
                 when (detailTab) {
                     0 -> OverviewTab(match, vm.stats, onWatchHighlights)
                     1 -> LineupTab(match, vm.deepStats)
-                    2 -> StatsTab(match, vm.deepStats)
+                    2 -> EventsTab(match, vm.deepStats)
+                    3 -> StatsTab(match, vm.deepStats)
                     else -> FormTab(match, vm.teamMatches)
                 }
             }
@@ -439,7 +448,11 @@ private fun OverviewTab(
     }
 }
 
-/** §3.2 Lineup: the unified pitch, bench strip, and the full event record. */
+/** §3.2 Lineup (v1.10.3 owner decision): PURELY the lineup — the pitch
+ *  with both teams' players in their slots, plus the announced bench.
+ *  The full match record has its OWN tab (Events) and never appears here:
+ *  no badges on the pitch (gone since v1.10.2) and no events card below
+ *  (moved in v1.10.3) — the lineup stands alone. */
 @Composable
 private fun LineupTab(match: Match, ds: MatchStats?) {
     Column(
@@ -459,18 +472,38 @@ private fun LineupTab(match: Match, ds: MatchStats?) {
                     .fillMaxWidth()
                     .padding(vertical = 24.dp)
             )
-            if (ds != null && ds.events.isNotEmpty()) {
-                EventsCard(match, ds)
-            }
         } else {
             LineupsSection(match, ds)
-            // The accessible, full-detail record of the match (spec §3.2
-            // keeps the events integrated on the pitch; this list stays as
-            // the screen-reader-friendly record).
-            if (ds.events.isNotEmpty()) {
-                Spacer(Modifier.height(16.dp))
-                EventsCard(match, ds)
-            }
+        }
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** §3.2b Events (v1.10.3 owner decision): the match record gets its OWN
+ *  tab, beside Overview / Lineup / Stats / Form, in the same card forms
+ *  as every other tab. Nothing here touches the pitch, and nothing
+ *  lineup-shaped is mixed into this record. */
+@Composable
+private fun EventsTab(match: Match, ds: MatchStats?) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (ds != null && ds.events.isNotEmpty()) {
+            EventsCard(match, ds)
+        } else {
+            Text(
+                stringResource(R.string.events_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp)
+            )
         }
         Spacer(Modifier.height(24.dp))
     }

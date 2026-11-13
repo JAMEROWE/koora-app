@@ -35,7 +35,7 @@
     <string name="no_live">No live matches right now. Check back soon — the tab refreshes itself.</string>
     <string name="updated_at">Updated %1$s</string>
     <string name="highlights_button">Watch highlights</string>
-    <string name="highlights_attribution">Official videos via YouTube • verified league channels</string>
+    <string name="highlights_attribution">Official videos via YouTube • verified league &amp; club channels</string>
     <string name="video_attribution">Official video via YouTube • %1$s</string>
     <string name="legal_notice">Koora is an independent live-score and sports statistics application. All match highlights are official videos hosted and streamed directly via YouTube by their respective rights-holders. Koora does not host, upload, or claim ownership over any video broadcasts, league logos, or club trademarks.</string>
     <string name="news_empty">No news right now. Tap refresh to try again.</string>
@@ -45,6 +45,7 @@
     <string name="reader_open">Open in browser</string>
     <string name="video_title">Highlights</string>
     <string name="stats_events">Match events</string>
+    <string name="events_empty">No match events recorded yet.</string>
     <string name="stats_lineups">Lineups</string>
     <string name="bench_title">Substitutions</string>
     <string name="stats_match">Match stats</string>
@@ -80,8 +81,8 @@
     <string name="col_points">Pts</string>
     <!-- v1.5.4 — own-player video screen + standings zones -->
     <string name="video_finding">Finding official highlights…</string>
-    <string name="video_none_title">No highlights published yet</string>
-    <string name="video_none_body">Official videos for this match have not been published. Check again later.</string>
+    <string name="video_none_title">No official video found yet</string>
+    <string name="video_none_body">We could not find a verified official video for this match. Videos appear here as soon as the leagues or clubs publish them.</string>
     <string name="video_more">More highlights</string>
     <string name="standings_legend_europe">European places</string>
     <string name="standings_legend_relegation">Relegation</string>
@@ -118,6 +119,7 @@
     <string name="vote_accuracy">Score: %1$d of %2$d predictions correct</string>
     <string name="detail_overview">Overview</string>
     <string name="detail_lineup">Lineup</string>
+    <string name="detail_events">Events</string>
     <string name="detail_stats">Stats</string>
     <string name="detail_form">Form</string>
     <string name="lineup_empty">No lineup published for this match</string>
