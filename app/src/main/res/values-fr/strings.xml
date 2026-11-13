@@ -45,7 +45,7 @@
     <string name="reader_open">Ouvrir dans le navigateur</string>
     <string name="video_title">Résumé vidéo</string>
     <string name="stats_events">Faits du match</string>
-    <string name="events_empty">Aucun fait de match enregistré pour l'instant.</string>
+    <string name="events_empty">Aucun fait de match enregistré pour l\'instant.</string>
     <string name="stats_lineups">Compositions</string>
     <string name="bench_title">Remplacements</string>
     <string name="stats_match">Statistiques</string>
@@ -81,8 +81,8 @@
     <string name="col_points">Pts</string>
     <!-- v1.5.4 — lecteur vidéo intégré + zones du classement -->
     <string name="video_finding">Recherche des résumés officiels…</string>
-    <string name="video_none_title">Aucune vidéo officielle trouvée pour l'instant</string>
-    <string name="video_none_body">Nous n'avons trouvé aucune vidéo officielle vérifiée pour ce match. Les vidéos apparaissent dès que les ligues ou les clubs les publient.</string>
+    <string name="video_none_title">Aucune vidéo officielle trouvée pour l\'instant</string>
+    <string name="video_none_body">Nous n\'avons trouvé aucune vidéo officielle vérifiée pour ce match. Les vidéos apparaissent dès que les ligues ou les clubs les publient.</string>
     <string name="video_more">Plus de résumés</string>
     <string name="standings_legend_europe">Places européennes</string>
     <string name="standings_legend_relegation">Relégation</string>
