@@ -141,6 +141,7 @@
     <string name="onboarding_skip">تخطي الآن</string>
     <string name="share_match">مشاركة النتيجة</string>
     <string name="share_chooser_title">مشاركة عبر</string>
+    <string name="share_card_brand">نتائج مباشرة وأخبار وملخصات على Koora</string>
     <string name="settings_fav_teams">البطولات والفرق المفضلة</string>
     <string name="day_results">النتائج</string>
     <string name="empty_results">لا توجد مباريات منتهية في الأيام الستة الماضية.</string>
