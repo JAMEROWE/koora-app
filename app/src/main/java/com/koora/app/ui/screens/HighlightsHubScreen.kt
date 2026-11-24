@@ -60,13 +60,13 @@ import java.util.Locale
 import java.util.TimeZone
 
 /*
- * HIGHLIGHTS TAB (v1.8.0) â the independent entry point the owner asked
+ * HIGHLIGHTS TAB (v1.8.0) — the independent entry point the owner asked
  * for: official released highlight videos, discoverable without opening
  * any match page. The list contains ONLY matches whose official video is
  * actually out (paired from the verified league channels' own feeds by
- * HighlightsHub) â a fixture without a release never appears, and a
+ * HighlightsHub) — a fixture without a release never appears, and a
  * release without a known fixture never appears either. Empty tab =
- * nothing released yet, with a retry â never a placeholder.
+ * nothing released yet, with a retry — never a placeholder.
  *
  * Data cost: the fixture list reuses the SAME shared window cache as the
  * Live and Results tabs (identical keys = zero extra football-data.org
@@ -84,7 +84,7 @@ class HighlightsHubViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val now = System.currentTimeMillis()
-                // Exactly the Live/Results window (v1.9.0: ..day after) â
+                // Exactly the Live/Results window (v1.9.0: ..day after) —
                 // shared per-league cache, zero duplicate calls.
                 val fixtures = MatchRepository.matchesWindow(
                     localDayKeyAt(now, -6), localDayKeyAt(now, 2)
@@ -92,7 +92,7 @@ class HighlightsHubViewModel : ViewModel() {
                 rows = HighlightsHub.resolve(context, fixtures)
             } catch (_: Exception) {
                 // Offline/failure: keep the previous rows (they are already
-                // verified real data); an empty list stays empty â never
+                // verified real data); an empty list stays empty — never
                 // fake rows, per the no-fake rule.
             }
             loading = false
@@ -118,7 +118,7 @@ fun HighlightsHubScreen(
         TopAppBar(
             title = { Text(stringResource(R.string.tab_highlights)) },
             actions = {
-                // v1.9.0 (spec Â§1.1): Settings gear top-right.
+                // v1.9.0 (spec §1.1): Settings gear top-right.
                 IconButton(onClick = onOpenSettings) {
                     Icon(
                         Icons.Filled.Settings,
@@ -134,7 +134,7 @@ fun HighlightsHubScreen(
             }
         )
 
-        // Permanent attribution under the title (roadmap Â§3.4, EN/FR/AR).
+        // Permanent attribution under the title (roadmap §3.4, EN/FR/AR).
         Text(
             stringResource(R.string.highlights_attribution),
             Modifier.padding(horizontal = 16.dp),
