@@ -246,7 +246,7 @@ internal fun MatchRow(
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onMatch)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = 8.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         VersusContent(m, Modifier.weight(1f), onTeam)
@@ -288,7 +288,7 @@ private fun VersusContent(m: Match, modifier: Modifier = Modifier, onTeam: (Team
         )
         Column(
             Modifier
-                .widthIn(min = 52.dp)
+                .widthIn(min = 48.dp)
                 .padding(horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
