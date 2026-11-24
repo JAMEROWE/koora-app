@@ -6,6 +6,7 @@ import com.koora.app.data.ScoreDetail
 import com.koora.app.data.Team
 import com.koora.app.ui.screens.HighlightsHub
 import com.koora.app.ui.screens.YtEntry
+import com.koora.app.ui.screens.entryGroundedInFixture
 import com.koora.app.ui.screens.fixtureSeasonStart
 import com.koora.app.ui.screens.publishWindowAllows
 import com.koora.app.ui.screens.titleScoreline
@@ -82,17 +83,67 @@ class HighlightsHubTest {
     }
 
     @Test
-    fun newestFixtureWinsWhenTeamsMetTwice() {
+    fun twoPlausibleMeetings_neverAssignedOnRecencyAlone() {
+        // Both meetings pass every gate (publish window overlaps, scores
+        // unknown): recency order is NOT evidence, so no association.
         val older = fixture(4, "Arsenal", "Chelsea", "2026-11-08T12:00:00Z")
         val newer = fixture(5, "Chelsea", "Arsenal", "2026-11-09T20:00:00Z")
-        // Published AFTER the rematch's kick-off: it can only document the
-        // newer meeting, and the newest-first order still picks it.
-        val entry = YtEntry("Arsenal 2-2 Chelsea | Highlights", "mV126", "",
+        val entry = YtEntry("Arsenal v Chelsea | Highlights", "mV126", "",
             publishedAtMs = ms("2026-11-09T23:00:00Z"))
-        val pairedNewestFirst = HighlightsHub.pairWithFixture(entry, listOf(newer, older))
-        assertEquals(5L, pairedNewestFirst!!.second.id)
-        // And when the entry names both teams, pairing succeeds at all.
-        assertTrue(pairedNewestFirst.second.awayTeam.name == "Arsenal")
+        assertNull(HighlightsHub.pairWithFixture(entry, listOf(newer, older)))
+    }
+
+    @Test
+    fun agreeingScoreline_disambiguatesBetweenMeetings() {
+        // The ONE stronger-metadata case: both meetings pass every other
+        // gate (the older one's score is unknown, so nothing excludes it),
+        // and the title's own scoreline equals exactly ONE recorded score.
+        val older = fixture(4, "Arsenal", "Chelsea", "2026-11-08T12:00:00Z")
+        val newer = fixture(5, "Chelsea", "Arsenal", "2026-11-09T20:00:00Z",
+            Score(fullTime = ScoreDetail(home = 2, away = 2)))
+        val entry = YtEntry("Chelsea 2-2 Arsenal | Highlights", "mV127", "",
+            publishedAtMs = ms("2026-11-09T23:00:00Z"))
+        val paired = HighlightsHub.pairWithFixture(entry, listOf(newer, older))
+        assertEquals(5L, paired!!.second.id)
+    }
+
+    @Test
+    fun identicalScoresStayAmbiguous_neverAssigned() {
+        // Two meetings with the SAME recorded score: even the title
+        // scoreline cannot tell them apart, so no association.
+        val older = fixture(4, "Arsenal", "Chelsea", "2026-11-08T12:00:00Z",
+            Score(fullTime = ScoreDetail(home = 2, away = 2)))
+        val newer = fixture(5, "Chelsea", "Arsenal", "2026-11-09T20:00:00Z",
+            Score(fullTime = ScoreDetail(home = 2, away = 2)))
+        val entry = YtEntry("Chelsea 2-2 Arsenal | Highlights", "mV128", "",
+            publishedAtMs = ms("2026-11-09T23:00:00Z"))
+        assertNull(HighlightsHub.pairWithFixture(entry, listOf(newer, older)))
+    }
+
+    @Test
+    fun nonHighlightGenres_neverPair() {
+        // Previews, pressers, training and interviews name both teams and
+        // pass the metadata gates — only their declared genre betrays them.
+        val fresh = ms("2026-11-22T19:00:00Z")
+        listOf(
+            "Liverpool v Manchester United | PREVIEW",
+            "Liverpool 4-0 Manchester United | Slot press conference",
+            "Manchester United training before Liverpool",
+            "Liverpool star interview: facing Manchester United"
+        ).forEachIndexed { i, title ->
+            val entry = YtEntry(title, "mV40$i", "1d ago", publishedAtMs = fresh)
+            assertNull(title, HighlightsHub.pairWithFixture(entry, listOf(liverpoolManUtd)))
+        }
+    }
+
+    @Test
+    fun genreWordsInsideHighlightTitles_doNotFalseReject() {
+        // A genuine highlights title mentioning none of the genres passes.
+        val entry = YtEntry(
+            "Liverpool 4-0 Manchester United | Premier League Highlights", "mV410", "1d ago",
+            publishedAtMs = ms("2026-11-22T19:00:00Z")
+        )
+        assertNotNull(HighlightsHub.pairWithFixture(entry, listOf(liverpoolManUtd)))
     }
 
     @Test
@@ -225,6 +276,24 @@ class HighlightsHubTest {
         )
         val paired = HighlightsHub.pairWithFixture(entry, listOf(newer, older))
         assertEquals(30L, paired!!.second.id)
+    }
+
+    @Test
+    fun detailResolver_usesTheSameGrounding() {
+        // The shared gate the detail screen now applies: a stale throwback
+        // fails, the verified highlight passes — same rule as the hub.
+        val stale = YtEntry(
+            "Maguire's Late Heroics! | Liverpool v Manchester United 2025/26", "mV420", "3d ago",
+            publishedAtMs = ms("2026-11-21T12:00:00Z")
+        )
+        val real = YtEntry(
+            "Liverpool 4-0 Manchester United | Highlights", "mV421", "1d ago",
+            publishedAtMs = ms("2026-11-22T19:00:00Z")
+        )
+        val grounded = listOf(stale, real).filter {
+            entryGroundedInFixture(it, "Liverpool", "Manchester United", "2026-11-22T16:30:00Z", 4, 0)
+        }
+        assertEquals(listOf("mV421"), grounded.map { it.videoId })
     }
 
     @Test
