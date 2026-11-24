@@ -142,6 +142,7 @@
     <string name="onboarding_skip">Skip for now</string>
     <string name="share_match">Share result</string>
     <string name="share_chooser_title">Share via</string>
+    <string name="share_card_brand">Live scores, news and highlights on Koora</string>
     <string name="settings_fav_teams">Favorite leagues &amp; teams</string>
     <string name="day_results">Results</string>
     <string name="empty_results">No finished matches in the last 6 days.</string>
