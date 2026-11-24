@@ -1,5 +1,6 @@
 package com.koora.app.ui.components
 
+import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -96,9 +97,14 @@ private fun flagFor(code: String?): String? = when (code) {
     "DED" -> "\uD83C\uDDF3\uD83C\uDDF1" // Netherlands
     "PPL" -> "\uD83C\uDDF5\uD83C\uDDF9" // Portugal
     "BSA" -> "\uD83C\uDDE7\uD83C\uDDF7" // Brazil
-    // England's own flag (tag-sequence emoji). Where unsupported it renders
-    // as a plain black flag, never as another country - verified in renders.
-    "PL" -> "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F"
+    // England's own flag (tag-sequence emoji) where the platform emoji font
+    // supports subdivision flags (Android 13+); a readable "ENG" label
+    // elsewhere - never a black flag posing as an identifier.
+    "PL" -> if (Build.VERSION.SDK_INT >= 33) {
+        "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F"
+    } else {
+        "ENG"
+    }
     "CL", "EC", "EL", "WC", "CLI" -> "\uD83C\uDFC6" // international competition
     else -> null
 }
