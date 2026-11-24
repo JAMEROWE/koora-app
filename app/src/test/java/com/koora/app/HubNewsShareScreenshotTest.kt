@@ -16,6 +16,7 @@ import com.koora.app.ui.screens.MatchDetailScreen
 import com.koora.app.ui.screens.NewsRow
 import com.koora.app.ui.screens.YtEntry
 import com.koora.app.ui.theme.KooraTheme
+import com.koora.app.ui.theme.ThemeController
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
@@ -67,7 +68,7 @@ class HubNewsShareScreenshotTest {
             )
         }
         rule.setContent {
-            KooraTheme {
+            KooraTheme(themeMode = ThemeController.DARK) {
                 Column {
                     rows.forEach { HubRow(it) { _, _ -> } }
                 }
@@ -92,7 +93,7 @@ class HubNewsShareScreenshotTest {
             )
         )
         rule.setContent {
-            KooraTheme {
+            KooraTheme(themeMode = ThemeController.DARK) {
                 Column {
                     items.forEach { NewsRow(it) {} }
                 }
@@ -109,7 +110,7 @@ class HubNewsShareScreenshotTest {
         runBlocking { MatchRepository.matches("FL1") }
         val match = MatchRepository.cache.first { it.id == 9001L }
         rule.setContent {
-            KooraTheme {
+            KooraTheme(themeMode = ThemeController.DARK) {
                 MatchDetailScreen(
                     matchId = match.id,
                     onBack = {},
