@@ -71,6 +71,8 @@ import com.koora.app.ui.localDayKeyAt
 import com.koora.app.ui.matchesOnDay
 import com.koora.app.ui.searchMatches
 import com.koora.app.ui.sectionExpandedDefault
+import com.koora.app.ui.pinFavoriteLeagues
+import com.koora.app.data.FavoriteTeamsStore
 import com.koora.app.ui.sortMixed
 import com.koora.app.ui.components.DayEmptyLine
 import com.koora.app.ui.components.ExpandCollapseRow
@@ -88,13 +90,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /*
- * HOME — the matches-first screen (post-review direction, approved by the
+ * HOME â the matches-first screen (post-review direction, approved by the
  * owner on 24 Nov):
  *   - ONE Matches home. There is no separate Live tab and no separate
  *     Live filter chip: TODAY already contains today's live matches,
  *     sorted first with their LIVE badge.
  *   - Day chips (Today / Tomorrow / Day after) plus the calendar: the
- *     selected day shows ONLY that day — picking Today never renders a
+ *     selected day shows ONLY that day â picking Today never renders a
  *     Tomorrow section underneath it. The calendar still covers the
  *     honest -6..+2 window, so recent results stay reachable by day.
  *   - Favorite matches of the SELECTED day pin to the top; favorites of
@@ -195,7 +197,6 @@ fun HomeScreen(
     // 0 today (default), 1 tomorrow, 2 day after, 3 a calendar-picked day.
     var dayFilter by remember { mutableIntStateOf(0) }
     var customDayKey by remember { mutableStateOf<String?>(null) }
-    var showDatePicker by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     val sectionExpanded = remember { mutableStateMapOf<String, Boolean>() }
@@ -203,6 +204,26 @@ fun HomeScreen(
         FavoritesStore.toggle(context, m)
         vm.bumpFavorites()
     }
+
+    // First-launch personalization: once the first load lands, offer the
+    // favorite leagues/teams picker exactly once (re-openable in Settings).
+    var showOnboarding by remember { mutableStateOf(false) }
+    LaunchedEffect(vm.loading) {
+        if (!vm.loading && !FavoriteTeamsStore.skipOnboardingForTest &&
+            !FavoriteTeamsStore.onboardingDone(context)
+        ) {
+            showOnboarding = true
+        }
+    }
+    if (showOnboarding) {
+        OnboardingDialog(window = vm.window, onDone = {
+            showOnboarding = false
+            vm.bumpFavorites()
+        })
+    }
+    // Favorite leagues/teams, re-read whenever any favorite changes.
+    val favLeagueCodes = remember(vm.favsTick) { FavoriteTeamsStore.leagues(context) }
+    val favTeamNames = remember(vm.favsTick) { FavoriteTeamsStore.teams(context) }
 
     Column(Modifier.fillMaxSize()) {
         // Slim identity banner; Settings gear + Search top-right.
@@ -268,7 +289,7 @@ fun HomeScreen(
             }
 
             // Day chips: exactly one day at a time. Today already carries
-            // the live matches — there is deliberately no Live chip.
+            // the live matches â there is deliberately no Live chip.
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -296,56 +317,15 @@ fun HomeScreen(
                     onClick = { dayFilter = 2 },
                     label = { Text(stringResource(R.string.day_after), maxLines = 1) }
                 )
-            }
-            // Calendar: pinned after the scrollable chips so large font
-            // scales never push it off screen. Constrained to the fetched
-            // window (-6..+2 days).
-            IconButton(onClick = { showDatePicker = true }) {
-                Icon(
-                    Icons.Filled.CalendarMonth,
-                    contentDescription = stringResource(R.string.calendar_pick),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                // Results: one tap to recent finished matches, no date
+                // picking (owner request, replaces the calendar button).
+                FilterChip(
+                    selected = dayFilter == 4,
+                    onClick = { dayFilter = 4 },
+                    label = { Text(stringResource(R.string.day_results), maxLines = 1) },
+                    modifier = Modifier.testTag("results_chip")
                 )
             }
-            }
-        }
-
-        if (showDatePicker) {
-            val windowKeys = remember {
-                val now = System.currentTimeMillis()
-                (-6..2).map { localDayKeyAt(now, it) }.toSet()
-            }
-            val pickerState = rememberDatePickerState(
-                selectableDates = object : SelectableDates {
-                    override fun isSelectableDate(utcMillis: Long): Boolean {
-                        val key = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
-                            timeZone = TimeZone.getTimeZone("UTC")
-                        }.format(Date(utcMillis))
-                        return key in windowKeys
-                    }
-                }
-            )
-            DatePickerDialog(
-                onDismissRequest = { showDatePicker = false },
-                confirmButton = {
-                    TextButton(onClick = {
-                        val ms = pickerState.selectedDateMillis
-                        if (ms != null) {
-                            customDayKey = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
-                                timeZone = TimeZone.getTimeZone("UTC")
-                            }.format(Date(ms))
-                            dayFilter = 3
-                        }
-                        showDatePicker = false
-                    }) { Text(stringResource(R.string.date_pick_confirm)) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDatePicker = false }) {
-                        Text(stringResource(R.string.panel_close))
-                    }
-                }
-            ) {
-                DatePicker(state = pickerState)
             }
         }
 
@@ -400,17 +380,81 @@ fun HomeScreen(
                 val dayMatches = remember(vm.window, vm.favsTick, selectedKey, vm.demo) {
                     dayMatchesFor(vm, selectedKey)
                 }
+                // Results mode: finished matches of the last days, newest
+                // day first, each day grouped per league like a match day.
+                val resultsDays = remember(vm.window, vm.favsTick, dayFilter) {
+                    if (dayFilter != 4) emptyList()
+                    else {
+                        val now = System.currentTimeMillis()
+                        (-1 downTo -6)
+                            .map { localDayKeyAt(now, it) }
+                            .map { day ->
+                                day to matchesOnDay(vm.window, day)
+                                    .filter { it.status == "FINISHED" }
+                                    .sortedByDescending { it.utcDate }
+                            }
+                            .filter { it.second.isNotEmpty() }
+                    }
+                }
 
                 // testTag: LaunchTest scrolls THIS list before asserting
                 // below-the-fold items (Robolectric's tiny window).
                 LazyColumn(Modifier.fillMaxSize().testTag("home_feed")) {
                     item(key = "exp-toggle") {
-                        val visibleKeys = dayMatchesFor(vm, selectedKey)
-                            .let { daySections(it).map { sec -> "h-sec-${sec.code}" } }
+                        val visibleKeys = if (dayFilter == 4) {
+                            resultsDays.flatMap { (day, ms) ->
+                                daySections(ms).map { sec -> "r$day-sec-${sec.code}" }
+                            }
+                        } else {
+                            dayMatchesFor(vm, selectedKey)
+                                .let { daySections(it).map { sec -> "h-sec-${sec.code}" } }
+                        }
                         ExpandCollapseRow(
                             onExpandAll = { visibleKeys.forEach { sectionExpanded[it] = true } },
                             onCollapseAll = { visibleKeys.forEach { sectionExpanded[it] = false } }
                         )
+                    }
+                    if (dayFilter == 4) {
+                        item(key = "r-title") {
+                            Text(
+                                stringResource(R.string.day_results),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                            )
+                        }
+                        if (resultsDays.isEmpty()) {
+                            item(key = "r-empty") { DayEmptyLine(stringResource(R.string.empty_results)) }
+                        }
+                        resultsDays.forEach { (day, ms) ->
+                            dayBlock(
+                                tag = "r$day",
+                                title = prettyDayKey(day),
+                                emptyText = "",
+                                sections = pinFavoriteLeagues(daySections(ms), favLeagueCodes),
+                                titles = titles,
+                                favIds = favIds,
+                                favTeamNames = favTeamNames,
+                                favLeagueCodes = favLeagueCodes,
+                                sectionExpanded = sectionExpanded,
+                                onMatchClick = onMatchClick,
+                                onVote = { voteFor = it },
+                                onTeam = { teamFor = it },
+                                onToggleFavorite = onToggleFavorite
+                            )
+                        }
+                        item(key = "version-results") {
+                            Text(
+                                stringResource(R.string.app_version_line, BuildConfig.VERSION_NAME),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp)
+                            )
+                        }
+                        return@LazyColumn
                     }
                     favoritesBlock(
                         vm = vm,
@@ -428,9 +472,11 @@ fun HomeScreen(
                         tag = "h",
                         title = selectedTitle,
                         emptyText = selectedEmpty,
-                        sections = daySections(dayMatches),
+                        sections = pinFavoriteLeagues(daySections(dayMatches), favLeagueCodes),
                         titles = titles,
                         favIds = favIds,
+                        favTeamNames = favTeamNames,
+                        favLeagueCodes = favLeagueCodes,
                         sectionExpanded = sectionExpanded,
                         onMatchClick = onMatchClick,
                         onVote = { voteFor = it },
@@ -555,7 +601,7 @@ private fun prettyDayKey(key: String): String = runCatching {
 
 // ---- LazyColumn blocks ------------------------------------------------------
 
-/** Favorites of the SELECTED day only — other days stay on their own day. */
+/** Favorites of the SELECTED day only â other days stay on their own day. */
 private fun LazyListScope.favoritesBlock(
     vm: HomeViewModel,
     context: android.content.Context,
@@ -597,6 +643,8 @@ private fun LazyListScope.dayBlock(
     sections: List<LeagueSection>,
     titles: Map<String, String>,
     favIds: Set<Long>,
+    favTeamNames: Set<String>,
+    favLeagueCodes: Set<String>,
     sectionExpanded: SnapshotStateMap<String, Boolean>,
     onMatchClick: (Long) -> Unit,
     onVote: (Match) -> Unit,
@@ -618,9 +666,17 @@ private fun LazyListScope.dayBlock(
     sections.forEach { sec ->
         val key = "$tag-sec-${sec.code}"
         val live = sec.matches.any { isLive(it) }
+        val hasFavTeam = favTeamNames.isNotEmpty() && sec.matches.any { m ->
+            val h = FavoriteTeamsStore.normalize(m.homeTeam.name)
+            val a = FavoriteTeamsStore.normalize(m.awayTeam.name)
+            favTeamNames.any {
+                FavoriteTeamsStore.normalizedEquals(it, h) ||
+                    FavoriteTeamsStore.normalizedEquals(it, a)
+            }
+        }
         val expanded = sectionExpanded[key] ?: sectionExpandedDefault(
             hasLive = live,
-            hasFavorite = sec.matches.any { it.id in favIds },
+            hasFavorite = sec.matches.any { it.id in favIds } || hasFavTeam || sec.code in favLeagueCodes,
             sectionsInBlock = sections.size
         )
         item(key = "$key-header") {
