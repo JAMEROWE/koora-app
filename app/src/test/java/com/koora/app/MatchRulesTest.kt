@@ -34,7 +34,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * v1.5.6 RULES LAYER â pure logic, no screens, no network (doc Â§3):
+ * v1.5.6 RULES LAYER — pure logic, no screens, no network (doc §3):
  * day split, sort orders, pagination, vote lock at kick-off, team
  * panel selectors, league grouping, and the video-cache TTL rule
  * (found = 24h, miss = 45 min).
@@ -69,7 +69,7 @@ class MatchRulesTest {
 
     private fun now(): Long = System.currentTimeMillis()
 
-    /** UTC instant at [hour]:00 local time of a given local day key â
+    /** UTC instant at [hour]:00 local time of a given local day key —
      *  deterministic in ANY device timezone (noon cannot leave its day). */
     private fun instantOf(dayKey: String, hour: Int): String {
         val df = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
@@ -170,7 +170,7 @@ class MatchRulesTest {
         assertTrue(voteLocked(m, now()))
     }
 
-    /** Match where "MyTeam" (id 10) always plays â [home] picks the side. */
+    /** Match where "MyTeam" (id 10) always plays — [home] picks the side. */
     private fun teamMatch(
         id: Long,
         opponent: String,
@@ -276,7 +276,7 @@ class MatchRulesTest {
         assertFalse(VideoCache.isFresh(found = true, at = now + hour, now = now))
     }
 
-    // ---- v1.10.0 (spec Â§2.3): pick validation + personal accuracy --------------------
+    // ---- v1.10.0 (spec §2.3): pick validation + personal accuracy --------------------
 
     @Test
     fun pickResult_checksRealFinalScore() {
@@ -315,7 +315,7 @@ class MatchRulesTest {
         assertEquals(0 to 0, accuracyOf(emptyMap(), listOf(win, loss)))
     }
 
-    // ---- v1.10.0 (spec Â§2.2): accordion smart default --------------------------------
+    // ---- v1.10.0 (spec §2.2): accordion smart default --------------------------------
 
     @Test
     fun sectionExpanded_smartDefault() {
@@ -324,7 +324,7 @@ class MatchRulesTest {
         assertTrue(sectionExpandedDefault(hasLive = false, hasFavorite = true, sectionsInBlock = 9))
         // small blocks stay open (a quiet matchday hides nothing)
         assertTrue(sectionExpandedDefault(hasLive = false, hasFavorite = false, sectionsInBlock = 3))
-        // a big block keeps non-live, unfavorited leagues collapsed (spec Â§2.2)
+        // a big block keeps non-live, unfavorited leagues collapsed (spec §2.2)
         assertFalse(sectionExpandedDefault(hasLive = false, hasFavorite = false, sectionsInBlock = 4))
     }
 
