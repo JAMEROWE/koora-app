@@ -129,4 +129,7 @@
     <string name="team_next">Prochains matchs</string>
     <string name="team_recent">Résultats récents</string>
     <string name="team_fixtures_unavailable">Matchs de l\'équipe indisponibles.</string>
+    <string name="search_label">Rechercher</string>
+    <string name="search_hint">Équipe ou ligue</string>
+    <string name="search_none">Aucun match des jours chargés ne correspond à « %1$s ».</string>
 </resources>
