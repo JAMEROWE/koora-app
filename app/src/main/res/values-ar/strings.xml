@@ -129,4 +129,7 @@
     <string name="team_next">المباريات القادمة</string>
     <string name="team_recent">النتائج الأخيرة</string>
     <string name="team_fixtures_unavailable">مباريات هذا الفريق غير متوفرة.</string>
+    <string name="search_label">بحث</string>
+    <string name="search_hint">فريق أو دوري</string>
+    <string name="search_none">لا توجد مباراة في الأيام المحمّلة تطابق «%1$s».</string>
 </resources>
