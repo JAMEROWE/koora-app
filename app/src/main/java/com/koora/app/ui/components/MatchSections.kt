@@ -81,7 +81,6 @@ internal fun DayEmptyLine(text: String) {
  * NOT rendered — the free providers give no emblem URLs, and a drawn
  * fake crest would break the no-fake rule.
  */
-@Composable
 /**
  * Flag emoji for a domestic league's country, or a trophy for international
  * competitions (no national flag is correct for those). Unknown codes show
@@ -97,11 +96,14 @@ private fun flagFor(code: String?): String? = when (code) {
     "DED" -> "\uD83C\uDDF3\uD83C\uDDF1" // Netherlands
     "PPL" -> "\uD83C\uDDF5\uD83C\uDDF9" // Portugal
     "BSA" -> "\uD83C\uDDE7\uD83C\uDDF7" // Brazil
-    "PL" -> "\uD83C\uDDEC\uD83C\uDDE7"  // England (UK flag: the England tag-sequence emoji is unsupported on many Androids)
+    // England's own flag (tag-sequence emoji). Where unsupported it renders
+    // as a plain black flag, never as another country - verified in renders.
+    "PL" -> "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F"
     "CL", "EC", "EL", "WC", "CLI" -> "\uD83C\uDFC6" // international competition
     else -> null
 }
 
+@Composable
 internal fun LeagueHeaderCard(
     title: String,
     count: Int,
@@ -318,17 +320,22 @@ private fun VersusContent(m: Match, modifier: Modifier = Modifier, onTeam: (Team
 }
 
 /**
- * Conventional shortening built only from the club's own words: drops
- * generic filler ("Club", "de", "FC", ...) and keeps the identity words -
- * "Raja Club Athletic" -> "Raja Athletic", "Olympique de Marseille" ->
- * "Olympique Marseille". Returns null when nothing safe can be dropped.
+ * Conventional shortening built only from the club's own words: drops the
+ * generic connector words ("Club", "de", "FC") and keeps the identity words
+ * - "Raja Club Athletic" -> "Raja Athletic", "Olympique de Marseille" ->
+ * "Olympique Marseille". Identity-bearing tokens (acronyms like FAR, suffixes
+ * like AC/United/City) are never dropped, and nothing is invented or
+ * appended. Returns null when there is nothing safe to drop, so the caller
+ * falls back to the TLA instead of a mangled name.
  */
-private fun conventionalShort(name: String): String? {
-    val filler = setOf("Club", "de", "del", "la", "FC", "CF", "AC", "SC", "CD", "UD", "AFC", "FK", "SK", "BK", "IF")
+internal fun conventionalShort(name: String): String? {
+    val filler = setOf("Club", "de", "del", "la", "FC", "CF")
     val words = name.split(' ').filter { it.isNotBlank() }
     if (words.size < 3) return null
     val kept = listOf(words.first()) + words.drop(1).filter { it !in filler }
-    return if (kept.size >= 2 && kept.size < words.size) kept.joinToString(" ") else null
+    if (kept.size < 2 || kept.size == words.size) return null
+    // The result must keep a real identity word, not just connectors.
+    return if (kept.any { it.length >= 3 && it !in filler }) kept.joinToString(" ") else null
 }
 
 /**
