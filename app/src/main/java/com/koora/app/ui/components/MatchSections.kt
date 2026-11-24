@@ -318,6 +318,20 @@ private fun VersusContent(m: Match, modifier: Modifier = Modifier, onTeam: (Team
 }
 
 /**
+ * Conventional shortening built only from the club's own words: drops
+ * generic filler ("Club", "de", "FC", ...) and keeps the identity words -
+ * "Raja Club Athletic" -> "Raja Athletic", "Olympique de Marseille" ->
+ * "Olympique Marseille". Returns null when nothing safe can be dropped.
+ */
+private fun conventionalShort(name: String): String? {
+    val filler = setOf("Club", "de", "del", "la", "FC", "CF", "AC", "SC", "CD", "UD", "AFC", "FK", "SK", "BK", "IF")
+    val words = name.split(' ').filter { it.isNotBlank() }
+    if (words.size < 3) return null
+    val kept = listOf(words.first()) + words.drop(1).filter { it !in filler }
+    return if (kept.size >= 2 && kept.size < words.size) kept.joinToString(" ") else null
+}
+
+/**
  * Team label in a versus row, always at the standard body size. Picks the
  * most complete grounded label that fits the column whole (full name, then
  * API shortName, then TLA - which the badge also shows). A label is only
@@ -331,10 +345,13 @@ private fun AdaptiveTeamName(team: Team, modifier: Modifier = Modifier, textAlig
     val measurer = rememberTextMeasurer()
     BoxWithConstraints(modifier) {
         val maxWidthPx = constraints.maxWidth
+        // Most complete first: full name, API shortName, the club's own
+        // words minus filler, then the TLA (which the badge also shows).
         val candidates = remember(team) {
             listOfNotNull(
                 team.name,
                 team.shortName?.takeIf { it.isNotBlank() },
+                conventionalShort(team.name),
                 team.tla?.takeIf { it.isNotBlank() }
             ).distinct()
         }
