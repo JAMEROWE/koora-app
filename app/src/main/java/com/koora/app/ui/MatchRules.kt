@@ -8,7 +8,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 /*
- * RULES LAYER (v1.5.6, extended v1.6.0) â plain logic with no screens and
+ * RULES LAYER (v1.5.6, extended v1.6.0) — plain logic with no screens and
  * no network. The Live and Results screens only render what these pure
  * functions return, so a sorting, day-split or section bug is fixed once,
  * here, and covered by tests.
@@ -19,7 +19,7 @@ import java.util.TimeZone
 data class Competition(val code: String, val label: String)
 
 /**
- * Real competitions, in display order. Botola Pro first â our home
+ * Real competitions, in display order. Botola Pro first — our home
  * audience. BOT has no football-data.org resource yet (demo stamps it
  * locally; the API-Football upgrade brings the real one).
  */
@@ -40,10 +40,10 @@ val ALL_COMPETITIONS = listOf(
     Competition("CLG", "Coupe de France"),
     Competition("UEL", "Europa League"),
     Competition("UECL", "Conference League"),
-    // v1.7.0: "max attractive leagues" â served by the PitchAPI layer
+    // v1.7.0: "max attractive leagues" — served by the PitchAPI layer
     // (football-data.org free tier offers none of these).
     Competition("SPL", "Saudi Pro League"),
-    Competition("TUR", "SÃ¼per Lig"),
+    Competition("TUR", "Süper Lig"),
     Competition("ARG", "Liga Profesional"),
     Competition("MEX", "Liga MX"),
     Competition("MLS", "MLS"),
@@ -54,7 +54,7 @@ val ALL_COMPETITIONS = listOf(
     Competition("ELC", "Championship"),
     Competition("DED", "Eredivisie"),
     Competition("PPL", "Primeira Liga"),
-    Competition("BSA", "BrasileirÃ£o"),
+    Competition("BSA", "Brasileirão"),
     Competition("CLI", "Copa Libertadores"),
     Competition("WC", "World Cup"),
     Competition("EC", "Euro")
@@ -138,11 +138,11 @@ fun voteLocked(m: Match, nowMs: Long): Boolean {
     return t <= nowMs
 }
 
-// ---- Votes stage 2 (v1.10.0, spec Â§2.3): reactions + post-match check ----
+// ---- Votes stage 2 (v1.10.0, spec §2.3): reactions + post-match check ----
 
 /**
- * Spec Â§2.3 quick reaction chips. They are the USER'S OWN reactions,
- * stored on the phone like the pick â the community variant arrives only
+ * Spec §2.3 quick reaction chips. They are the USER'S OWN reactions,
+ * stored on the phone like the pick — the community variant arrives only
  * with a real backend, and until then nothing here pretends otherwise.
  */
 val VOTE_REACTIONS = listOf("clean_sheet", "goal_fest", "upset_alert")
@@ -166,7 +166,7 @@ fun pickResult(m: Match, pick: String?): Boolean? {
 
 /**
  * Personal prediction accuracy over every pick that HAS a final result:
- * (correct, counted). Unresolved picks are never counted â no fake score.
+ * (correct, counted). Unresolved picks are never counted — no fake score.
  */
 fun accuracyOf(picks: Map<Long, String>, matches: List<Match>): Pair<Int, Int> {
     var correct = 0
@@ -184,7 +184,7 @@ fun accuracyOf(picks: Map<Long, String>, matches: List<Match>): Pair<Int, Int> {
 // ---- Team panel ----------------------------------------------------------
 
 /**
- * A team's next 5 matches (soonest first â live ones included, they are
+ * A team's next 5 matches (soonest first — live ones included, they are
  * "now") and last 5 results (newest first), across whatever competitions
  * the list contains. Pure: the screen renders exactly this.
  */
@@ -200,7 +200,7 @@ fun next5Last5(all: List<Match>, teamId: Long, nowMs: Long, count: Int = 5): Pai
 }
 
 /**
- * Team & league search over the ALREADY-LOADED window (-6..+2 days) â
+ * Team & league search over the ALREADY-LOADED window (-6..+2 days) —
  * zero extra API calls. Case-insensitive substring on either team name,
  * the provider competition name, or the known league label; an exact
  * competition code ("PL") also matches. Needs at least 2 characters.
@@ -230,7 +230,7 @@ fun leagueBlocks(matches: List<Match>): Map<String, List<Match>> =
         .filter { !it.competition?.code.isNullOrBlank() }
         .groupBy { it.competition!!.code }
 
-// ---- Day sections (v1.6.0 â the Live/Results screen structure) -----------
+// ---- Day sections (v1.6.0 — the Live/Results screen structure) -----------
 
 /** One league block of a day's matches (rendered under a LeagueHeader). */
 data class LeagueSection(val code: String, val matches: List<Match>)
@@ -252,14 +252,14 @@ fun daySections(dayMatches: List<Match>): List<LeagueSection> =
             }
         }
 
-// ---- Accordion default state (v1.10.0, spec Â§2.2) -------------------------
+// ---- Accordion default state (v1.10.0, spec §2.2) -------------------------
 
 /**
  * Smart default for a league section: EXPAND when it holds a live match
  * (the user opened Live to watch something) or a favorited match, and
- * also when the whole block is small (three sections or fewer â a quiet
+ * also when the whole block is small (three sections or fewer — a quiet
  * matchday must not hide its matches behind three taps). Everything else
- * stays collapsed by default, exactly as spec Â§2.2 prescribes. Pure,
+ * stays collapsed by default, exactly as spec §2.2 prescribes. Pure,
  * unit-tested.
  */
 fun sectionExpandedDefault(hasLive: Boolean, hasFavorite: Boolean, sectionsInBlock: Int): Boolean =
