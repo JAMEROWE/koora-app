@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -60,10 +61,14 @@ fun TeamBadge(
             .border(0.5.dp, MaterialTheme.colorScheme.outline, CircleShape),
         contentAlignment = Alignment.Center
     ) {
+        // Constant on-screen size: the badge circle does not grow with the
+        // system font scale, so its letters must not either, otherwise large
+        // text clips out of the circle.
+        val badgeFontSize = with(LocalDensity.current) { (size.value * 0.36f).dp.toSp() }
         Text(
             label,
             color = Color(colors.fg),
-            fontSize = (size.value * 0.36f).sp,
+            fontSize = badgeFontSize,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
             maxLines = 1
