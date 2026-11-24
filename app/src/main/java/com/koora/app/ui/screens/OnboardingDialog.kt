@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -106,7 +105,6 @@ fun OnboardingDialog(window: List<Match>, onDone: () -> Unit) {
                 Modifier
                     .padding(20.dp)
                     .heightIn(max = 560.dp)
-                    .verticalScroll(rememberScrollState())
             ) {
                 Text(
                     stringResource(R.string.onboarding_title),
@@ -121,6 +119,13 @@ fun OnboardingDialog(window: List<Match>, onDone: () -> Unit) {
                 )
                 Spacer(Modifier.height(16.dp))
 
+                // Scrollable picks; the Skip/Save row below stays pinned
+                // and reachable at any viewport height or font scale.
+                Column(
+                    Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState())
+                ) {
                 Text(
                     stringResource(R.string.onboarding_leagues),
                     style = MaterialTheme.typography.titleSmall,
@@ -178,9 +183,13 @@ fun OnboardingDialog(window: List<Match>, onDone: () -> Unit) {
                         }
                     }
 
+                }
                 Spacer(Modifier.height(16.dp))
                 Row(Modifier.fillMaxWidth()) {
-                    TextButton(onClick = { dismiss() }) {
+                    TextButton(
+                        onClick = { dismiss() },
+                        modifier = Modifier.testTag("onboarding_skip")
+                    ) {
                         Text(stringResource(R.string.onboarding_skip))
                     }
                     Spacer(Modifier.weight(1f))
@@ -194,7 +203,6 @@ fun OnboardingDialog(window: List<Match>, onDone: () -> Unit) {
                         Text(stringResource(R.string.onboarding_save))
                     }
                 }
-                Spacer(Modifier.width(1.dp))
             }
         }
     }
