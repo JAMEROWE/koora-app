@@ -15,6 +15,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 
 /**
  * RENDERED UI EVIDENCE — Roborazzi screenshots of the REAL app (MainActivity,
@@ -23,6 +24,7 @@ import org.robolectric.annotation.Config
  * reviewer sees exactly what a phone shows — not a hand-drawn mockup.
  */
 @RunWith(AndroidJUnit4::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [34], application = HomeScreenshotTest.NoAdsApp::class)
 class HomeScreenshotTest {
 
