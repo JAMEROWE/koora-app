@@ -16,6 +16,8 @@ import com.koora.app.ui.paginate
 import com.koora.app.ui.pickResult
 import com.koora.app.ui.accuracyOf
 import com.koora.app.ui.sectionExpandedDefault
+import com.koora.app.ui.LeagueSection
+import com.koora.app.ui.pinFavoriteLeagues
 import com.koora.app.ui.sortMixed
 import com.koora.app.ui.sortResultsNewestFirst
 import com.koora.app.ui.sortUpcomingSoonestFirst
@@ -32,7 +34,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * v1.5.6 RULES LAYER — pure logic, no screens, no network (doc §3):
+ * v1.5.6 RULES LAYER â pure logic, no screens, no network (doc Â§3):
  * day split, sort orders, pagination, vote lock at kick-off, team
  * panel selectors, league grouping, and the video-cache TTL rule
  * (found = 24h, miss = 45 min).
@@ -67,7 +69,7 @@ class MatchRulesTest {
 
     private fun now(): Long = System.currentTimeMillis()
 
-    /** UTC instant at [hour]:00 local time of a given local day key —
+    /** UTC instant at [hour]:00 local time of a given local day key â
      *  deterministic in ANY device timezone (noon cannot leave its day). */
     private fun instantOf(dayKey: String, hour: Int): String {
         val df = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
@@ -168,7 +170,7 @@ class MatchRulesTest {
         assertTrue(voteLocked(m, now()))
     }
 
-    /** Match where "MyTeam" (id 10) always plays — [home] picks the side. */
+    /** Match where "MyTeam" (id 10) always plays â [home] picks the side. */
     private fun teamMatch(
         id: Long,
         opponent: String,
@@ -274,7 +276,7 @@ class MatchRulesTest {
         assertFalse(VideoCache.isFresh(found = true, at = now + hour, now = now))
     }
 
-    // ---- v1.10.0 (spec §2.3): pick validation + personal accuracy --------------------
+    // ---- v1.10.0 (spec Â§2.3): pick validation + personal accuracy --------------------
 
     @Test
     fun pickResult_checksRealFinalScore() {
@@ -313,7 +315,7 @@ class MatchRulesTest {
         assertEquals(0 to 0, accuracyOf(emptyMap(), listOf(win, loss)))
     }
 
-    // ---- v1.10.0 (spec §2.2): accordion smart default --------------------------------
+    // ---- v1.10.0 (spec Â§2.2): accordion smart default --------------------------------
 
     @Test
     fun sectionExpanded_smartDefault() {
@@ -322,9 +324,25 @@ class MatchRulesTest {
         assertTrue(sectionExpandedDefault(hasLive = false, hasFavorite = true, sectionsInBlock = 9))
         // small blocks stay open (a quiet matchday hides nothing)
         assertTrue(sectionExpandedDefault(hasLive = false, hasFavorite = false, sectionsInBlock = 3))
-        // a big block keeps non-live, unfavorited leagues collapsed (spec §2.2)
+        // a big block keeps non-live, unfavorited leagues collapsed (spec Â§2.2)
         assertFalse(sectionExpandedDefault(hasLive = false, hasFavorite = false, sectionsInBlock = 4))
     }
 
     private fun hour(): Long = 3_600_000L
+
+    @Test
+    fun pinFavoriteLeagues_favoritesFirstOtherwiseOrderKept() {
+        val sections = listOf(
+            LeagueSection("BOT", emptyList()),
+            LeagueSection("CL", emptyList()),
+            LeagueSection("PL", emptyList())
+        )
+        val pinned = pinFavoriteLeagues(sections, setOf("PL"))
+        assertEquals(listOf("PL", "BOT", "CL"), pinned.map { it.code })
+        // empty favorites: input order untouched
+        assertEquals(sections, pinFavoriteLeagues(sections, emptySet()))
+        // several favorites keep their relative order at the top
+        val multi = pinFavoriteLeagues(sections, setOf("CL", "PL"))
+        assertEquals(listOf("CL", "PL", "BOT"), multi.map { it.code })
+    }
 }
