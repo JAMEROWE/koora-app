@@ -103,7 +103,7 @@ class HighlightsHubViewModel : ViewModel() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HighlightsHubScreen(
-    onWatch: (String, String) -> Unit,
+    onWatch: (HighlightsHub.Row) -> Unit,
     onOpenSettings: () -> Unit = {},
     vm: HighlightsHubViewModel = viewModel()
 ) {
@@ -175,14 +175,17 @@ fun HighlightsHubScreen(
 }
 
 @Composable
-internal fun HubRow(row: HighlightsHub.Row, onWatch: (String, String) -> Unit) {
+internal fun HubRow(row: HighlightsHub.Row, onWatch: (HighlightsHub.Row) -> Unit) {
     val m = row.match
     // Thumbnail card: the video's own YouTube thumbnail (no media cached,
     // image only), the match line, then its source badges.
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable { onWatch(m.homeTeam.name, m.awayTeam.name) }
+            // The whole grounded row travels to the player: kick-off and
+            // score gate the resolver so another meeting's video can
+            // never play as this fixture's highlights.
+            .clickable { onWatch(row) }
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
