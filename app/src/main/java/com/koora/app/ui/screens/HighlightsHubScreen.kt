@@ -175,7 +175,7 @@ fun HighlightsHubScreen(
 }
 
 @Composable
-private fun HubRow(row: HighlightsHub.Row, onWatch: (String, String) -> Unit) {
+internal fun HubRow(row: HighlightsHub.Row, onWatch: (String, String) -> Unit) {
     val m = row.match
     // Thumbnail card: the video's own YouTube thumbnail (no media cached,
     // image only), the match line, then its source badges.
