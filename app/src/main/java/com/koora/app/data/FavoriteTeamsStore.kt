@@ -6,7 +6,7 @@ import java.text.Normalizer
 /**
  * First-launch personalization: the user's favorite LEAGUES and TEAMS,
  * picked in the onboarding dialog and editable from Settings. Stored in
- * SharedPreferences â no backend. Favorite leagues pin to the top of a
+ * SharedPreferences — no backend. Favorite leagues pin to the top of a
  * match day and open by default; sections holding a favorite team's
  * match open too. This is the teams/leagues personalization from the
  * app-identity review; the older per-match star (FavoritesStore) is a
@@ -42,7 +42,7 @@ object FavoriteTeamsStore {
         prefs(context).edit().putBoolean(KEY_ONBOARDED, true).apply()
     }
 
-    /** Lowercase, diacritics stripped, punctuation collapsed â pure. */
+    /** Lowercase, diacritics stripped, punctuation collapsed — pure. */
     internal fun normalize(name: String): String =
         Normalizer.normalize(name, Normalizer.Form.NFD)
             .replace(Regex("\\p{Mn}+"), "")
