@@ -84,12 +84,12 @@ class ShareCardScreenshotTest {
             }
         }
         rule.waitUntil(timeoutMillis = 10_000) {
-            rule.onAllNodesWithContentDescription(appString(R.string.share_match))
+            rule.onAllNodesWithContentDescription(ApplicationProvider.getApplicationContext<android.content.Context>().getString(R.string.share_match))
                 .fetchSemanticsNodes().isNotEmpty()
         }
         // Tap Share: the card renders off-screen (two posted frames), then
         // the chooser opens with the PNG + result text.
-        rule.onAllNodesWithContentDescription(appString(R.string.share_match))[0]
+        rule.onAllNodesWithContentDescription(ApplicationProvider.getApplicationContext<android.content.Context>().getString(R.string.share_match))[0]
             .performClick()
         rule.waitForIdle()
 
