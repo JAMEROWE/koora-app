@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.koora.app.R
@@ -64,9 +65,20 @@ private fun TeamNameText(name: String, modifier: Modifier = Modifier, textAlign:
         val maxWidthPx = constraints.maxWidth
         val longest = name.split(' ', '-').maxByOrNull { it.length } ?: name
         var fontSize = base.fontSize
-        while (fontSize > 9.sp &&
-            measurer.measure(longest, style = base.copy(fontSize = fontSize)).size.width > maxWidthPx
-        ) {
+        // Step down until the longest word fits the column whole AND the full
+        // name fits within two lines: no mid-word breaks and no ellipsis, at
+        // any width or system font scale. 8sp floor keeps worst cases graceful.
+        while (fontSize > 8.sp) {
+            val wordTooWide =
+                measurer.measure(longest, style = base.copy(fontSize = fontSize)).size.width > maxWidthPx
+            val full = measurer.measure(
+                name,
+                style = base.copy(fontSize = fontSize),
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 2,
+                constraints = Constraints(maxWidth = maxWidthPx)
+            )
+            if (!wordTooWide && !full.hasVisualOverflow) break
             fontSize = (fontSize.value - 0.5f).sp
         }
         Text(
