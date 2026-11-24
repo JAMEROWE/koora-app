@@ -77,11 +77,11 @@ internal fun DayEmptyLine(text: String) {
 }
 
 /**
- * Section header (spec Â§2.2, v1.10.0): green brand bar + league name +
+ * Section header (spec §2.2, v1.10.0): green brand bar + league name +
  * pulsing LIVE pill when the section holds live matches + match count
  * badge + expand/collapse chevron. Tapping the header toggles the
  * accordion; the chevron rotation is animated. League crest images are
- * NOT rendered â the free providers give no emblem URLs, and a drawn
+ * NOT rendered — the free providers give no emblem URLs, and a drawn
  * fake crest would break the no-fake rule.
  */
 /**
@@ -210,8 +210,8 @@ internal fun LeagueHeaderCard(
 }
 
 /**
- * Spec Â§2.2: the top Expand All / Collapse All toggle for the whole
- * feed (Live and Results). Two small stateless buttons â the screen
+ * Spec §2.2: the top Expand All / Collapse All toggle for the whole
+ * feed (Live and Results). Two small stateless buttons — the screen
  * owns the collapsed-state map.
  */
 @Composable
