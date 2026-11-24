@@ -67,7 +67,12 @@ class ScreensTest {
     fun highlightsScreenRenders_inApp() {
         rule.setContent {
             KooraTheme {
-                HighlightsScreen(home = "Raja", away = "Wydad", onBack = {})
+                HighlightsScreen(
+                    home = "Raja", away = "Wydad",
+                    utcDate = "2026-11-20T20:00:00Z",
+                    homeGoals = -1, awayGoals = -1,
+                    onBack = {}
+                )
             }
         }
         rule.waitForIdle()
@@ -86,7 +91,7 @@ class ScreensTest {
                 MatchDetailScreen(
                     matchId = match.id,
                     onBack = {},
-                    onWatchHighlights = { _, _ -> }
+                    onWatchHighlights = { }
                 )
             }
         }
