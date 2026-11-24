@@ -140,16 +140,21 @@ class HubNewsShareScreenshotTest {
         val fixtures = listOf(liverpool, realMadrid)
         val candidates = listOf(
             // The reported stale pairing: classic re-release from BEFORE
-            // the 4-0 was played, thumbnail showed the old 1-2.
+            // the 4-0 was played, thumbnail showed the old 1-2. Fuzzy
+            // "3 days ago" interval lying entirely pre-kickoff: REJECT.
             YtEntry(
                 "Maguire's Late Heroics! | Liverpool v Manchester United 2025/26",
                 "staleThrowback", "3d ago",
-                publishedAtMs = ms("2026-11-21T12:00:00Z")
+                publishedAtMs = ms("2026-11-21T12:00:00Z"),
+                publishedAtEarliestMs = ms("2026-11-20T12:00:00Z")
             ),
+            // The genuine highlight as the RSS exact-stamp upgrade
+            // delivers it (earliest == latest = exact publish instant).
             YtEntry(
                 "Real Madrid 2-1 Celta Vigo | LaLiga Highlights",
                 "realHighlights", "1d ago",
-                publishedAtMs = ms("2026-11-22T23:30:00Z")
+                publishedAtMs = ms("2026-11-22T23:30:00Z"),
+                publishedAtEarliestMs = ms("2026-11-22T23:30:00Z")
             )
         )
         val rows = HighlightsHub.oneRowPerFixture(
