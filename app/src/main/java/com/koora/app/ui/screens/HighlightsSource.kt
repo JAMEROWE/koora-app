@@ -357,6 +357,7 @@ object HighlightsHub {
             titleMatches(entry.title, f.homeTeam.name) &&
                 titleMatches(entry.title, f.awayTeam.name) &&
                 publishWindowAllows(entry.publishedAtMs, f.utcDate) &&
+                !seasonDeclaresOtherMeeting(entry.title, f.utcDate) &&
                 !titleScoreDisagrees(
                     entry.title, f.homeTeam.name, f.awayTeam.name,
                     f.score.fullTime?.home, f.score.fullTime?.away
@@ -751,6 +752,39 @@ internal fun titleScoreline(title: String): Pair<Int, Int>? =
             a <= 15 && b <= 15
         }
         ?.let { it.groupValues[1].toInt() to it.groupValues[2].toInt() }
+
+/**
+ * Season labels in a title ("2025/26") are fixture grounding too: a
+ * video that DECLARES a different season documents another meeting —
+ * throwback re-releases of classics, the exact owner-reported genre.
+ * Only complete "20XX/YY" or "20XX-YY" spans count (date fragments like
+ * "2026-11" are rejected by the span check); a fixture's season starts
+ * in July. No label, no opinion. Closes the window gap the publish
+ * check cannot: a classic re-released AFTER the new kick-off.
+ */
+private val SEASON_LABEL = Regex("""\b(20\d{2})[/\-](\d{2})\b""")
+
+internal fun titleSeasonStart(title: String): Int? =
+    SEASON_LABEL.find(title)?.let { m ->
+        val start = m.groupValues[1].toIntOrNull() ?: return null
+        val end = m.groupValues[2].toIntOrNull() ?: return null
+        if ((start + 1) % 100 != end) return null
+        start
+    }
+
+/** Season start year of a fixture from its ISO kick-off (no clock). */
+internal fun fixtureSeasonStart(fixtureUtc: String): Int? {
+    val year = fixtureUtc.take(4).toIntOrNull() ?: return null
+    val month = fixtureUtc.substring(5, 7).toIntOrNull() ?: return null
+    if (month !in 1..12) return null
+    return if (month >= 7) year else year - 1
+}
+
+internal fun seasonDeclaresOtherMeeting(title: String, fixtureUtc: String): Boolean {
+    val label = titleSeasonStart(title) ?: return false
+    val seasonStart = fixtureSeasonStart(fixtureUtc) ?: return false
+    return label != seasonStart
+}
 
 /**
  * Reliable REJECTION only: true when the title carries a scoreline that
