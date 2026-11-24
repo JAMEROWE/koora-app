@@ -55,10 +55,7 @@ fun SettingsScreen(onBack: () -> Unit = {}) {
     val currentTag = if (locales.isEmpty) "" else locales.toLanguageTags()
     var favCount by remember { mutableIntStateOf(FavoritesStore.count(context)) }
     var showFavPicker by remember { mutableStateOf(false) }
-    if (showFavPicker) {
-        OnboardingDialog(window = emptyList(), onDone = { showFavPicker = false })
-    }
-
+    Box(Modifier.fillMaxSize()) {
     Column(
         Modifier
             .fillMaxSize()
@@ -200,6 +197,10 @@ fun SettingsScreen(onBack: () -> Unit = {}) {
             }
         }
         Spacer(Modifier.height(24.dp))
+    }
+    if (showFavPicker) {
+        OnboardingDialog(window = emptyList(), onDone = { showFavPicker = false })
+    }
     }
 }
 
