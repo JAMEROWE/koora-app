@@ -12,7 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * v1.8.0 Highlights hub — the PURE pairing rule that decides which
+ * v1.8.0 Highlights hub â the PURE pairing rule that decides which
  * released official videos may appear in the independent tab. Plain
  * JUnit (no Android APIs under test):
  *
@@ -51,7 +51,7 @@ class HighlightsHubTest {
     @Test
     fun oneTeamOnly_neverPairs() {
         // The title names Chelsea but the only fixture with Chelsea also
-        // involved Everton — pairing would be a guess, so it must fail.
+        // involved Everton â pairing would be a guess, so it must fail.
         val entry = YtEntry("Chelsea 1-0 Arsenal | Highlights", "mV124", "")
         assertNull(HighlightsHub.pairWithFixture(entry, listOf(fixture(3, "Chelsea", "Everton", "2026-11-09T14:00:00Z"))))
     }
@@ -87,5 +87,55 @@ class HighlightsHubTest {
         val city = fixture(6, "Manchester City", "Sunderland", "2026-11-08T17:30:00Z")
         val entry = YtEntry("Manchester City 4-0 Sunderland | Highlights", "mV127", "")
         assertNotNull(HighlightsHub.pairWithFixture(entry, listOf(city)))
+    }
+
+    // ---- one row per fixture (user-reported duplicate highlight) ----
+
+    private fun row(m: Match, videoId: String, title: String) =
+        HighlightsHub.Row(m, YtEntry(title, videoId, "2026-11-09T18:00:00Z"))
+
+    @Test
+    fun twoVideosOfSameFixture_collapseToOneRow() {
+        val rows = listOf(
+            row(palaceBrentford, "mV200", "Palace 1-0 Brentford | Highlights"),
+            row(palaceBrentford, "mV201", "Palace v Brentford | EXTENDED Highlights")
+        )
+        val collapsed = HighlightsHub.oneRowPerFixture(rows)
+        assertEquals(1, collapsed.size)
+        // first official release (list order) wins â all rows are playable
+        assertEquals("mV200", collapsed[0].video.videoId)
+    }
+
+    @Test
+    fun rematchBetweenSameClubs_keepsItsOwnRow() {
+        val firstLeg = fixture(10, "Arsenal", "Chelsea", "2026-09-01T15:00:00Z")
+        val secondLeg = fixture(11, "Arsenal", "Chelsea", "2026-11-09T16:30:00Z")
+        val rows = listOf(
+            row(firstLeg, "mV210", "Arsenal 0-0 Chelsea | Highlights"),
+            row(secondLeg, "mV211", "Arsenal 2-1 Chelsea | Highlights")
+        )
+        assertEquals(2, HighlightsHub.oneRowPerFixture(rows).size)
+    }
+
+    @Test
+    fun sameVideoListedTwice_surfacesOnce() {
+        val rows = listOf(
+            row(arsenalChelsea, "mV220", "Arsenal 2-1 Chelsea | Highlights"),
+            row(arsenalChelsea, "mV220", "Arsenal 2-1 Chelsea | Highlights")
+        )
+        assertEquals(1, HighlightsHub.oneRowPerFixture(rows).size)
+    }
+
+    @Test
+    fun unsetFixtureId_fallsBackToDateAndTeams() {
+        val dayOne = fixture(0, "Arsenal", "Chelsea", "2026-11-01T16:30:00Z")
+        val dayTwo = fixture(0, "Arsenal", "Chelsea", "2026-11-09T16:30:00Z")
+        val rows = listOf(
+            row(dayOne, "mV230", "Arsenal v Chelsea"),
+            row(dayTwo, "mV231", "Arsenal v Chelsea"),
+            row(dayOne, "mV232", "Arsenal v Chelsea | Extended")
+        )
+        // different days never merge; two videos of the same day do
+        assertEquals(2, HighlightsHub.oneRowPerFixture(rows).size)
     }
 }
