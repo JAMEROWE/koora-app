@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,9 +35,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.koora.app.R
 import com.koora.app.data.Match
 import com.koora.app.data.Team
@@ -43,6 +47,38 @@ import com.koora.app.ui.isLive
 import com.koora.app.ui.scoreLabel
 import com.koora.app.ui.statusLabel
 import com.koora.app.ui.theme.LiveRed
+
+/** Compact row label: API short name when available (e.g. "Man City"), else full name. */
+private fun Team.rowName(): String = shortName?.takeIf { it.isNotBlank() } ?: name
+
+/**
+ * Team name in a match row. Wraps whole words over two lines; if the longest
+ * single word is wider than the column (narrow phones, large font scales),
+ * the font steps down until the word fits, so names never break mid-word.
+ */
+@Composable
+private fun TeamNameText(name: String, modifier: Modifier = Modifier, textAlign: TextAlign? = null) {
+    val base = MaterialTheme.typography.bodyMedium
+    val measurer = rememberTextMeasurer()
+    BoxWithConstraints(modifier) {
+        val maxWidthPx = constraints.maxWidth
+        val longest = name.split(' ', '-').maxByOrNull { it.length } ?: name
+        var fontSize = base.fontSize
+        while (fontSize > 9.sp &&
+            measurer.measure(longest, style = base.copy(fontSize = fontSize)).size.width > maxWidthPx
+        ) {
+            fontSize = (fontSize.value - 0.5f).sp
+        }
+        Text(
+            name,
+            Modifier.fillMaxWidth(),
+            textAlign = textAlign,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            style = base.copy(fontSize = fontSize)
+        )
+    }
+}
 
 /*
  * SHARED MATCH LIST PIECES (v1.6.0) — the Live tab and the Results tab
@@ -226,19 +262,14 @@ internal fun MatchRow(
             TeamBadge(m.homeTeam.name, m.homeTeam.tla, 26.dp)
         }
         Spacer(Modifier.width(4.dp))
-        Text(
-            m.homeTeam.name,
+        TeamNameText(
+            m.homeTeam.rowName(),
             Modifier.weight(1.1f),
-            textAlign = TextAlign.End,
-            // Whole-word wrap onto two lines: full team names stay readable
-            // instead of being ellipsized against the center column.
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium
+            textAlign = TextAlign.End
         )
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.width(76.dp)
+            modifier = Modifier.width(68.dp)
         ) {
             Text(
                 scoreLabel(m),
@@ -257,12 +288,9 @@ internal fun MatchRow(
                 )
             }
         }
-        Text(
-            m.awayTeam.name,
-            Modifier.weight(1.1f),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium
+        TeamNameText(
+            m.awayTeam.rowName(),
+            Modifier.weight(1.1f)
         )
         Spacer(Modifier.width(4.dp))
         Box(
