@@ -2,7 +2,7 @@
     <string name="app_name">كورة</string>
     <string name="tab_matches">المباريات</string>
     <string name="tab_standings">الترتيب</string>
-    <string name="demo_notice">وضع تجريبي: احصل على مفتاح مجاني من football-data.org ثم أضف هذا السطر في local.properties: FOOTBALL_DATA_TOKEN=مفتاحك</string>
+    <string name="demo_notice">الوضع التجريبي: تُعرض مباريات تجريبية</string>
     <string name="retry">إعادة المحاولة</string>
     <string name="error_generic">تعذر تحميل البيانات.</string>
     <string name="no_matches">لا توجد مباريات لعرضها لهذه المسابقة حالياً.</string>
