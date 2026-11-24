@@ -4,7 +4,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,12 +34,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.koora.app.R
 import com.koora.app.data.Match
 import com.koora.app.data.Team
@@ -51,57 +47,6 @@ import com.koora.app.ui.theme.LiveRed
 
 /** Compact row label: API short name when available (e.g. "Man City"), else full name. */
 private fun Team.rowName(): String = shortName?.takeIf { it.isNotBlank() } ?: name
-
-/**
- * Team name in a match row. Wraps whole words over two lines; if the longest
- * single word is wider than the column (narrow phones, large font scales),
- * the font steps down until the word fits, so names never break mid-word.
- */
-@Composable
-private fun TeamNameText(name: String, modifier: Modifier = Modifier, textAlign: TextAlign? = null) {
-    val base = MaterialTheme.typography.bodyMedium
-    val measurer = rememberTextMeasurer()
-    BoxWithConstraints(modifier) {
-        val maxWidthPx = constraints.maxWidth
-        val longest = name.split(' ', '-').maxByOrNull { it.length } ?: name
-        var fontSize = base.fontSize
-        // Step down until the longest word fits the column whole AND the full
-        // name fits within two lines: no mid-word breaks and no ellipsis, at
-        // any width or system font scale. 8sp floor keeps worst cases graceful.
-        while (fontSize > 8.sp) {
-            val wordTooWide =
-                measurer.measure(longest, style = base.copy(fontSize = fontSize)).size.width > maxWidthPx
-            val full = measurer.measure(
-                name,
-                style = base.copy(fontSize = fontSize),
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 2,
-                constraints = Constraints(maxWidth = maxWidthPx)
-            )
-            if (!wordTooWide && !full.hasVisualOverflow) break
-            fontSize = (fontSize.value - 0.5f).sp
-        }
-        Text(
-            name,
-            Modifier.fillMaxWidth(),
-            textAlign = textAlign,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            style = base.copy(fontSize = fontSize)
-        )
-    }
-}
-
-/*
- * SHARED MATCH LIST PIECES (v1.6.0) — the Live tab and the Results tab
- * render the exact same section anatomy, so the pieces live here once:
- *
- *   DayTitle          — big label between day blocks (Today / Tomorrow).
- *   LeagueHeaderCard  — accordion header: green brand bar + league name
- *                       + LIVE pill + match count + chevron (spec §2.2).
- *   ExpandCollapseRow — the top Expand All / Collapse All toggle.
- *   MatchRow          — one fixture: badges, score, status, favorite star.
- */
 
 /** Big day label between day blocks (Today / Tomorrow). */
 @Composable
@@ -256,38 +201,29 @@ internal fun MatchRow(
     onTeam: (Team) -> Unit,
     showStar: Boolean = true
 ) {
+    val ft = m.score.fullTime
     Row(
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onMatch)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 48dp touch target around the 26dp badge (Android accessibility
-        // minimum) — the visible badge size is unchanged.
-        Box(
-            Modifier
-                .size(48.dp)
-                .clickable(onClick = { onTeam(m.homeTeam) }),
-            contentAlignment = Alignment.Center
-        ) {
-            TeamBadge(m.homeTeam.name, m.homeTeam.tla, 26.dp)
+        // Two stacked team lines: every name gets the full row width at the
+        // standard text size, so names stay readable at narrow widths and
+        // large system font scales (no shrink-to-fit, no mid-word breaks).
+        Column(Modifier.weight(1f)) {
+            TeamScoreLine(m.homeTeam, ft?.home, onTeam)
+            Spacer(Modifier.size(2.dp))
+            TeamScoreLine(m.awayTeam, ft?.away, onTeam)
         }
-        Spacer(Modifier.width(4.dp))
-        TeamNameText(
-            m.homeTeam.rowName(),
-            Modifier.weight(1.1f),
-            textAlign = TextAlign.End
-        )
+        // Status appears exactly once per match: kickoff time when upcoming
+        // (previously the time rendered twice, large and small), LIVE / FT
+        // otherwise.
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.width(68.dp)
+            Modifier.width(52.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                scoreLabel(m),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (isLive(m)) {
                     LivePulseDot()
@@ -295,23 +231,12 @@ internal fun MatchRow(
                 }
                 Text(
                     statusLabel(m),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isLive(m)) LiveRed else MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = if (isLive(m)) FontWeight.Bold else null,
+                    color = if (isLive(m)) LiveRed else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
                 )
             }
-        }
-        TeamNameText(
-            m.awayTeam.rowName(),
-            Modifier.weight(1.1f)
-        )
-        Spacer(Modifier.width(4.dp))
-        Box(
-            Modifier
-                .size(48.dp)
-                .clickable(onClick = { onTeam(m.awayTeam) }),
-            contentAlignment = Alignment.Center
-        ) {
-            TeamBadge(m.awayTeam.name, m.awayTeam.tla, 26.dp)
         }
         if (showStar) {
             IconToggleButton(
@@ -325,5 +250,36 @@ internal fun MatchRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun TeamScoreLine(team: Team, score: Int?, onTeam: (Team) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        // 48dp touch target around the 26dp badge (Android accessibility
+        // minimum) - the visible badge size is unchanged.
+        Box(
+            Modifier
+                .size(48.dp)
+                .clickable(onClick = { onTeam(team) }),
+            contentAlignment = Alignment.Center
+        ) {
+            TeamBadge(team.name, team.tla, 26.dp)
+        }
+        Spacer(Modifier.width(4.dp))
+        Text(
+            team.rowName(),
+            Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Text(
+            score?.toString() ?: "",
+            Modifier.width(24.dp),
+            textAlign = TextAlign.End,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
