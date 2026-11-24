@@ -11,6 +11,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.semantics.getOrNull
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.koora.app.data.FavoriteTeamsStore
 import com.koora.app.data.MatchRepository
 import org.junit.Before
 import org.junit.Rule
@@ -19,14 +20,14 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * INTERNAL LAUNCH TEST — the sandbox "phone".
+ * INTERNAL LAUNCH TEST â the sandbox "phone".
  *
  * Boots the real MainActivity through the real Android framework
- * (Robolectric — no device, no emulator needed) and fails the build if
+ * (Robolectric â no device, no emulator needed) and fails the build if
  * startup ever crashes.
  *
  * Matches-first IA (owner-approved 24 Nov): the app opens on the MATCHES
- * home — Today by default, live matches inside Today, one day at a time,
+ * home â Today by default, live matches inside Today, one day at a time,
  * favorites of the selected day pinned on top, team/league search in the
  * top bar. Demo mode stamps the sample matches on Today: Botola Pro
  * (Raja-Wydad, FAR-MCO finished), Ligue 1 (PSG-OM live, OL-Lille) and
@@ -38,12 +39,13 @@ class LaunchTest {
 
     companion object {
         init {
-            // Runs at CLASS LOAD — before any JUnit rule, @Before, or activity
+            // Runs at CLASS LOAD â before any JUnit rule, @Before, or activity
             // launch. Critical: viewModelScope uses Dispatchers.Main.immediate,
-            // so the first data load starts synchronously inside onCreate —
+            // so the first data load starts synchronously inside onCreate â
             // later @Before would be TOO LATE on CI (which has a real API
             // token baked in) and the test would hit the live API.
             MatchRepository.forceDemoForTest = true
+            FavoriteTeamsStore.skipOnboardingForTest = true
         }
     }
 
@@ -70,7 +72,7 @@ class LaunchTest {
         // No "All days" chip anymore: exactly one day at a time.
         rule.onNodeWithText(rule.activity.getString(R.string.chip_all)).assertDoesNotExist()
 
-        // Default = Today: the word appears TWICE once the feed composed —
+        // Default = Today: the word appears TWICE once the feed composed â
         // the chip AND the list's day title.
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodesWithText(rule.activity.getString(R.string.day_today))
@@ -115,7 +117,7 @@ class LaunchTest {
         }
 
         // Owner's rule (24 Nov): picking Tomorrow must not render a Today
-        // or other-day section — "Today" drops back to just its chip.
+        // or other-day section â "Today" drops back to just its chip.
         rule.onNodeWithText(rule.activity.getString(R.string.day_tomorrow)).performClick()
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodesWithText(rule.activity.getString(R.string.day_tomorrow))
