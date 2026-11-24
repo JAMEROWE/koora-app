@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,14 +31,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.koora.app.R
 import com.koora.app.data.Match
@@ -46,9 +47,6 @@ import com.koora.app.ui.isLive
 import com.koora.app.ui.scoreLabel
 import com.koora.app.ui.statusLabel
 import com.koora.app.ui.theme.LiveRed
-
-/** Compact row label: API short name when available (e.g. "Man City"), else full name. */
-private fun Team.rowName(): String = shortName?.takeIf { it.isNotBlank() } ?: name
 
 /** Big day label between day blocks (Today / Tomorrow). */
 @Composable
@@ -84,12 +82,33 @@ internal fun DayEmptyLine(text: String) {
  * fake crest would break the no-fake rule.
  */
 @Composable
+/**
+ * Flag emoji for a domestic league's country, or a trophy for international
+ * competitions (no national flag is correct for those). Unknown codes show
+ * no icon. On devices without flag-emoji support the regional indicator
+ * degrades to the country letters (e.g. "MA"), which stays meaningful.
+ */
+private fun flagFor(code: String?): String? = when (code) {
+    "BOT" -> "\uD83C\uDDF2\uD83C\uDDE6" // Morocco
+    "FL1" -> "\uD83C\uDDEB\uD83C\uDDF7" // France
+    "PD" -> "\uD83C\uDDEA\uD83C\uDDF8"  // Spain
+    "SA" -> "\uD83C\uDDEE\uD83C\uDDF9"  // Italy
+    "BL1" -> "\uD83C\uDDE9\uD83C\uDDEA" // Germany
+    "DED" -> "\uD83C\uDDF3\uD83C\uDDF1" // Netherlands
+    "PPL" -> "\uD83C\uDDF5\uD83C\uDDF9" // Portugal
+    "BSA" -> "\uD83C\uDDE7\uD83C\uDDF7" // Brazil
+    "PL" -> "\uD83C\uDDEC\uD83C\uDDE7"  // England (UK flag: the England tag-sequence emoji is unsupported on many Androids)
+    "CL", "EC", "EL", "WC", "CLI" -> "\uD83C\uDFC6" // international competition
+    else -> null
+}
+
 internal fun LeagueHeaderCard(
     title: String,
     count: Int,
     live: Boolean,
     expanded: Boolean,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    code: String? = null
 ) {
     val rotation by animateFloatAsState(
         targetValue = if (expanded) 0f else 180f,
@@ -111,6 +130,10 @@ internal fun LeagueHeaderCard(
                 )
         )
         Spacer(Modifier.width(8.dp))
+        flagFor(code)?.let { flag ->
+            Text(flag, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.width(6.dp))
+        }
         Text(
             title,
             style = MaterialTheme.typography.titleMedium,
@@ -203,49 +226,20 @@ internal fun MatchRow(
     onTeam: (Team) -> Unit,
     showStar: Boolean = true
 ) {
-    // User-preferred arrangement is side-by-side "home vs away". It only
-    // works when each name column can hold whole words at the standard text
-    // size; below ~340 effective dp (narrow phones, large system font) the
-    // row stacks instead, because readability beats arrangement there.
-    val widthDp = LocalConfiguration.current.screenWidthDp
-    val fontScale = LocalDensity.current.fontScale
-    val sideBySide = widthDp / fontScale >= 340f
+    // Side-by-side "home vs away" at every width and font scale: immediate
+    // matchup recognition is the user's chosen arrangement. Names never
+    // shrink and never break mid-word; each side picks the most complete
+    // grounded label that fits whole (full name, API shortName, or TLA -
+    // the badge shows the same TLA), and the full name stays one tap away
+    // via the badge or match detail.
     Row(
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onMatch)
-            .padding(horizontal = 12.dp, vertical = if (sideBySide) 10.dp else 6.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (sideBySide) {
-            VersusContent(m, Modifier.weight(1f), onTeam)
-        } else {
-            val ft = m.score.fullTime
-            Column(Modifier.weight(1f)) {
-                TeamScoreLine(m.homeTeam, ft?.home, onTeam)
-                Spacer(Modifier.size(2.dp))
-                TeamScoreLine(m.awayTeam, ft?.away, onTeam)
-            }
-            // Status appears exactly once per match.
-            Column(
-                Modifier.width(52.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (isLive(m)) {
-                        LivePulseDot()
-                        Spacer(Modifier.width(4.dp))
-                    }
-                    Text(
-                        statusLabel(m),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = if (isLive(m)) FontWeight.Bold else null,
-                        color = if (isLive(m)) LiveRed else MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                }
-            }
-        }
+        VersusContent(m, Modifier.weight(1f), onTeam)
         if (showStar) {
             IconToggleButton(
                 checked = isFavorite,
@@ -261,10 +255,6 @@ internal fun MatchRow(
     }
 }
 
-/** Side-by-side "home vs away": badge, two-line whole-word name, center
- *  score/status, name, badge. The kickoff time is never shown twice: when
- *  status equals the score slot (upcoming matches), only the score slot
- *  renders. */
 @Composable
 private fun VersusContent(m: Match, modifier: Modifier = Modifier, onTeam: (Team) -> Unit) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically) {
@@ -279,13 +269,10 @@ private fun VersusContent(m: Match, modifier: Modifier = Modifier, onTeam: (Team
             TeamBadge(m.homeTeam.name, m.homeTeam.tla, 26.dp)
         }
         Spacer(Modifier.width(2.dp))
-        Text(
-            m.homeTeam.rowName(),
+        AdaptiveTeamName(
+            m.homeTeam,
             Modifier.weight(1f),
-            textAlign = TextAlign.End,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium
+            textAlign = TextAlign.End
         )
         Column(
             Modifier.width(60.dp),
@@ -297,6 +284,8 @@ private fun VersusContent(m: Match, modifier: Modifier = Modifier, onTeam: (Team
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+            // The kickoff time is never shown twice: when status equals the
+            // score slot (upcoming matches), only the score slot renders.
             val status = statusLabel(m)
             if (status != score) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -312,12 +301,9 @@ private fun VersusContent(m: Match, modifier: Modifier = Modifier, onTeam: (Team
                 }
             }
         }
-        Text(
-            m.awayTeam.rowName(),
-            Modifier.weight(1f),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium
+        AdaptiveTeamName(
+            m.awayTeam,
+            Modifier.weight(1f)
         )
         Spacer(Modifier.width(2.dp))
         Box(
@@ -331,33 +317,47 @@ private fun VersusContent(m: Match, modifier: Modifier = Modifier, onTeam: (Team
     }
 }
 
+/**
+ * Team label in a versus row, always at the standard body size. Picks the
+ * most complete grounded label that fits the column whole (full name, then
+ * API shortName, then TLA - which the badge also shows). A label is only
+ * chosen when its longest word fits the column AND the whole label fits two
+ * lines, so names never break mid-word and never shrink; the full name is
+ * one tap away via the badge or the match detail.
+ */
 @Composable
-private fun TeamScoreLine(team: Team, score: Int?, onTeam: (Team) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        // 48dp touch target around the 26dp badge (Android accessibility
-        // minimum) - the visible badge size is unchanged.
-        Box(
-            Modifier
-                .size(48.dp)
-                .clickable(onClick = { onTeam(team) }),
-            contentAlignment = Alignment.Center
-        ) {
-            TeamBadge(team.name, team.tla, 26.dp)
+private fun AdaptiveTeamName(team: Team, modifier: Modifier = Modifier, textAlign: TextAlign? = null) {
+    val style = MaterialTheme.typography.bodyMedium
+    val measurer = rememberTextMeasurer()
+    BoxWithConstraints(modifier) {
+        val maxWidthPx = constraints.maxWidth
+        val candidates = remember(team) {
+            listOfNotNull(
+                team.name,
+                team.shortName?.takeIf { it.isNotBlank() },
+                team.tla?.takeIf { it.isNotBlank() }
+            ).distinct()
         }
-        Spacer(Modifier.width(4.dp))
+        val label = candidates.firstOrNull { candidate ->
+            val longest = candidate.split(' ', '-').maxByOrNull { it.length } ?: candidate
+            if (measurer.measure(longest, style = style).size.width > maxWidthPx) {
+                return@firstOrNull false
+            }
+            !measurer.measure(
+                candidate,
+                style = style,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 2,
+                constraints = Constraints(maxWidth = maxWidthPx)
+            ).hasVisualOverflow
+        } ?: candidates.last()
         Text(
-            team.rowName(),
-            Modifier.weight(1f),
-            maxLines = 1,
+            label,
+            Modifier.fillMaxWidth(),
+            textAlign = textAlign,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Text(
-            score?.toString() ?: "",
-            Modifier.width(24.dp),
-            textAlign = TextAlign.End,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
+            style = style
         )
     }
 }
