@@ -43,7 +43,7 @@ import com.koora.app.ui.theme.ThemeController
 
 /*
  * Minimal Settings screen:
- *  - Language switcher (per-app locales, persists automatically) â makes
+ *  - Language switcher (per-app locales, persists automatically) — makes
  *    the EN / FR / AR promise real on any device.
  *  - Favorites management.
  *  - About (version + data credits).
@@ -65,7 +65,7 @@ fun SettingsScreen(onBack: () -> Unit = {}) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        // v1.9.0: Settings left the bottom bar (spec Â§1.1) â it is a page
+        // v1.9.0: Settings left the bottom bar (spec §1.1) — it is a page
         // now, so it needs its own way back.
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
@@ -95,10 +95,10 @@ fun SettingsScreen(onBack: () -> Unit = {}) {
                 LanguageRow("English", "en", currentTag) {
                     AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("en"))
                 }
-                LanguageRow("FranÃ§ais", "fr", currentTag) {
+                LanguageRow("Français", "fr", currentTag) {
                     AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("fr"))
                 }
-                LanguageRow("Ø§ÙØ¹Ø±Ø¨ÙØ©", "ar", currentTag) {
+                LanguageRow("العربية", "ar", currentTag) {
                     AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("ar"))
                 }
                 Text(
@@ -186,7 +186,7 @@ fun SettingsScreen(onBack: () -> Unit = {}) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
-                // v1.8.0 roadmap Â§3.4: permanent legal notice â always visible
+                // v1.8.0 roadmap §3.4: permanent legal notice — always visible
                 // in Settings, never conditional.
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
