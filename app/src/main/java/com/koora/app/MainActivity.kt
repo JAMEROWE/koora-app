@@ -145,8 +145,13 @@ private fun KooraRoot() {
             composable("standings") { StandingsScreen(onOpenSettings = openSettings) }
             composable("highlights") {
                 HighlightsHubScreen(
-                    onWatch = { home, away ->
-                        nav.navigate("video?home=${Uri.encode(home)}&away=${Uri.encode(away)}")
+                    onWatch = { row ->
+                        val m = row.match
+                        nav.navigate(
+                            "video?home=${Uri.encode(m.homeTeam.name)}&away=${Uri.encode(m.awayTeam.name)}" +
+                                "&utc=${Uri.encode(m.utcDate)}" +
+                                "&hg=${m.score.fullTime?.home ?: -1}&ag=${m.score.fullTime?.away ?: -1}"
+                        )
                     },
                     onOpenSettings = openSettings
                 )
@@ -163,8 +168,12 @@ private fun KooraRoot() {
                 MatchDetailScreen(
                     matchId = id,
                     onBack = { nav.popBackStack() },
-                    onWatchHighlights = { home, away ->
-                        nav.navigate("video?home=${Uri.encode(home)}&away=${Uri.encode(away)}")
+                    onWatchHighlights = { m ->
+                        nav.navigate(
+                            "video?home=${Uri.encode(m.homeTeam.name)}&away=${Uri.encode(m.awayTeam.name)}" +
+                                "&utc=${Uri.encode(m.utcDate)}" +
+                                "&hg=${m.score.fullTime?.home ?: -1}&ag=${m.score.fullTime?.away ?: -1}"
+                        )
                     }
                 )
             }
@@ -175,10 +184,13 @@ private fun KooraRoot() {
                     onClose = { nav.popBackStack() }
                 )
             }
-            composable("video?home={home}&away={away}") { entry ->
+            composable("video?home={home}&away={away}&utc={utc}&hg={hg}&ag={ag}") { entry ->
                 HighlightsScreen(
                     home = entry.arguments?.getString("home").orEmpty(),
                     away = entry.arguments?.getString("away").orEmpty(),
+                    utcDate = entry.arguments?.getString("utc").orEmpty(),
+                    homeGoals = entry.arguments?.getString("hg")?.toIntOrNull() ?: -1,
+                    awayGoals = entry.arguments?.getString("ag")?.toIntOrNull() ?: -1,
                     onBack = { nav.popBackStack() }
                 )
             }
