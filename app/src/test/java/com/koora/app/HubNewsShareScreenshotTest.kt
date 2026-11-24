@@ -75,7 +75,7 @@ class HubNewsShareScreenshotTest {
                 // LocalContentColor black and the capture background light.
                 Surface {
                     Column {
-                        rows.forEach { HubRow(it) { _, _ -> } }
+                        rows.forEach { HubRow(it) { } }
                     }
                 }
             }
@@ -163,7 +163,7 @@ class HubNewsShareScreenshotTest {
             KooraTheme(themeMode = ThemeController.DARK) {
                 Surface {
                     Column {
-                        rows.forEach { HubRow(it) { _, _ -> } }
+                        rows.forEach { HubRow(it) { } }
                     }
                 }
             }
@@ -183,7 +183,7 @@ class HubNewsShareScreenshotTest {
                 MatchDetailScreen(
                     matchId = match.id,
                     onBack = {},
-                    onWatchHighlights = { _, _ -> }
+                    onWatchHighlights = { }
                 )
             }
         }
