@@ -6,8 +6,10 @@ import com.koora.app.data.ScoreDetail
 import com.koora.app.data.Team
 import com.koora.app.ui.screens.HighlightsHub
 import com.koora.app.ui.screens.YtEntry
+import com.koora.app.ui.screens.fixtureSeasonStart
 import com.koora.app.ui.screens.publishWindowAllows
 import com.koora.app.ui.screens.titleScoreline
+import com.koora.app.ui.screens.titleSeasonStart
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -180,12 +182,34 @@ class HighlightsHubTest {
         assertNull(titleScoreline("Liverpool v Manchester United | 2025-26 Classics"))
         assertNull(titleScoreline("Liverpool v Manchester United 2026-11-08 rerun"))
         assertEquals(4 to 0, titleScoreline("Liverpool 4-0 Manchester United | Highlights"))
-        // A season label must not false-reject the real highlights.
+        // A CURRENT-season label must not false-reject the real highlights.
         val entry = YtEntry(
-            "Liverpool v Manchester United 2025-26 | Extended Highlights", "mV307", "1d ago",
+            "Liverpool v Manchester United 2026-27 | Extended Highlights", "mV307", "1d ago",
             publishedAtMs = ms("2026-11-22T19:00:00Z")
         )
         assertNotNull(HighlightsHub.pairWithFixture(entry, listOf(liverpoolManUtd)))
+    }
+
+    @Test
+    fun oldSeasonLabel_neverPairsEvenWhenPublishedAfterKickoff() {
+        // The gap the publish window cannot see: a classic RE-RELEASED
+        // after the new meeting. Its own season declaration betrays it.
+        val entry = YtEntry(
+            "Liverpool v Manchester United 2025/26 | Classics", "mV309", "1d ago",
+            publishedAtMs = ms("2026-11-23T12:00:00Z")
+        )
+        assertNull(HighlightsHub.pairWithFixture(entry, listOf(liverpoolManUtd)))
+    }
+
+    @Test
+    fun seasonHelpers_readLabelsAndFixtureSeasons() {
+        assertEquals(2025, titleSeasonStart("Liverpool v Manchester United 2025/26"))
+        assertEquals(2026, titleSeasonStart("EVERY Weekend Goal | Matchweek 11 | 2026/27 Premier League Highlights"))
+        assertNull(titleSeasonStart("Liverpool v Manchester United 2026-11-08 rerun")) // date, not a season
+        assertNull(titleSeasonStart("Liverpool 4-0 Manchester United | Highlights"))
+        assertEquals(2026, fixtureSeasonStart("2026-11-22T16:30:00Z"))  // autumn
+        assertEquals(2026, fixtureSeasonStart("2027-02-14T20:00:00Z"))  // spring, same season
+        assertEquals(2025, fixtureSeasonStart("2026-06-30T18:00:00Z"))  // June still old season
     }
 
     @Test
