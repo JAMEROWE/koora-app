@@ -143,5 +143,5 @@
     <string name="share_chooser_title">مشاركة عبر</string>
     <string name="settings_fav_teams">البطولات والفرق المفضلة</string>
     <string name="day_results">النتائج</string>
-    <string name="empty_results">لا توجد نتائج حديثة في القائمة المحمّلة.</string>
+    <string name="empty_results">لا توجد مباريات منتهية في الأيام الستة الماضية.</string>
 </resources>
