@@ -16,6 +16,8 @@ import com.koora.app.ui.paginate
 import com.koora.app.ui.pickResult
 import com.koora.app.ui.accuracyOf
 import com.koora.app.ui.sectionExpandedDefault
+import com.koora.app.ui.LeagueSection
+import com.koora.app.ui.pinFavoriteLeagues
 import com.koora.app.ui.sortMixed
 import com.koora.app.ui.sortResultsNewestFirst
 import com.koora.app.ui.sortUpcomingSoonestFirst
@@ -327,4 +329,20 @@ class MatchRulesTest {
     }
 
     private fun hour(): Long = 3_600_000L
+
+    @Test
+    fun pinFavoriteLeagues_favoritesFirstOtherwiseOrderKept() {
+        val sections = listOf(
+            LeagueSection("BOT", emptyList()),
+            LeagueSection("CL", emptyList()),
+            LeagueSection("PL", emptyList())
+        )
+        val pinned = pinFavoriteLeagues(sections, setOf("PL"))
+        assertEquals(listOf("PL", "BOT", "CL"), pinned.map { it.code })
+        // empty favorites: input order untouched
+        assertEquals(sections, pinFavoriteLeagues(sections, emptySet()))
+        // several favorites keep their relative order at the top
+        val multi = pinFavoriteLeagues(sections, setOf("CL", "PL"))
+        assertEquals(listOf("CL", "PL", "BOT"), multi.map { it.code })
+    }
 }

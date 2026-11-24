@@ -1,6 +1,7 @@
 package com.koora.app.ui.screens
 
 import android.text.format.DateUtils
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,6 +36,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.koora.app.R
 import com.koora.app.ads.AdBanner
 import com.koora.app.data.MatchRepository
@@ -98,7 +103,7 @@ class HighlightsHubViewModel : ViewModel() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HighlightsHubScreen(
-    onWatch: (String, String) -> Unit,
+    onWatch: (HighlightsHub.Row) -> Unit,
     onOpenSettings: () -> Unit = {},
     vm: HighlightsHubViewModel = viewModel()
 ) {
@@ -170,37 +175,58 @@ fun HighlightsHubScreen(
 }
 
 @Composable
-private fun HubRow(row: HighlightsHub.Row, onWatch: (String, String) -> Unit) {
+internal fun HubRow(row: HighlightsHub.Row, onWatch: (HighlightsHub.Row) -> Unit) {
     val m = row.match
-    Column(
+    // Thumbnail card: the video's own YouTube thumbnail (no media cached,
+    // image only), the match line, then its source badges.
+    Row(
         Modifier
             .fillMaxWidth()
-            .clickable { onWatch(m.homeTeam.name, m.awayTeam.name) }
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            // The whole grounded row travels to the player: kick-off and
+            // score gate the resolver so another meeting's video can
+            // never play as this fixture's highlights.
+            .clickable { onWatch(row) }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            "${m.homeTeam.name}  ${scoreLabel(m)}  ${m.awayTeam.name}",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+        AsyncImage(
+            model = "https://i.ytimg.com/vi/${row.video.videoId}/hqdefault.jpg",
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(width = 112.dp, height = 63.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         )
-        Spacer(Modifier.height(6.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            m.competition?.name?.takeIf { it.isNotBlank() }?.let {
-                HubBadge(it)
-                Spacer(Modifier.width(6.dp))
-            }
-            row.video.channel.takeIf { it.isNotBlank() }?.let {
-                HubBadge(it, soft = true)
-                Spacer(Modifier.width(8.dp))
-            }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
             Text(
-                relativeReleaseTime(row.video.published),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
+                "${m.homeTeam.name}  ${scoreLabel(m)}  ${m.awayTeam.name}",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                m.competition?.name?.takeIf { it.isNotBlank() }?.let {
+                    HubBadge(it)
+                    Spacer(Modifier.width(6.dp))
+                }
+                row.video.channel.takeIf { it.isNotBlank() }?.let {
+                    HubBadge(it, soft = true)
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(
+                    relativeReleaseTime(row.video.published),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }

@@ -2,7 +2,7 @@
     <string name="app_name">Koora</string>
     <string name="tab_matches">Matches</string>
     <string name="tab_standings">Standings</string>
-    <string name="demo_notice">Demo mode: get a free key at football-data.org and add this line to local.properties: FOOTBALL_DATA_TOKEN=your_key</string>
+    <string name="demo_notice">Demo mode: showing sample matches</string>
     <string name="retry">Retry</string>
     <string name="error_generic">Couldn\'t load data.</string>
     <string name="no_matches">No matches to show for this competition yet.</string>
@@ -130,4 +130,20 @@
     <string name="team_next">Next matches</string>
     <string name="team_recent">Recent results</string>
     <string name="team_fixtures_unavailable">Team fixtures not available.</string>
+    <string name="search_label">Search</string>
+    <string name="search_hint">Team or league</string>
+    <string name="search_none">Nothing in the loaded days matches "%1$s".</string>
+    <string name="onboarding_title">Make Koora yours</string>
+    <string name="onboarding_subtitle">Pick your favorite leagues and teams. Koora puts them first, and you can change them anytime in Settings.</string>
+    <string name="onboarding_leagues">Leagues</string>
+    <string name="onboarding_teams">Teams</string>
+    <string name="onboarding_search_teams">Search teams</string>
+    <string name="onboarding_save">Save</string>
+    <string name="onboarding_skip">Skip for now</string>
+    <string name="share_match">Share result</string>
+    <string name="share_chooser_title">Share via</string>
+    <string name="share_card_brand">Live scores, news and highlights on Koora</string>
+    <string name="settings_fav_teams">Favorite leagues &amp; teams</string>
+    <string name="day_results">Results</string>
+    <string name="empty_results">No finished matches in the last 6 days.</string>
 </resources>

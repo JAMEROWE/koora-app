@@ -75,7 +75,12 @@ object MatchRepository {
     @VisibleForTesting
     internal var forceDemoForTest: Boolean = false
 
-    val hasKey: Boolean get() = !forceDemoForTest && BuildConfig.FOOTBALL_DATA_TOKEN.isNotBlank()
+    /** Test-only: serve a fixed real-shaped window (and mark a key present)
+     *  so screenshot tests exercise the real-data rendering path. */
+    @Volatile internal var windowOverrideForTest: List<Match>? = null
+
+    val hasKey: Boolean get() = !forceDemoForTest &&
+        (BuildConfig.FOOTBALL_DATA_TOKEN.isNotBlank() || windowOverrideForTest != null)
 
     private data class Entry(val at: Long, val value: Any?)
 
@@ -204,6 +209,7 @@ object MatchRepository {
      * zero duplicate calls between screens thanks to the per-league cache.
      */
     suspend fun matchesWindow(fromDay: String, toDay: String, force: Boolean = false): List<Match> {
+        windowOverrideForTest?.let { return it }
         if (!hasKey) return DemoData.matches("ALL").distinctBy { it.id }
         val type = object : TypeToken<List<Match>>() {}.type
         val now = System.currentTimeMillis()

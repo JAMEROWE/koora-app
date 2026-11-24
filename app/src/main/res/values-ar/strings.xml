@@ -2,7 +2,7 @@
     <string name="app_name">كورة</string>
     <string name="tab_matches">المباريات</string>
     <string name="tab_standings">الترتيب</string>
-    <string name="demo_notice">وضع تجريبي: احصل على مفتاح مجاني من football-data.org ثم أضف هذا السطر في local.properties: FOOTBALL_DATA_TOKEN=مفتاحك</string>
+    <string name="demo_notice">الوضع التجريبي: تُعرض مباريات تجريبية</string>
     <string name="retry">إعادة المحاولة</string>
     <string name="error_generic">تعذر تحميل البيانات.</string>
     <string name="no_matches">لا توجد مباريات لعرضها لهذه المسابقة حالياً.</string>
@@ -129,4 +129,20 @@
     <string name="team_next">المباريات القادمة</string>
     <string name="team_recent">النتائج الأخيرة</string>
     <string name="team_fixtures_unavailable">مباريات هذا الفريق غير متوفرة.</string>
+    <string name="search_label">بحث</string>
+    <string name="search_hint">فريق أو دوري</string>
+    <string name="search_none">لا توجد مباراة في الأيام المحمّلة تطابق «%1$s».</string>
+    <string name="onboarding_title">خصّص كورا على ذوقك</string>
+    <string name="onboarding_subtitle">اختر بطولاتك وفرقك المفضلة. يضعها كورا في المقدمة، ويمكنك تغييرها في أي وقت من الإعدادات.</string>
+    <string name="onboarding_leagues">البطولات</string>
+    <string name="onboarding_teams">الفرق</string>
+    <string name="onboarding_search_teams">ابحث عن فريق</string>
+    <string name="onboarding_save">حفظ</string>
+    <string name="onboarding_skip">تخطي الآن</string>
+    <string name="share_match">مشاركة النتيجة</string>
+    <string name="share_chooser_title">مشاركة عبر</string>
+    <string name="share_card_brand">نتائج مباشرة وأخبار وملخصات على Koora</string>
+    <string name="settings_fav_teams">البطولات والفرق المفضلة</string>
+    <string name="day_results">النتائج</string>
+    <string name="empty_results">لا توجد مباريات منتهية في الأيام الستة الماضية.</string>
 </resources>

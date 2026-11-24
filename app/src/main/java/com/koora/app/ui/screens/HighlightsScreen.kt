@@ -96,7 +96,14 @@ import com.koora.app.ui.theme.PitchAccent
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
+fun HighlightsScreen(
+    home: String,
+    away: String,
+    utcDate: String,
+    homeGoals: Int,
+    awayGoals: Int,
+    onBack: () -> Unit
+) {
     val context = LocalContext.current
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
@@ -130,11 +137,16 @@ fun HighlightsScreen(home: String, away: String, onBack: () -> Unit) {
         }
     }
 
-    LaunchedEffect(home, away, retryTick) {
+    LaunchedEffect(home, away, utcDate, retryTick) {
         resolving = true
         pickedId = null
         blockedIds = emptySet()
-        val found = HighlightsSource.resolve(context, home, away)
+        // Fixture grounding travels WITH the navigation (-1 = unknown
+        // score): the resolver never attaches a video on names alone.
+        val found = HighlightsSource.resolve(
+            context, home, away, utcDate,
+            homeGoals.takeIf { it >= 0 }, awayGoals.takeIf { it >= 0 }
+        )
         videos = found
         resolving = false
     }

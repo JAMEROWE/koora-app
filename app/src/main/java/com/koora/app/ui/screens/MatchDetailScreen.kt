@@ -1,6 +1,7 @@
 package com.koora.app.ui.screens
 
 import android.app.Activity
+import com.koora.app.ui.components.shareMatchCard
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.SportsSoccer
@@ -193,7 +195,7 @@ class MatchDetailViewModel : ViewModel() {
 fun MatchDetailScreen(
     matchId: Long,
     onBack: () -> Unit,
-    onWatchHighlights: (home: String, away: String) -> Unit,
+    onWatchHighlights: (match: Match) -> Unit,
     vm: MatchDetailViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -236,6 +238,21 @@ fun MatchDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
+                actions = {
+                    // User-initiated share of THIS match: generates the
+                    // branded share card PNG (see MatchShareCard) and opens
+                    // the Android share sheet with image + result text. No
+                    // permissions, nothing sent by the app itself.
+                    IconButton(onClick = {
+                        val m = match ?: return@IconButton
+                        shareMatchCard(context, m)
+                    }) {
+                        Icon(
+                            Icons.Filled.Share,
+                            contentDescription = stringResource(R.string.share_match)
+                        )
                     }
                 }
             )
@@ -315,37 +332,51 @@ fun MatchDetailScreen(
                             )
                         }
                         Spacer(Modifier.height(10.dp))
+                        // Badge over the full team name on each side of the
+                        // score (owner rule: full name when it fits, wrapping
+                        // at word boundaries, never clipped mid-word). The
+                        // old one-row badge|name|score|name|badge layout left
+                        // the name columns so narrow that "Wydad AC" broke
+                        // inside the word and "Raja Club" ellipsized.
                         Row(
                             Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            TeamBadge(match.homeTeam.name, match.homeTeam.tla, 40.dp)
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                match.homeTeam.name,
+                            Column(
                                 Modifier.weight(1f),
-                                style = MaterialTheme.typography.titleMedium,
-                                textAlign = TextAlign.Center,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(Modifier.width(12.dp))
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                TeamBadge(match.homeTeam.name, match.homeTeam.tla, 44.dp)
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    match.homeTeam.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Spacer(Modifier.width(10.dp))
                             Text(
                                 scoreLabel(match),
                                 style = MaterialTheme.typography.headlineLarge,
                                 fontWeight = FontWeight.Bold
                             )
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                match.awayTeam.name,
-                                Modifier.weight(1f),
-                                style = MaterialTheme.typography.titleMedium,
-                                textAlign = TextAlign.Center,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
                             Spacer(Modifier.width(10.dp))
-                            TeamBadge(match.awayTeam.name, match.awayTeam.tla, 40.dp)
+                            Column(
+                                Modifier.weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                TeamBadge(match.awayTeam.name, match.awayTeam.tla, 44.dp)
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    match.awayTeam.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                         match.score.halfTime?.home?.let { htHome ->
                             match.score.halfTime?.away?.let { htAway ->
@@ -418,7 +449,7 @@ fun MatchDetailScreen(
 private fun OverviewTab(
     match: Match,
     state: StatsUiState,
-    onWatchHighlights: (home: String, away: String) -> Unit
+    onWatchHighlights: (match: Match) -> Unit
 ) {
     Column(
         Modifier
@@ -441,7 +472,7 @@ private fun OverviewTab(
         if (match.status == "FINISHED") {
             Spacer(Modifier.height(14.dp))
             Button(
-                onClick = { onWatchHighlights(match.homeTeam.name, match.awayTeam.name) }
+                onClick = { onWatchHighlights(match) }
             ) {
                 Icon(Icons.Filled.PlayCircle, contentDescription = null)
                 Spacer(Modifier.width(8.dp))

@@ -24,6 +24,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,6 +38,7 @@ import androidx.core.os.LocaleListCompat
 import com.koora.app.BuildConfig
 import com.koora.app.R
 import com.koora.app.data.FavoritesStore
+import com.koora.app.ui.screens.OnboardingDialog
 import com.koora.app.ui.theme.ThemeController
 
 /*
@@ -52,7 +54,8 @@ fun SettingsScreen(onBack: () -> Unit = {}) {
     val locales = AppCompatDelegate.getApplicationLocales()
     val currentTag = if (locales.isEmpty) "" else locales.toLanguageTags()
     var favCount by remember { mutableIntStateOf(FavoritesStore.count(context)) }
-
+    var showFavPicker by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxSize()) {
     Column(
         Modifier
             .fillMaxSize()
@@ -149,6 +152,12 @@ fun SettingsScreen(onBack: () -> Unit = {}) {
                         Text(stringResource(R.string.fav_clear))
                     }
                 }
+                Spacer(Modifier.height(8.dp))
+                // Re-open the first-launch picker any time (stored picks
+                // render checked, window data is not needed to edit them).
+                TextButton(onClick = { showFavPicker = true }) {
+                    Text(stringResource(R.string.settings_fav_teams))
+                }
             }
         }
 
@@ -188,6 +197,10 @@ fun SettingsScreen(onBack: () -> Unit = {}) {
             }
         }
         Spacer(Modifier.height(24.dp))
+    }
+    if (showFavPicker) {
+        OnboardingDialog(window = emptyList(), onDone = { showFavPicker = false })
+    }
     }
 }
 

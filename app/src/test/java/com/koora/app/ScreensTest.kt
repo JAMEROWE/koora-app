@@ -5,6 +5,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.koora.app.data.FavoriteTeamsStore
 import com.koora.app.data.MatchRepository
 import com.koora.app.ui.screens.SettingsScreen
 import com.koora.app.ui.screens.ArticleReader
@@ -33,6 +34,7 @@ class ScreensTest {
         init {
             // Class-load time (before any coroutine): never touch the network.
             MatchRepository.forceDemoForTest = true
+            FavoriteTeamsStore.skipOnboardingForTest = true
         }
     }
 
@@ -65,7 +67,12 @@ class ScreensTest {
     fun highlightsScreenRenders_inApp() {
         rule.setContent {
             KooraTheme {
-                HighlightsScreen(home = "Raja", away = "Wydad", onBack = {})
+                HighlightsScreen(
+                    home = "Raja", away = "Wydad",
+                    utcDate = "2026-11-20T20:00:00Z",
+                    homeGoals = -1, awayGoals = -1,
+                    onBack = {}
+                )
             }
         }
         rule.waitForIdle()
@@ -84,7 +91,7 @@ class ScreensTest {
                 MatchDetailScreen(
                     matchId = match.id,
                     onBack = {},
-                    onWatchHighlights = { _, _ -> }
+                    onWatchHighlights = { }
                 )
             }
         }

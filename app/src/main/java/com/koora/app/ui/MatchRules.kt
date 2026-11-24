@@ -199,6 +199,25 @@ fun next5Last5(all: List<Match>, teamId: Long, nowMs: Long, count: Int = 5): Pai
     return next to recent
 }
 
+/**
+ * Team & league search over the ALREADY-LOADED window (-6..+2 days) —
+ * zero extra API calls. Case-insensitive substring on either team name,
+ * the provider competition name, or the known league label; an exact
+ * competition code ("PL") also matches. Needs at least 2 characters.
+ * Results come back soonest kickoff first. Pure, unit-tested.
+ */
+fun searchMatches(matches: List<Match>, query: String): List<Match> {
+    val q = query.trim().lowercase()
+    if (q.length < 2) return emptyList()
+    return matches.filter { m ->
+        m.homeTeam.name.lowercase().contains(q) ||
+            m.awayTeam.name.lowercase().contains(q) ||
+            (m.competition?.name?.lowercase()?.contains(q) == true) ||
+            (m.competition?.code?.lowercase() == q) ||
+            (competitionLabels[m.competition?.code]?.lowercase()?.contains(q) == true)
+    }.sortedBy { it.utcDate }
+}
+
 // ---- League blocks -------------------------------------------------------
 
 /**
@@ -245,3 +264,18 @@ fun daySections(dayMatches: List<Match>): List<LeagueSection> =
  */
 fun sectionExpandedDefault(hasLive: Boolean, hasFavorite: Boolean, sectionsInBlock: Int): Boolean =
     hasLive || hasFavorite || sectionsInBlock <= 3
+
+// ---- Personalization (favorite leagues first) ---------------------------
+
+/**
+ * Sections of the user's favorite leagues pin to the top of a day; every
+ * other section keeps its usual [daySections] order (stable sort). An
+ * empty favorite set returns the input unchanged. Pure.
+ */
+fun pinFavoriteLeagues(sections: List<LeagueSection>, favoriteCodes: Set<String>): List<LeagueSection> {
+    if (favoriteCodes.isEmpty()) return sections
+    return sections
+        .mapIndexed { i, s -> i to s }
+        .sortedWith(compareBy({ if (it.second.code in favoriteCodes) 0 else 1 }, { it.first }))
+        .map { it.second }
+}
