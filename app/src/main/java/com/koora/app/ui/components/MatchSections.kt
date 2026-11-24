@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -280,18 +281,23 @@ private fun VersusContent(m: Match, modifier: Modifier = Modifier, onTeam: (Team
         Spacer(Modifier.width(2.dp))
         AdaptiveTeamName(
             m.homeTeam,
-            Modifier.weight(1f),
+            Modifier
+                .weight(1f)
+                .padding(end = 6.dp),
             textAlign = TextAlign.End
         )
         Column(
-            Modifier.width(60.dp),
+            Modifier
+                .widthIn(min = 60.dp)
+                .padding(horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             val score = scoreLabel(m)
             Text(
                 score,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
             )
             // The kickoff time is never shown twice: when status equals the
             // score slot (upcoming matches), only the score slot renders.
@@ -312,7 +318,9 @@ private fun VersusContent(m: Match, modifier: Modifier = Modifier, onTeam: (Team
         }
         AdaptiveTeamName(
             m.awayTeam,
-            Modifier.weight(1f)
+            Modifier
+                .weight(1f)
+                .padding(start = 6.dp)
         )
         Spacer(Modifier.width(2.dp))
         Box(
@@ -345,10 +353,29 @@ internal fun conventionalShort(name: String): String? {
     return if (kept.any { it.length >= 3 && it !in filler }) kept.joinToString(" ") else null
 }
 
+
+/**
+ * Leading-word fallbacks built from the club's own name: the conventional
+ * short (or the full name when nothing is safe to drop) minus trailing words,
+ * one at a time - "Raja Club Athletic" -> "Raja", "Wydad AC" -> "Wydad",
+ * "AS FAR Rabat" -> "AS FAR". Single tokens shorter than 3 letters are
+ * skipped (they read as generic prefixes, not club identity), and nothing is
+ * invented or appended. The TLA stays the last resort behind these, so a
+ * narrow row keeps a recognizable word instead of repeating badge initials.
+ */
+internal fun leadingShorts(name: String): List<String> {
+    val base = conventionalShort(name) ?: name
+    val words = base.split(' ').filter { it.isNotBlank() }
+    if (words.size < 2) return emptyList()
+    return (words.size - 1 downTo 1)
+        .map { words.take(it).joinToString(" ") }
+        .filter { it.length >= 3 }
+}
+
 /**
  * Team label in a versus row, always at the standard body size. Picks the
  * most complete grounded label that fits the column whole (full name, then
- * API shortName, then TLA - which the badge also shows). A label is only
+ * API shortName, then the club's own leading words, then the TLA). A label is only
  * chosen when its longest word fits the column AND the whole label fits two
  * lines, so names never break mid-word and never shrink; the full name is
  * one tap away via the badge or the match detail.
@@ -366,6 +393,7 @@ private fun AdaptiveTeamName(team: Team, modifier: Modifier = Modifier, textAlig
                 team.name,
                 team.shortName?.takeIf { it.isNotBlank() },
                 conventionalShort(team.name),
+                *leadingShorts(team.name).toTypedArray(),
                 team.tla?.takeIf { it.isNotBlank() }
             ).distinct()
         }
