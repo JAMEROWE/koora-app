@@ -24,6 +24,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,11 +38,12 @@ import androidx.core.os.LocaleListCompat
 import com.koora.app.BuildConfig
 import com.koora.app.R
 import com.koora.app.data.FavoritesStore
+import com.koora.app.ui.screens.OnboardingDialog
 import com.koora.app.ui.theme.ThemeController
 
 /*
  * Minimal Settings screen:
- *  - Language switcher (per-app locales, persists automatically) — makes
+ *  - Language switcher (per-app locales, persists automatically) â makes
  *    the EN / FR / AR promise real on any device.
  *  - Favorites management.
  *  - About (version + data credits).
@@ -52,6 +54,10 @@ fun SettingsScreen(onBack: () -> Unit = {}) {
     val locales = AppCompatDelegate.getApplicationLocales()
     val currentTag = if (locales.isEmpty) "" else locales.toLanguageTags()
     var favCount by remember { mutableIntStateOf(FavoritesStore.count(context)) }
+    var showFavPicker by remember { mutableStateOf(false) }
+    if (showFavPicker) {
+        OnboardingDialog(window = emptyList(), onDone = { showFavPicker = false })
+    }
 
     Column(
         Modifier
@@ -59,7 +65,7 @@ fun SettingsScreen(onBack: () -> Unit = {}) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        // v1.9.0: Settings left the bottom bar (spec §1.1) — it is a page
+        // v1.9.0: Settings left the bottom bar (spec Â§1.1) â it is a page
         // now, so it needs its own way back.
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
@@ -89,10 +95,10 @@ fun SettingsScreen(onBack: () -> Unit = {}) {
                 LanguageRow("English", "en", currentTag) {
                     AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("en"))
                 }
-                LanguageRow("Français", "fr", currentTag) {
+                LanguageRow("FranÃ§ais", "fr", currentTag) {
                     AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("fr"))
                 }
-                LanguageRow("العربية", "ar", currentTag) {
+                LanguageRow("Ø§ÙØ¹Ø±Ø¨ÙØ©", "ar", currentTag) {
                     AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("ar"))
                 }
                 Text(
@@ -149,6 +155,12 @@ fun SettingsScreen(onBack: () -> Unit = {}) {
                         Text(stringResource(R.string.fav_clear))
                     }
                 }
+                Spacer(Modifier.height(8.dp))
+                // Re-open the first-launch picker any time (stored picks
+                // render checked, window data is not needed to edit them).
+                TextButton(onClick = { showFavPicker = true }) {
+                    Text(stringResource(R.string.settings_fav_teams))
+                }
             }
         }
 
@@ -174,7 +186,7 @@ fun SettingsScreen(onBack: () -> Unit = {}) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
-                // v1.8.0 roadmap §3.4: permanent legal notice — always visible
+                // v1.8.0 roadmap Â§3.4: permanent legal notice â always visible
                 // in Settings, never conditional.
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
