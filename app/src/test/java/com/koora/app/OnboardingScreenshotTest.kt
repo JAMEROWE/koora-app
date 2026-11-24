@@ -19,7 +19,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * RENDERED UI EVIDENCE â the first-launch favorites picker and its
+ * RENDERED UI EVIDENCE — the first-launch favorites picker and its
  * effect on the home screen (favorite league pinned and opened on top).
  * Real HomeScreen composable with demo data. PNGs land in
  * app/build/outputs/roborazzi.
@@ -32,7 +32,7 @@ class OnboardingScreenshotTest {
     companion object {
         init {
             MatchRepository.forceDemoForTest = true
-            // This class EXERCISES the picker â every test class sets the
+            // This class EXERCISES the picker — every test class sets the
             // flag explicitly because it is JVM-static across classes.
             FavoriteTeamsStore.skipOnboardingForTest = false
         }
@@ -46,7 +46,7 @@ class OnboardingScreenshotTest {
     @Test
     @Config(qualifiers = "w360dp-night")
     fun onboarding_firstLaunch_rendersPicker() {
-        // Fresh prefs: nothing stored, onboarding not done â the picker
+        // Fresh prefs: nothing stored, onboarding not done — the picker
         // must appear by itself once the first load lands.
         rule.setContent {
             KooraTheme {
