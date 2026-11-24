@@ -1,135 +1,147 @@
 <resources>
-    <string name="app_name">كورة</string>
-    <string name="tab_matches">المباريات</string>
-    <string name="tab_standings">الترتيب</string>
-    <string name="demo_notice">الوضع التجريبي: تُعرض مباريات تجريبية</string>
-    <string name="retry">إعادة المحاولة</string>
-    <string name="error_generic">تعذر تحميل البيانات.</string>
-    <string name="no_matches">لا توجد مباريات لعرضها لهذه المسابقة حالياً.</string>
-    <string name="match_not_found">المباراة غير موجودة.</string>
-    <string name="h2h_title">مواجهات مباشرة</string>
-    <string name="h2h_meetings">%1$d مباراة سابقة</string>
-    <string name="last_meetings_title">آخر اللقاءات</string>
-    <string name="form_title">النتائج الأخيرة (آخر 5)</string>
-    <string name="ht_label">الشوط الأول: %1$d–%2$d</string>
-    <string name="no_stats">لا توجد إحصائيات لهذه المباراة بعد.</string>
-    <string name="tab_live">مباشر</string>
-    <string name="tab_news">الأخبار</string>
-    <string name="tab_settings">الإعدادات</string>
-    <string name="tab_highlights">الملخصات</string>
-    <string name="hub_empty">لا توجد ملخصات رسمية منشورة بعد. تظهر الفيديوهات هنا فور نشرها من قبل الدوريات — اضغط التحديث لإعادة المحاولة.</string>
-    <string name="hub_refresh">تحديث الملخصات</string>
-    <string name="day_after">بعد غد</string>
-    <string name="empty_day_after">لا توجد مباريات بعد غد حالياً.</string>
-    <string name="chip_all">كل الأيام</string>
-    <string name="nav_back">رجوع</string>
-    <string name="pos_gk">حارس المرمى</string>
-    <string name="pos_df">مدافع</string>
-    <string name="pos_mf">وسط</string>
-    <string name="pos_fw">مهاجم</string>
-    <string name="player_sheet_note">الملفات الكاملة — الصور والأعمار وإحصائيات الموسم — تظهر تلقائياً عند توصيل خطة بيانات أغنى.</string>
-    <string name="fav_tab">المفضلة</string>
-    <string name="fav_empty">لا توجد مباريات مفضلة. اضغط على النجمة في أي مباراة لمتابعتها.</string>
-    <string name="fav_count">المباريات المحفوظة: %1$d</string>
-    <string name="fav_clear">حذف الكل</string>
-    <string name="no_live">لا توجد مباريات مباشرة حالياً. عود قريباً — هذه الصفحة تُحدّث تلقائياً.</string>
-    <string name="updated_at">آخر تحديث %1$s</string>
-    <string name="highlights_button">شاهد ملخص المباراة</string>
-    <string name="highlights_attribution">فيديوهات رسمية عبر يوتيوب • قنوات دوريات وأندية موثقة</string>
-    <string name="video_attribution">فيديو رسمي عبر يوتيوب • %1$s</string>
-    <string name="video_attribution_plain">فيديو رسمي عبر يوتيوب</string>
-    <string name="legal_notice">كورة هو تطبيق مستقل للنتائج المباشرة والإحصائيات الرياضية. جميع ملخصات المباريات هي فيديوهات رسمية تُستضاف وتُبث مباشرة عبر يوتيوب من قبل أصحاب الحقوق المعنيين. كورة لا تستضيف أو ترفع أو تدّعي ملكية أي بث فيديو أو شعارات دوريات أو علامات تجارية للأندية.</string>
-    <string name="news_empty">لا توجد أخبار حالياً. اضغط التحديث لإعادة المحاولة.</string>
-    <string name="news_refresh">تحديث الأخبار</string>
-    <string name="reader_close">إغلاق</string>
-    <string name="reader_error">تعذّر تحميل هذا المقال. تحقق من الاتصال ثم أعد المحاولة.</string>
-    <string name="reader_open">فتح في المتصفح</string>
-    <string name="video_title">ملخص المباراة</string>
-    <string name="stats_events">أحداث المباراة</string>
-    <string name="events_empty">لا توجد أحداث مسجلة للمباراة حتى الآن.</string>
-    <string name="stats_lineups">التشكيلة</string>
-    <string name="bench_title">التبديلات</string>
-    <string name="stats_match">إحصائيات المباراة</string>
-    <string name="stats_subs">و %1$d بديلاً</string>
-    <string name="stats_coach">المدرب</string>
-    <string name="stats_possession">الاستحواذ</string>
-    <string name="stats_shots">التسديدات</string>
-    <string name="stats_shots_on">على الهدف</string>
-    <string name="stats_corners">الركنيات</string>
-    <string name="stats_fouls">الأخطاء</string>
-    <string name="stats_yellow">البطاقات الصفراء</string>
-    <string name="stats_red">البطاقات الحمراء</string>
-    <string name="stats_offsides">التسلل</string>
-    <string name="stats_saves">التصديات</string>
-    <string name="settings_language">اللغة</string>
-    <string name="language_hint">يتبع التطبيق لغة الهاتف حتى تختار لغة من هنا.</string>
-    <string name="settings_favorites">المفضلة</string>
-    <string name="settings_about">حول التطبيق</string>
-    <string name="about_version">الإصدار %1$s (البناء %2$s)</string>
-    <string name="app_version_line">كورة v%1$s</string>
-    <string name="about_data">النتائج: football-data.org • إحصائيات المباريات: ESPN • الأخبار: مصادر رسمية • الملخصات: يوتيوب</string>
-    <string name="settings_theme">المظهر</string>
-    <string name="theme_system">كالهاتف</string>
-    <string name="theme_dark">داكن</string>
-    <string name="theme_light">فاتح</string>
-    <string name="stale_updated">بيانات محفوظة · حُدّثت قبل %1$d د</string>
-    <string name="match_of_the_day">مباراة اليوم</string>
-    <string name="col_team">الفريق</string>
-    <string name="col_played">ل</string>
-    <string name="col_won">ف</string>
-    <string name="col_draw">ت</string>
-    <string name="col_lost">خ</string>
-    <string name="col_points">نقاط</string>
-    <!-- v1.5.4 — مشغّل الفيديو المدمج ومناطق الترتيب -->
-    <string name="video_finding">جارٍ البحث عن الملخصات الرسمية…</string>
-    <string name="video_none_title">لم يُعثر على فيديو رسمي بعد</string>
-    <string name="video_none_body">لم نتمكن من العثور على فيديو رسمي موثّق لهذه المباراة. تظهر الفيديوهات هنا بمجرد نشرها من الدوريات أو الأندية.</string>
-    <string name="video_more">مزيد من الملخصات</string>
-    <string name="standings_legend_europe">مراكز أوروبية</string>
-    <string name="standings_legend_relegation">الهبوط</string>
-    <!-- v1.5.5 — أداة الشاشة الرئيسية -->
-    <string name="widget_hint">افتح كورة لتحميل مباريات اليوم</string>
-    <string name="widget_live">مباشر</string>
-    <!-- v1.5.6 — مباريات مريحة (اليوم/غدا، كتل الدوريات، التصويت) -->
-    <string name="day_today">اليوم</string>
-    <string name="day_tomorrow">غدا</string>
-    <string name="empty_today">لا مباريات اليوم. غدا: %1$d.</string>
-    <string name="empty_tomorrow">لا مباريات غدا. راجع "اليوم" لآخر النتائج.</string>
-    <string name="tab_results">النتائج</string>
-    <string name="tab_upcoming">القادمة</string>
-    <string name="tab_teams">الفرق</string>
-    <string name="league_results_empty">لا نتائج في هذه الفترة.</string>
-    <string name="league_upcoming_empty">لا مباريات قادمة هنا.</string>
-    <string name="vote_title">من سيفوز؟</string>
-    <string name="vote_home">صاحب الأرض</string>
-    <string name="vote_draw">تعادل</string>
-    <string name="vote_away">الضيف</string>
-    <string name="vote_your_pick">اختيارك: %1$s</string>
-    <string name="vote_locked">يُغلق التصويت عند انطلاق المباراة.</string>
-    <string name="vote_community">ستظهر نسب تصويت الجمهور هنا عند توفرها.</string>
-    <string name="expand_all">توسيع الكل</string>
-    <string name="collapse_all">طي الكل</string>
-    <string name="calendar_pick">اختر يومًا</string>
-    <string name="date_pick_confirm">عرض</string>
-    <string name="vote_chip_clean_sheet">شباك نظيفة</string>
-    <string name="vote_chip_goal_fest">مهرجان أهداف</string>
-    <string name="vote_chip_upset_alert">خطر مفاجأة</string>
-    <string name="vote_correct">توقع صحيح</string>
-    <string name="vote_missed">توقع خاطئ</string>
-    <string name="vote_accuracy">النتيجة: %1$d من %2$d توقعات صحيحة</string>
-    <string name="detail_overview">نظرة عامة</string>
-    <string name="detail_lineup">التشكيلة</string>
-    <string name="detail_events">الأحداث</string>
-    <string name="detail_stats">إحصائيات</string>
-    <string name="detail_form">الأداء</string>
-    <string name="lineup_empty">لم يُنشر تشكيل لهذه المباراة</string>
-    <string name="match_info_title">معلومات المباراة</string>
-    <string name="full_match_page">صفحة المباراة الكاملة</string>
-    <string name="panel_close">إغلاق</string>
-    <string name="team_next">المباريات القادمة</string>
-    <string name="team_recent">النتائج الأخيرة</string>
-    <string name="team_fixtures_unavailable">مباريات هذا الفريق غير متوفرة.</string>
-    <string name="search_label">بحث</string>
-    <string name="search_hint">فريق أو دوري</string>
-    <string name="search_none">لا توجد مباراة في الأيام المحمّلة تطابق «%1$s».</string>
+    <string name="app_name">ÙÙØ±Ø©</string>
+    <string name="tab_matches">Ø§ÙÙØ¨Ø§Ø±ÙØ§Øª</string>
+    <string name="tab_standings">Ø§ÙØªØ±ØªÙØ¨</string>
+    <string name="demo_notice">Ø§ÙÙØ¶Ø¹ Ø§ÙØªØ¬Ø±ÙØ¨Ù: ØªÙØ¹Ø±Ø¶ ÙØ¨Ø§Ø±ÙØ§Øª ØªØ¬Ø±ÙØ¨ÙØ©</string>
+    <string name="retry">Ø¥Ø¹Ø§Ø¯Ø© Ø§ÙÙØ­Ø§ÙÙØ©</string>
+    <string name="error_generic">ØªØ¹Ø°Ø± ØªØ­ÙÙÙ Ø§ÙØ¨ÙØ§ÙØ§Øª.</string>
+    <string name="no_matches">ÙØ§ ØªÙØ¬Ø¯ ÙØ¨Ø§Ø±ÙØ§Øª ÙØ¹Ø±Ø¶ÙØ§ ÙÙØ°Ù Ø§ÙÙØ³Ø§Ø¨ÙØ© Ø­Ø§ÙÙØ§Ù.</string>
+    <string name="match_not_found">Ø§ÙÙØ¨Ø§Ø±Ø§Ø© ØºÙØ± ÙÙØ¬ÙØ¯Ø©.</string>
+    <string name="h2h_title">ÙÙØ§Ø¬ÙØ§Øª ÙØ¨Ø§Ø´Ø±Ø©</string>
+    <string name="h2h_meetings">%1$d ÙØ¨Ø§Ø±Ø§Ø© Ø³Ø§Ø¨ÙØ©</string>
+    <string name="last_meetings_title">Ø¢Ø®Ø± Ø§ÙÙÙØ§Ø¡Ø§Øª</string>
+    <string name="form_title">Ø§ÙÙØªØ§Ø¦Ø¬ Ø§ÙØ£Ø®ÙØ±Ø© (Ø¢Ø®Ø± 5)</string>
+    <string name="ht_label">Ø§ÙØ´ÙØ· Ø§ÙØ£ÙÙ: %1$dâ%2$d</string>
+    <string name="no_stats">ÙØ§ ØªÙØ¬Ø¯ Ø¥Ø­ØµØ§Ø¦ÙØ§Øª ÙÙØ°Ù Ø§ÙÙØ¨Ø§Ø±Ø§Ø© Ø¨Ø¹Ø¯.</string>
+    <string name="tab_live">ÙØ¨Ø§Ø´Ø±</string>
+    <string name="tab_news">Ø§ÙØ£Ø®Ø¨Ø§Ø±</string>
+    <string name="tab_settings">Ø§ÙØ¥Ø¹Ø¯Ø§Ø¯Ø§Øª</string>
+    <string name="tab_highlights">Ø§ÙÙÙØ®ØµØ§Øª</string>
+    <string name="hub_empty">ÙØ§ ØªÙØ¬Ø¯ ÙÙØ®ØµØ§Øª Ø±Ø³ÙÙØ© ÙÙØ´ÙØ±Ø© Ø¨Ø¹Ø¯. ØªØ¸ÙØ± Ø§ÙÙÙØ¯ÙÙÙØ§Øª ÙÙØ§ ÙÙØ± ÙØ´Ø±ÙØ§ ÙÙ ÙØ¨Ù Ø§ÙØ¯ÙØ±ÙØ§Øª â Ø§Ø¶ØºØ· Ø§ÙØªØ­Ø¯ÙØ« ÙØ¥Ø¹Ø§Ø¯Ø© Ø§ÙÙØ­Ø§ÙÙØ©.</string>
+    <string name="hub_refresh">ØªØ­Ø¯ÙØ« Ø§ÙÙÙØ®ØµØ§Øª</string>
+    <string name="day_after">Ø¨Ø¹Ø¯ ØºØ¯</string>
+    <string name="empty_day_after">ÙØ§ ØªÙØ¬Ø¯ ÙØ¨Ø§Ø±ÙØ§Øª Ø¨Ø¹Ø¯ ØºØ¯ Ø­Ø§ÙÙØ§Ù.</string>
+    <string name="chip_all">ÙÙ Ø§ÙØ£ÙØ§Ù</string>
+    <string name="nav_back">Ø±Ø¬ÙØ¹</string>
+    <string name="pos_gk">Ø­Ø§Ø±Ø³ Ø§ÙÙØ±ÙÙ</string>
+    <string name="pos_df">ÙØ¯Ø§ÙØ¹</string>
+    <string name="pos_mf">ÙØ³Ø·</string>
+    <string name="pos_fw">ÙÙØ§Ø¬Ù</string>
+    <string name="player_sheet_note">Ø§ÙÙÙÙØ§Øª Ø§ÙÙØ§ÙÙØ© â Ø§ÙØµÙØ± ÙØ§ÙØ£Ø¹ÙØ§Ø± ÙØ¥Ø­ØµØ§Ø¦ÙØ§Øª Ø§ÙÙÙØ³Ù â ØªØ¸ÙØ± ØªÙÙØ§Ø¦ÙØ§Ù Ø¹ÙØ¯ ØªÙØµÙÙ Ø®Ø·Ø© Ø¨ÙØ§ÙØ§Øª Ø£ØºÙÙ.</string>
+    <string name="fav_tab">Ø§ÙÙÙØ¶ÙØ©</string>
+    <string name="fav_empty">ÙØ§ ØªÙØ¬Ø¯ ÙØ¨Ø§Ø±ÙØ§Øª ÙÙØ¶ÙØ©. Ø§Ø¶ØºØ· Ø¹ÙÙ Ø§ÙÙØ¬ÙØ© ÙÙ Ø£Ù ÙØ¨Ø§Ø±Ø§Ø© ÙÙØªØ§Ø¨Ø¹ØªÙØ§.</string>
+    <string name="fav_count">Ø§ÙÙØ¨Ø§Ø±ÙØ§Øª Ø§ÙÙØ­ÙÙØ¸Ø©: %1$d</string>
+    <string name="fav_clear">Ø­Ø°Ù Ø§ÙÙÙ</string>
+    <string name="no_live">ÙØ§ ØªÙØ¬Ø¯ ÙØ¨Ø§Ø±ÙØ§Øª ÙØ¨Ø§Ø´Ø±Ø© Ø­Ø§ÙÙØ§Ù. Ø¹ÙØ¯ ÙØ±ÙØ¨Ø§Ù â ÙØ°Ù Ø§ÙØµÙØ­Ø© ØªÙØ­Ø¯ÙØ« ØªÙÙØ§Ø¦ÙØ§Ù.</string>
+    <string name="updated_at">Ø¢Ø®Ø± ØªØ­Ø¯ÙØ« %1$s</string>
+    <string name="highlights_button">Ø´Ø§ÙØ¯ ÙÙØ®Øµ Ø§ÙÙØ¨Ø§Ø±Ø§Ø©</string>
+    <string name="highlights_attribution">ÙÙØ¯ÙÙÙØ§Øª Ø±Ø³ÙÙØ© Ø¹Ø¨Ø± ÙÙØªÙÙØ¨ â¢ ÙÙÙØ§Øª Ø¯ÙØ±ÙØ§Øª ÙØ£ÙØ¯ÙØ© ÙÙØ«ÙØ©</string>
+    <string name="video_attribution">ÙÙØ¯ÙÙ Ø±Ø³ÙÙ Ø¹Ø¨Ø± ÙÙØªÙÙØ¨ â¢ %1$s</string>
+    <string name="video_attribution_plain">ÙÙØ¯ÙÙ Ø±Ø³ÙÙ Ø¹Ø¨Ø± ÙÙØªÙÙØ¨</string>
+    <string name="legal_notice">ÙÙØ±Ø© ÙÙ ØªØ·Ø¨ÙÙ ÙØ³ØªÙÙ ÙÙÙØªØ§Ø¦Ø¬ Ø§ÙÙØ¨Ø§Ø´Ø±Ø© ÙØ§ÙØ¥Ø­ØµØ§Ø¦ÙØ§Øª Ø§ÙØ±ÙØ§Ø¶ÙØ©. Ø¬ÙÙØ¹ ÙÙØ®ØµØ§Øª Ø§ÙÙØ¨Ø§Ø±ÙØ§Øª ÙÙ ÙÙØ¯ÙÙÙØ§Øª Ø±Ø³ÙÙØ© ØªÙØ³ØªØ¶Ø§Ù ÙØªÙØ¨Ø« ÙØ¨Ø§Ø´Ø±Ø© Ø¹Ø¨Ø± ÙÙØªÙÙØ¨ ÙÙ ÙØ¨Ù Ø£ØµØ­Ø§Ø¨ Ø§ÙØ­ÙÙÙ Ø§ÙÙØ¹ÙÙÙÙ. ÙÙØ±Ø© ÙØ§ ØªØ³ØªØ¶ÙÙ Ø£Ù ØªØ±ÙØ¹ Ø£Ù ØªØ¯ÙØ¹Ù ÙÙÙÙØ© Ø£Ù Ø¨Ø« ÙÙØ¯ÙÙ Ø£Ù Ø´Ø¹Ø§Ø±Ø§Øª Ø¯ÙØ±ÙØ§Øª Ø£Ù Ø¹ÙØ§ÙØ§Øª ØªØ¬Ø§Ø±ÙØ© ÙÙØ£ÙØ¯ÙØ©.</string>
+    <string name="news_empty">ÙØ§ ØªÙØ¬Ø¯ Ø£Ø®Ø¨Ø§Ø± Ø­Ø§ÙÙØ§Ù. Ø§Ø¶ØºØ· Ø§ÙØªØ­Ø¯ÙØ« ÙØ¥Ø¹Ø§Ø¯Ø© Ø§ÙÙØ­Ø§ÙÙØ©.</string>
+    <string name="news_refresh">ØªØ­Ø¯ÙØ« Ø§ÙØ£Ø®Ø¨Ø§Ø±</string>
+    <string name="reader_close">Ø¥ØºÙØ§Ù</string>
+    <string name="reader_error">ØªØ¹Ø°ÙØ± ØªØ­ÙÙÙ ÙØ°Ø§ Ø§ÙÙÙØ§Ù. ØªØ­ÙÙ ÙÙ Ø§ÙØ§ØªØµØ§Ù Ø«Ù Ø£Ø¹Ø¯ Ø§ÙÙØ­Ø§ÙÙØ©.</string>
+    <string name="reader_open">ÙØªØ­ ÙÙ Ø§ÙÙØªØµÙØ­</string>
+    <string name="video_title">ÙÙØ®Øµ Ø§ÙÙØ¨Ø§Ø±Ø§Ø©</string>
+    <string name="stats_events">Ø£Ø­Ø¯Ø§Ø« Ø§ÙÙØ¨Ø§Ø±Ø§Ø©</string>
+    <string name="events_empty">ÙØ§ ØªÙØ¬Ø¯ Ø£Ø­Ø¯Ø§Ø« ÙØ³Ø¬ÙØ© ÙÙÙØ¨Ø§Ø±Ø§Ø© Ø­ØªÙ Ø§ÙØ¢Ù.</string>
+    <string name="stats_lineups">Ø§ÙØªØ´ÙÙÙØ©</string>
+    <string name="bench_title">Ø§ÙØªØ¨Ø¯ÙÙØ§Øª</string>
+    <string name="stats_match">Ø¥Ø­ØµØ§Ø¦ÙØ§Øª Ø§ÙÙØ¨Ø§Ø±Ø§Ø©</string>
+    <string name="stats_subs">Ù %1$d Ø¨Ø¯ÙÙØ§Ù</string>
+    <string name="stats_coach">Ø§ÙÙØ¯Ø±Ø¨</string>
+    <string name="stats_possession">Ø§ÙØ§Ø³ØªØ­ÙØ§Ø°</string>
+    <string name="stats_shots">Ø§ÙØªØ³Ø¯ÙØ¯Ø§Øª</string>
+    <string name="stats_shots_on">Ø¹ÙÙ Ø§ÙÙØ¯Ù</string>
+    <string name="stats_corners">Ø§ÙØ±ÙÙÙØ§Øª</string>
+    <string name="stats_fouls">Ø§ÙØ£Ø®Ø·Ø§Ø¡</string>
+    <string name="stats_yellow">Ø§ÙØ¨Ø·Ø§ÙØ§Øª Ø§ÙØµÙØ±Ø§Ø¡</string>
+    <string name="stats_red">Ø§ÙØ¨Ø·Ø§ÙØ§Øª Ø§ÙØ­ÙØ±Ø§Ø¡</string>
+    <string name="stats_offsides">Ø§ÙØªØ³ÙÙ</string>
+    <string name="stats_saves">Ø§ÙØªØµØ¯ÙØ§Øª</string>
+    <string name="settings_language">Ø§ÙÙØºØ©</string>
+    <string name="language_hint">ÙØªØ¨Ø¹ Ø§ÙØªØ·Ø¨ÙÙ ÙØºØ© Ø§ÙÙØ§ØªÙ Ø­ØªÙ ØªØ®ØªØ§Ø± ÙØºØ© ÙÙ ÙÙØ§.</string>
+    <string name="settings_favorites">Ø§ÙÙÙØ¶ÙØ©</string>
+    <string name="settings_about">Ø­ÙÙ Ø§ÙØªØ·Ø¨ÙÙ</string>
+    <string name="about_version">Ø§ÙØ¥ØµØ¯Ø§Ø± %1$s (Ø§ÙØ¨ÙØ§Ø¡ %2$s)</string>
+    <string name="app_version_line">ÙÙØ±Ø© v%1$s</string>
+    <string name="about_data">Ø§ÙÙØªØ§Ø¦Ø¬: football-data.org â¢ Ø¥Ø­ØµØ§Ø¦ÙØ§Øª Ø§ÙÙØ¨Ø§Ø±ÙØ§Øª: ESPN â¢ Ø§ÙØ£Ø®Ø¨Ø§Ø±: ÙØµØ§Ø¯Ø± Ø±Ø³ÙÙØ© â¢ Ø§ÙÙÙØ®ØµØ§Øª: ÙÙØªÙÙØ¨</string>
+    <string name="settings_theme">Ø§ÙÙØ¸ÙØ±</string>
+    <string name="theme_system">ÙØ§ÙÙØ§ØªÙ</string>
+    <string name="theme_dark">Ø¯Ø§ÙÙ</string>
+    <string name="theme_light">ÙØ§ØªØ­</string>
+    <string name="stale_updated">Ø¨ÙØ§ÙØ§Øª ÙØ­ÙÙØ¸Ø© Â· Ø­ÙØ¯ÙØ«Øª ÙØ¨Ù %1$d Ø¯</string>
+    <string name="match_of_the_day">ÙØ¨Ø§Ø±Ø§Ø© Ø§ÙÙÙÙ</string>
+    <string name="col_team">Ø§ÙÙØ±ÙÙ</string>
+    <string name="col_played">Ù</string>
+    <string name="col_won">Ù</string>
+    <string name="col_draw">Øª</string>
+    <string name="col_lost">Ø®</string>
+    <string name="col_points">ÙÙØ§Ø·</string>
+    <!-- v1.5.4 â ÙØ´ØºÙÙ Ø§ÙÙÙØ¯ÙÙ Ø§ÙÙØ¯ÙØ¬ ÙÙÙØ§Ø·Ù Ø§ÙØªØ±ØªÙØ¨ -->
+    <string name="video_finding">Ø¬Ø§Ø±Ù Ø§ÙØ¨Ø­Ø« Ø¹Ù Ø§ÙÙÙØ®ØµØ§Øª Ø§ÙØ±Ø³ÙÙØ©â¦</string>
+    <string name="video_none_title">ÙÙ ÙÙØ¹Ø«Ø± Ø¹ÙÙ ÙÙØ¯ÙÙ Ø±Ø³ÙÙ Ø¨Ø¹Ø¯</string>
+    <string name="video_none_body">ÙÙ ÙØªÙÙÙ ÙÙ Ø§ÙØ¹Ø«ÙØ± Ø¹ÙÙ ÙÙØ¯ÙÙ Ø±Ø³ÙÙ ÙÙØ«ÙÙ ÙÙØ°Ù Ø§ÙÙØ¨Ø§Ø±Ø§Ø©. ØªØ¸ÙØ± Ø§ÙÙÙØ¯ÙÙÙØ§Øª ÙÙØ§ Ø¨ÙØ¬Ø±Ø¯ ÙØ´Ø±ÙØ§ ÙÙ Ø§ÙØ¯ÙØ±ÙØ§Øª Ø£Ù Ø§ÙØ£ÙØ¯ÙØ©.</string>
+    <string name="video_more">ÙØ²ÙØ¯ ÙÙ Ø§ÙÙÙØ®ØµØ§Øª</string>
+    <string name="standings_legend_europe">ÙØ±Ø§ÙØ² Ø£ÙØ±ÙØ¨ÙØ©</string>
+    <string name="standings_legend_relegation">Ø§ÙÙØ¨ÙØ·</string>
+    <!-- v1.5.5 â Ø£Ø¯Ø§Ø© Ø§ÙØ´Ø§Ø´Ø© Ø§ÙØ±Ø¦ÙØ³ÙØ© -->
+    <string name="widget_hint">Ø§ÙØªØ­ ÙÙØ±Ø© ÙØªØ­ÙÙÙ ÙØ¨Ø§Ø±ÙØ§Øª Ø§ÙÙÙÙ</string>
+    <string name="widget_live">ÙØ¨Ø§Ø´Ø±</string>
+    <!-- v1.5.6 â ÙØ¨Ø§Ø±ÙØ§Øª ÙØ±ÙØ­Ø© (Ø§ÙÙÙÙ/ØºØ¯Ø§Ø ÙØªÙ Ø§ÙØ¯ÙØ±ÙØ§ØªØ Ø§ÙØªØµÙÙØª) -->
+    <string name="day_today">Ø§ÙÙÙÙ</string>
+    <string name="day_tomorrow">ØºØ¯Ø§</string>
+    <string name="empty_today">ÙØ§ ÙØ¨Ø§Ø±ÙØ§Øª Ø§ÙÙÙÙ. ØºØ¯Ø§: %1$d.</string>
+    <string name="empty_tomorrow">ÙØ§ ÙØ¨Ø§Ø±ÙØ§Øª ØºØ¯Ø§. Ø±Ø§Ø¬Ø¹ "Ø§ÙÙÙÙ" ÙØ¢Ø®Ø± Ø§ÙÙØªØ§Ø¦Ø¬.</string>
+    <string name="tab_results">Ø§ÙÙØªØ§Ø¦Ø¬</string>
+    <string name="tab_upcoming">Ø§ÙÙØ§Ø¯ÙØ©</string>
+    <string name="tab_teams">Ø§ÙÙØ±Ù</string>
+    <string name="league_results_empty">ÙØ§ ÙØªØ§Ø¦Ø¬ ÙÙ ÙØ°Ù Ø§ÙÙØªØ±Ø©.</string>
+    <string name="league_upcoming_empty">ÙØ§ ÙØ¨Ø§Ø±ÙØ§Øª ÙØ§Ø¯ÙØ© ÙÙØ§.</string>
+    <string name="vote_title">ÙÙ Ø³ÙÙÙØ²Ø</string>
+    <string name="vote_home">ØµØ§Ø­Ø¨ Ø§ÙØ£Ø±Ø¶</string>
+    <string name="vote_draw">ØªØ¹Ø§Ø¯Ù</string>
+    <string name="vote_away">Ø§ÙØ¶ÙÙ</string>
+    <string name="vote_your_pick">Ø§Ø®ØªÙØ§Ø±Ù: %1$s</string>
+    <string name="vote_locked">ÙÙØºÙÙ Ø§ÙØªØµÙÙØª Ø¹ÙØ¯ Ø§ÙØ·ÙØ§Ù Ø§ÙÙØ¨Ø§Ø±Ø§Ø©.</string>
+    <string name="vote_community">Ø³ØªØ¸ÙØ± ÙØ³Ø¨ ØªØµÙÙØª Ø§ÙØ¬ÙÙÙØ± ÙÙØ§ Ø¹ÙØ¯ ØªÙÙØ±ÙØ§.</string>
+    <string name="expand_all">ØªÙØ³ÙØ¹ Ø§ÙÙÙ</string>
+    <string name="collapse_all">Ø·Ù Ø§ÙÙÙ</string>
+    <string name="calendar_pick">Ø§Ø®ØªØ± ÙÙÙÙØ§</string>
+    <string name="date_pick_confirm">Ø¹Ø±Ø¶</string>
+    <string name="vote_chip_clean_sheet">Ø´Ø¨Ø§Ù ÙØ¸ÙÙØ©</string>
+    <string name="vote_chip_goal_fest">ÙÙØ±Ø¬Ø§Ù Ø£ÙØ¯Ø§Ù</string>
+    <string name="vote_chip_upset_alert">Ø®Ø·Ø± ÙÙØ§Ø¬Ø£Ø©</string>
+    <string name="vote_correct">ØªÙÙØ¹ ØµØ­ÙØ­</string>
+    <string name="vote_missed">ØªÙÙØ¹ Ø®Ø§Ø·Ø¦</string>
+    <string name="vote_accuracy">Ø§ÙÙØªÙØ¬Ø©: %1$d ÙÙ %2$d ØªÙÙØ¹Ø§Øª ØµØ­ÙØ­Ø©</string>
+    <string name="detail_overview">ÙØ¸Ø±Ø© Ø¹Ø§ÙØ©</string>
+    <string name="detail_lineup">Ø§ÙØªØ´ÙÙÙØ©</string>
+    <string name="detail_events">Ø§ÙØ£Ø­Ø¯Ø§Ø«</string>
+    <string name="detail_stats">Ø¥Ø­ØµØ§Ø¦ÙØ§Øª</string>
+    <string name="detail_form">Ø§ÙØ£Ø¯Ø§Ø¡</string>
+    <string name="lineup_empty">ÙÙ ÙÙÙØ´Ø± ØªØ´ÙÙÙ ÙÙØ°Ù Ø§ÙÙØ¨Ø§Ø±Ø§Ø©</string>
+    <string name="match_info_title">ÙØ¹ÙÙÙØ§Øª Ø§ÙÙØ¨Ø§Ø±Ø§Ø©</string>
+    <string name="full_match_page">ØµÙØ­Ø© Ø§ÙÙØ¨Ø§Ø±Ø§Ø© Ø§ÙÙØ§ÙÙØ©</string>
+    <string name="panel_close">Ø¥ØºÙØ§Ù</string>
+    <string name="team_next">Ø§ÙÙØ¨Ø§Ø±ÙØ§Øª Ø§ÙÙØ§Ø¯ÙØ©</string>
+    <string name="team_recent">Ø§ÙÙØªØ§Ø¦Ø¬ Ø§ÙØ£Ø®ÙØ±Ø©</string>
+    <string name="team_fixtures_unavailable">ÙØ¨Ø§Ø±ÙØ§Øª ÙØ°Ø§ Ø§ÙÙØ±ÙÙ ØºÙØ± ÙØªÙÙØ±Ø©.</string>
+    <string name="search_label">Ø¨Ø­Ø«</string>
+    <string name="search_hint">ÙØ±ÙÙ Ø£Ù Ø¯ÙØ±Ù</string>
+    <string name="search_none">ÙØ§ ØªÙØ¬Ø¯ ÙØ¨Ø§Ø±Ø§Ø© ÙÙ Ø§ÙØ£ÙØ§Ù Ø§ÙÙØ­ÙÙÙØ© ØªØ·Ø§Ø¨Ù Â«%1$sÂ».</string>
+    <string name="onboarding_title">Ø®ØµÙØµ ÙÙØ±Ø§ Ø¹ÙÙ Ø°ÙÙÙ</string>
+    <string name="onboarding_subtitle">Ø§Ø®ØªØ± Ø¨Ø·ÙÙØ§ØªÙ ÙÙØ±ÙÙ Ø§ÙÙÙØ¶ÙØ©. ÙØ¶Ø¹ÙØ§ ÙÙØ±Ø§ ÙÙ Ø§ÙÙÙØ¯ÙØ©Ø ÙÙÙÙÙÙ ØªØºÙÙØ±ÙØ§ ÙÙ Ø£Ù ÙÙØª ÙÙ Ø§ÙØ¥Ø¹Ø¯Ø§Ø¯Ø§Øª.</string>
+    <string name="onboarding_leagues">Ø§ÙØ¨Ø·ÙÙØ§Øª</string>
+    <string name="onboarding_teams">Ø§ÙÙØ±Ù</string>
+    <string name="onboarding_search_teams">Ø§Ø¨Ø­Ø« Ø¹Ù ÙØ±ÙÙ</string>
+    <string name="onboarding_save">Ø­ÙØ¸</string>
+    <string name="onboarding_skip">ØªØ®Ø·Ù Ø§ÙØ¢Ù</string>
+    <string name="share_match">ÙØ´Ø§Ø±ÙØ© Ø§ÙÙØªÙØ¬Ø©</string>
+    <string name="share_chooser_title">ÙØ´Ø§Ø±ÙØ© Ø¹Ø¨Ø±</string>
+    <string name="settings_fav_teams">Ø§ÙØ¨Ø·ÙÙØ§Øª ÙØ§ÙÙØ±Ù Ø§ÙÙÙØ¶ÙØ©</string>
+    <string name="day_results">Ø§ÙÙØªØ§Ø¦Ø¬</string>
+    <string name="empty_results">ÙØ§ ØªÙØ¬Ø¯ ÙØªØ§Ø¦Ø¬ Ø­Ø¯ÙØ«Ø© ÙÙ Ø§ÙÙØ§Ø¦ÙØ© Ø§ÙÙØ­ÙÙÙØ©.</string>
 </resources>
