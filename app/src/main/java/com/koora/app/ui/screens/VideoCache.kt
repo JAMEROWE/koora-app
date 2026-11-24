@@ -25,7 +25,13 @@ internal object VideoCache {
     internal data class SlotVideo(
         val title: String = "",
         val videoId: String = "",
-        val published: String = ""
+        val published: String = "",
+        // Publish grounding must survive caching, otherwise the re-gate in
+        // HighlightsSource.resolve drops every cached entry (0 = unknown,
+        // fails closed). Entries persisted before these fields existed
+        // read 0/0 and degrade to one honest re-resolve.
+        val publishedAtMs: Long = 0L,
+        val publishedAtEarliestMs: Long = 0L
     )
 
     private data class Slot(val found: Boolean, val at: Long, val videos: List<SlotVideo> = emptyList())
@@ -49,12 +55,19 @@ internal object VideoCache {
         val slot = gson.fromJson(raw, Slot::class.java) ?: return null
         if (!isFresh(slot.found, slot.at, System.currentTimeMillis())) return null
         if (!slot.found) return emptyList()
-        slot.videos.map { YtEntry(it.title, it.videoId, it.published) }
+        slot.videos.map {
+            YtEntry(it.title, it.videoId, it.published,
+                publishedAtMs = it.publishedAtMs,
+                publishedAtEarliestMs = it.publishedAtEarliestMs)
+        }
     }.getOrNull()
 
     internal fun putFound(context: Context, home: String, away: String, videos: List<YtEntry>) {
         put(context, home, away, Slot(true, System.currentTimeMillis(),
-            videos.map { SlotVideo(it.title, it.videoId, it.published) }))
+            videos.map {
+                SlotVideo(it.title, it.videoId, it.published,
+                    it.publishedAtMs, it.publishedAtEarliestMs)
+            }))
     }
 
     internal fun putMiss(context: Context, home: String, away: String) {
