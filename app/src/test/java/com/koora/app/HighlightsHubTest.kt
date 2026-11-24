@@ -12,7 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * v1.8.0 Highlights hub â the PURE pairing rule that decides which
+ * v1.8.0 Highlights hub — the PURE pairing rule that decides which
  * released official videos may appear in the independent tab. Plain
  * JUnit (no Android APIs under test):
  *
@@ -51,7 +51,7 @@ class HighlightsHubTest {
     @Test
     fun oneTeamOnly_neverPairs() {
         // The title names Chelsea but the only fixture with Chelsea also
-        // involved Everton â pairing would be a guess, so it must fail.
+        // involved Everton — pairing would be a guess, so it must fail.
         val entry = YtEntry("Chelsea 1-0 Arsenal | Highlights", "mV124", "")
         assertNull(HighlightsHub.pairWithFixture(entry, listOf(fixture(3, "Chelsea", "Everton", "2026-11-09T14:00:00Z"))))
     }
@@ -102,7 +102,7 @@ class HighlightsHubTest {
         )
         val collapsed = HighlightsHub.oneRowPerFixture(rows)
         assertEquals(1, collapsed.size)
-        // first official release (list order) wins â all rows are playable
+        // first official release (list order) wins — all rows are playable
         assertEquals("mV200", collapsed[0].video.videoId)
     }
 
