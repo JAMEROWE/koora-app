@@ -296,16 +296,16 @@ fun HomeScreen(
                     onClick = { dayFilter = 2 },
                     label = { Text(stringResource(R.string.day_after), maxLines = 1) }
                 )
-                // Calendar: pinned after the scrollable chips so large font
-                // scales never push it off screen. Constrained to the fetched
-                // window (-6..+2 days).
-                IconButton(onClick = { showDatePicker = true }) {
-                    Icon(
-                        Icons.Filled.CalendarMonth,
-                        contentDescription = stringResource(R.string.calendar_pick),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            }
+            // Calendar: pinned after the scrollable chips so large font
+            // scales never push it off screen. Constrained to the fetched
+            // window (-6..+2 days).
+            IconButton(onClick = { showDatePicker = true }) {
+                Icon(
+                    Icons.Filled.CalendarMonth,
+                    contentDescription = stringResource(R.string.calendar_pick),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             }
         }
