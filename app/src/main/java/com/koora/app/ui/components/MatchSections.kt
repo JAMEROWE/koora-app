@@ -77,11 +77,11 @@ internal fun DayEmptyLine(text: String) {
 }
 
 /**
- * Section header (spec §2.2, v1.10.0): green brand bar + league name +
+ * Section header (spec Â§2.2, v1.10.0): green brand bar + league name +
  * pulsing LIVE pill when the section holds live matches + match count
  * badge + expand/collapse chevron. Tapping the header toggles the
  * accordion; the chevron rotation is animated. League crest images are
- * NOT rendered — the free providers give no emblem URLs, and a drawn
+ * NOT rendered â the free providers give no emblem URLs, and a drawn
  * fake crest would break the no-fake rule.
  */
 /**
@@ -92,22 +92,36 @@ internal fun DayEmptyLine(text: String) {
  */
 private fun flagFor(code: String?): String? = when (code) {
     "BOT" -> "\uD83C\uDDF2\uD83C\uDDE6" // Morocco
-    "FL1" -> "\uD83C\uDDEB\uD83C\uDDF7" // France
-    "PD" -> "\uD83C\uDDEA\uD83C\uDDF8"  // Spain
-    "SA" -> "\uD83C\uDDEE\uD83C\uDDF9"  // Italy
-    "BL1" -> "\uD83C\uDDE9\uD83C\uDDEA" // Germany
+    "FL1", "CLG" -> "\uD83C\uDDEB\uD83C\uDDF7" // France (+ Coupe de France)
+    "PD", "CDR" -> "\uD83C\uDDEA\uD83C\uDDF8"  // Spain (+ Copa del Rey)
+    "SA", "COP" -> "\uD83C\uDDEE\uD83C\uDDF9"  // Italy (+ Coppa Italia)
+    "BL1", "DFB" -> "\uD83C\uDDE9\uD83C\uDDEA" // Germany (+ DFB-Pokal)
     "DED" -> "\uD83C\uDDF3\uD83C\uDDF1" // Netherlands
     "PPL" -> "\uD83C\uDDF5\uD83C\uDDF9" // Portugal
     "BSA" -> "\uD83C\uDDE7\uD83C\uDDF7" // Brazil
+    "SPL" -> "\uD83C\uDDF8\uD83C\uDDE6" // Saudi Arabia
+    "TUR" -> "\uD83C\uDDF9\uD83C\uDDF7" // Turkiye
+    "ARG" -> "\uD83C\uDDE6\uD83C\uDDF7" // Argentina
+    "MEX" -> "\uD83C\uDDF2\uD83C\uDDFD" // Mexico
+    "MLS" -> "\uD83C\uDDFA\uD83C\uDDF8" // United States
+    "BEL" -> "\uD83C\uDDE7\uD83C\uDDEA" // Belgium
+    "JPN" -> "\uD83C\uDDEF\uD83C\uDDF5" // Japan
+    "KOR" -> "\uD83C\uDDF0\uD83C\uDDF7" // South Korea
     // England's own flag (tag-sequence emoji) where the platform emoji font
     // supports subdivision flags (Android 13+); a readable "ENG" label
     // elsewhere - never a black flag posing as an identifier.
-    "PL" -> if (Build.VERSION.SDK_INT >= 33) {
+    "PL", "ELC", "FAC" -> if (Build.VERSION.SDK_INT >= 33) {
         "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F"
     } else {
         "ENG"
     }
-    "CL", "EC", "EL", "WC", "CLI" -> "\uD83C\uDFC6" // international competition
+    // Scotland: same subdivision rule as England (gb-sct), "SCO" fallback.
+    "SCO" -> if (Build.VERSION.SDK_INT >= 33) {
+        "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC73\uDB40\uDC63\uDB40\uDC74\uDB40\uDC7F"
+    } else {
+        "SCO"
+    }
+    "CL", "EC", "EL", "UEL", "UECL", "WC", "CLI" -> "\uD83C\uDFC6" // international competition
     else -> null
 }
 
@@ -196,8 +210,8 @@ internal fun LeagueHeaderCard(
 }
 
 /**
- * Spec §2.2: the top Expand All / Collapse All toggle for the whole
- * feed (Live and Results). Two small stateless buttons — the screen
+ * Spec Â§2.2: the top Expand All / Collapse All toggle for the whole
+ * feed (Live and Results). Two small stateless buttons â the screen
  * owns the collapsed-state map.
  */
 @Composable
