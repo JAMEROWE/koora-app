@@ -11,13 +11,13 @@
     <string name="h2h_meetings">%1$d previous meetings</string>
     <string name="last_meetings_title">Last meetings</string>
     <string name="form_title">Recent form (last 5)</string>
-    <string name="ht_label">Half-time: %1$d–%2$d</string>
+    <string name="ht_label">Half-time: %1$dâ%2$d</string>
     <string name="no_stats">No stats available for this match yet.</string>
     <string name="tab_live">Live</string>
     <string name="tab_news">News</string>
     <string name="tab_settings">Settings</string>
     <string name="tab_highlights">Highlights</string>
-    <string name="hub_empty">No official highlights released yet. Videos appear here the moment the leagues publish them — tap refresh to check again.</string>
+    <string name="hub_empty">No official highlights released yet. Videos appear here the moment the leagues publish them â tap refresh to check again.</string>
     <string name="hub_refresh">Refresh highlights</string>
     <string name="day_after">Day after</string>
     <string name="empty_day_after">No matches yet for the day after tomorrow.</string>
@@ -27,16 +27,16 @@
     <string name="pos_df">Defender</string>
     <string name="pos_mf">Midfielder</string>
     <string name="pos_fw">Forward</string>
-    <string name="player_sheet_note">Full profiles — photos, ages, season stats — unlock automatically when a richer data plan is connected.</string>
+    <string name="player_sheet_note">Full profiles â photos, ages, season stats â unlock automatically when a richer data plan is connected.</string>
     <string name="fav_tab">Favorites</string>
     <string name="fav_empty">No favorite matches yet. Tap the star on any match to follow it.</string>
     <string name="fav_count">Saved matches: %1$d</string>
     <string name="fav_clear">Clear all</string>
-    <string name="no_live">No live matches right now. Check back soon — the tab refreshes itself.</string>
+    <string name="no_live">No live matches right now. Check back soon â the tab refreshes itself.</string>
     <string name="updated_at">Updated %1$s</string>
     <string name="highlights_button">Watch highlights</string>
-    <string name="highlights_attribution">Official videos via YouTube • verified league &amp; club channels</string>
-    <string name="video_attribution">Official video via YouTube • %1$s</string>
+    <string name="highlights_attribution">Official videos via YouTube â¢ verified league &amp; club channels</string>
+    <string name="video_attribution">Official video via YouTube â¢ %1$s</string>
     <string name="video_attribution_plain">Official video via YouTube</string>
     <string name="legal_notice">Koora is an independent live-score and sports statistics application. All match highlights are official videos hosted and streamed directly via YouTube by their respective rights-holders. Koora does not host, upload, or claim ownership over any video broadcasts, league logos, or club trademarks.</string>
     <string name="news_empty">No news right now. Tap refresh to try again.</string>
@@ -67,12 +67,12 @@
     <string name="settings_about">About</string>
     <string name="about_version">Version %1$s (build %2$s)</string>
     <string name="app_version_line">Koora v%1$s</string>
-    <string name="about_data">Scores: football-data.org • Match stats: ESPN • News: official media feeds • Highlights: YouTube</string>
+    <string name="about_data">Scores: football-data.org â¢ Match stats: ESPN â¢ News: official media feeds â¢ Highlights: YouTube</string>
     <string name="settings_theme">Theme</string>
     <string name="theme_system">Follow phone</string>
     <string name="theme_dark">Dark</string>
     <string name="theme_light">Light</string>
-    <string name="stale_updated">Saved data · updated %1$d min ago</string>
+    <string name="stale_updated">Saved data Â· updated %1$d min ago</string>
     <string name="match_of_the_day">Match of the Day</string>
     <string name="col_team">Team</string>
     <string name="col_played">P</string>
@@ -80,17 +80,17 @@
     <string name="col_draw">D</string>
     <string name="col_lost">L</string>
     <string name="col_points">Pts</string>
-    <!-- v1.5.4 — own-player video screen + standings zones -->
-    <string name="video_finding">Finding official highlights…</string>
+    <!-- v1.5.4 â own-player video screen + standings zones -->
+    <string name="video_finding">Finding official highlightsâ¦</string>
     <string name="video_none_title">No official video found yet</string>
     <string name="video_none_body">We could not find a verified official video for this match. Videos appear here as soon as the leagues or clubs publish them.</string>
     <string name="video_more">More highlights</string>
     <string name="standings_legend_europe">European places</string>
     <string name="standings_legend_relegation">Relegation</string>
-    <!-- v1.5.5 — home-screen widget -->
-    <string name="widget_hint">Open Koora to load today’s matches</string>
+    <!-- v1.5.5 â home-screen widget -->
+    <string name="widget_hint">Open Koora to load todayâs matches</string>
     <string name="widget_live">LIVE</string>
-    <!-- v1.5.6 — comfortable Matches (Today/Tomorrow, league blocks, votes) -->
+    <!-- v1.5.6 â comfortable Matches (Today/Tomorrow, league blocks, votes) -->
     <string name="day_today">Today</string>
     <string name="day_tomorrow">Tomorrow</string>
     <string name="empty_today">No matches today. Tomorrow has %1$d.</string>
@@ -107,7 +107,7 @@
     <string name="vote_your_pick">Your pick: %1$s</string>
     <string name="vote_locked">Voting is locked at kick-off.</string>
     <string name="vote_community">Community percentages will appear here when available.</string>
-    <!-- v1.10.0 — master spec §2/§3: accordions, calendar, voting stage 2, 4-tab detail -->
+    <!-- v1.10.0 â master spec Â§2/Â§3: accordions, calendar, voting stage 2, 4-tab detail -->
     <string name="expand_all">Expand all</string>
     <string name="collapse_all">Collapse all</string>
     <string name="calendar_pick">Pick a day</string>
@@ -133,4 +133,16 @@
     <string name="search_label">Search</string>
     <string name="search_hint">Team or league</string>
     <string name="search_none">Nothing in the loaded days matches "%1$s".</string>
+    <string name="onboarding_title">Make Koora yours</string>
+    <string name="onboarding_subtitle">Pick your favorite leagues and teams. Koora puts them first, and you can change them anytime in Settings.</string>
+    <string name="onboarding_leagues">Leagues</string>
+    <string name="onboarding_teams">Teams</string>
+    <string name="onboarding_search_teams">Search teams</string>
+    <string name="onboarding_save">Save</string>
+    <string name="onboarding_skip">Skip for now</string>
+    <string name="share_match">Share result</string>
+    <string name="share_chooser_title">Share via</string>
+    <string name="settings_fav_teams">Favorite leagues &amp; teams</string>
+    <string name="day_results">Results</string>
+    <string name="empty_results">No recent results in the loaded window.</string>
 </resources>
