@@ -144,5 +144,5 @@
     <string name="share_chooser_title">Share via</string>
     <string name="settings_fav_teams">Favorite leagues &amp; teams</string>
     <string name="day_results">Results</string>
-    <string name="empty_results">No recent results in the loaded window.</string>
+    <string name="empty_results">No finished matches in the last 6 days.</string>
 </resources>
