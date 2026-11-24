@@ -117,7 +117,7 @@ import com.koora.app.ui.voteLocked
 import kotlinx.coroutines.launch
 
 /*
- * Match detail â v1.4: stats are FREE for everyone (no ad gate).
+ * Match detail — v1.4: stats are FREE for everyone (no ad gate).
  * Monetization rides along passively: one capped interstitial fires on
  * entry to a LIVE match (see AdsManager.maybeShowInterstitial).
  * Finished matches offer official video highlights watched IN-APP
@@ -174,8 +174,8 @@ class MatchDetailViewModel : ViewModel() {
     }
 
     /**
-     * Form tab (spec Â§3.4): each team's fixtures from the SAME 6h-cached
-     * endpoint the team panel uses â never extra pressure on the free
+     * Form tab (spec §3.4): each team's fixtures from the SAME 6h-cached
+     * endpoint the team panel uses — never extra pressure on the free
      * tier. Failures leave that side out; the tab shows the honest state.
      */
     fun loadTeamMatches(homeId: Long, awayId: Long) {
@@ -203,11 +203,11 @@ fun MatchDetailScreen(
         MatchRepository.cache.firstOrNull { it.id == matchId }
     }
 
-    // Stats load automatically â free, no ad gate
+    // Stats load automatically — free, no ad gate
     LaunchedEffect(matchId) { vm.loadStats(matchId) }
 
-    // Deep stats (events, lineups, bars) â real providers (ESPN / API-Football).
-    // v1.8.0: the demo sample is DEBUG-only â a release build with no key
+    // Deep stats (events, lineups, bars) — real providers (ESPN / API-Football).
+    // v1.8.0: the demo sample is DEBUG-only — a release build with no key
     // HIDES the sections (no-fake rule), it never shows invented players.
     LaunchedEffect(matchId) {
         match?.let {
@@ -219,7 +219,7 @@ fun MatchDetailScreen(
         }
     }
 
-    // v1.10.0 (spec Â§3.4): last-5 / next-5 per team for the Form tab.
+    // v1.10.0 (spec §3.4): last-5 / next-5 per team for the Form tab.
     LaunchedEffect(matchId) {
         match?.let { vm.loadTeamMatches(it.homeTeam.id, it.awayTeam.id) }
     }
@@ -282,9 +282,9 @@ fun MatchDetailScreen(
                 Text(stringResource(R.string.match_not_found))
             }
         } else {
-            // v1.10.0 (spec Â§3): the score hero stays on top, the sticky
+            // v1.10.0 (spec §3): the score hero stays on top, the sticky
             // tab row sits directly below it, and each tab scrolls
-            // its own content â Overview | Lineup | Events | Stats | Form.
+            // its own content — Overview | Lineup | Events | Stats | Form.
             var detailTab by remember(matchId) { mutableIntStateOf(0) }
             Column(
                 Modifier
@@ -292,13 +292,13 @@ fun MatchDetailScreen(
                     .padding(padding)
             ) {
                 Spacer(Modifier.height(8.dp))
-                // v1.8.0 "stadium hero" â floodlit scoreboard card tinted with
+                // v1.8.0 "stadium hero" — floodlit scoreboard card tinted with
                 // the two teams' kit colors (subtle, theme-aware lerp: home
                 // left, away right, neutral center).
                 // v1.10.4 (owner report: the four stacked rows ate half the
                 // screen, so every tab's first card sat below the fold and
-                // the user scrolled on every visit): ONE compact row â badge
-                // + name | score | name + badge â with the status line and
+                // the user scrolled on every visit): ONE compact row — badge
+                // + name | score | name + badge — with the status line and
                 // the half-time score as small lines. The card now takes a
                 // fraction of the height, so the tab row and the first
                 // content card are visible the moment the screen opens.
@@ -338,7 +338,7 @@ fun MatchDetailScreen(
                                 Spacer(Modifier.width(6.dp))
                             }
                             Text(
-                                "${statusLabel(match)} â¢ ${dateLabel(match)}",
+                                "${statusLabel(match)} • ${dateLabel(match)}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -389,8 +389,8 @@ fun MatchDetailScreen(
                     }
                 }
 
-                // v1.10.0 (spec Â§3): sticky tab bar under the hero.
-                // v1.10.4 (owner report: the first tab rendered as "Overvi" â
+                // v1.10.0 (spec §3): sticky tab bar under the hero.
+                // v1.10.4 (owner report: the first tab rendered as "Overvi" —
                 // the fixed-width SecondaryTabRow splits the bar into equal
                 // fifths and clips "Overview" on narrow screens): a
                 // ScrollableTabRow gives every label its full natural width
@@ -410,7 +410,7 @@ fun MatchDetailScreen(
                         text = { Text(stringResource(R.string.detail_lineup), maxLines = 1) }
                     )
                     // v1.10.3 (owner decision): Match events get their OWN
-                    // tab, beside the others â the Lineup tab is purely the
+                    // tab, beside the others — the Lineup tab is purely the
                     // lineup from here on.
                     Tab(
                         selected = detailTab == 2,
@@ -440,9 +440,9 @@ fun MatchDetailScreen(
     }
 }
 
-// ---- Tab contents (spec Â§3, v1.10.0) ----------------------------------------
+// ---- Tab contents (spec §3, v1.10.0) ----------------------------------------
 
-/** Â§3.1 Overview: voting card, match info, highlights, H2H + meetings. */
+/** §3.1 Overview: voting card, match info, highlights, H2H + meetings. */
 @Composable
 private fun OverviewTab(
     match: Match,
@@ -462,11 +462,11 @@ private fun OverviewTab(
 
         // Official video highlights, watched INSIDE the app.
         // v1.8.0 owner revision: the button is ALWAYS visible for
-        // finished matches â a predictable, independent entry point,
+        // finished matches — a predictable, independent entry point,
         // not dependent on a pre-check. The player screen it opens
         // lists ONLY verified official releases; when nothing is
         // published yet it shows the honest "not available" state
-        // with a retry â never a fake or placeholder video.
+        // with a retry — never a fake or placeholder video.
         if (match.status == "FINISHED") {
             Spacer(Modifier.height(14.dp))
             Button(
@@ -491,11 +491,11 @@ private fun OverviewTab(
     }
 }
 
-/** Â§3.2 Lineup (v1.10.3 owner decision): PURELY the lineup â the pitch
+/** §3.2 Lineup (v1.10.3 owner decision): PURELY the lineup — the pitch
  *  with both teams' players in their slots, plus the announced bench.
  *  The full match record has its OWN tab (Events) and never appears here:
  *  no badges on the pitch (gone since v1.10.2) and no events card below
- *  (moved in v1.10.3) â the lineup stands alone. */
+ *  (moved in v1.10.3) — the lineup stands alone. */
 @Composable
 private fun LineupTab(match: Match, ds: MatchStats?) {
     Column(
@@ -522,7 +522,7 @@ private fun LineupTab(match: Match, ds: MatchStats?) {
     }
 }
 
-/** Â§3.2b Events (v1.10.3 owner decision): the match record gets its OWN
+/** §3.2b Events (v1.10.3 owner decision): the match record gets its OWN
  *  tab, beside Overview / Lineup / Stats / Form, in the same card forms
  *  as every other tab. Nothing here touches the pitch, and nothing
  *  lineup-shaped is mixed into this record. */
@@ -552,7 +552,7 @@ private fun EventsTab(match: Match, ds: MatchStats?) {
     }
 }
 
-/** Â§3.3 Stats: crest header + kit-colored dual bars (honest when empty). */
+/** §3.3 Stats: crest header + kit-colored dual bars (honest when empty). */
 @Composable
 private fun StatsTab(match: Match, ds: MatchStats?) {
     Column(
@@ -580,10 +580,10 @@ private fun StatsTab(match: Match, ds: MatchStats?) {
 }
 
 /**
- * Â§3.4 Form: each team's last 5 (W/D/L + opponent + score + date) and
+ * §3.4 Form: each team's last 5 (W/D/L + opponent + score + date) and
  * next 5 (opponent + competition + full local date/kickoff). Data comes
  * from the shared 6h-cached team endpoint; a side with no data is left
- * out â never invented.
+ * out — never invented.
  */
 @Composable
 private fun FormTab(match: Match, teamMatches: Map<Long, List<Match>>) {
@@ -781,14 +781,14 @@ private fun StatsContent(match: Match, state: StatsUiState) {
 }
 
 /**
- * Spec Â§3.1 pre-match voting card, v1.10.0. Local, honest stage:
+ * Spec §3.1 pre-match voting card, v1.10.0. Local, honest stage:
  *  - open before kick-off (voteLocked is the single rule);
  *  - one pick, saved on the phone, changeable until kick-off;
- *  - quick reaction chips (Clean sheet / Goal fest / Upset alert) â the
+ *  - quick reaction chips (Clean sheet / Goal fest / Upset alert) — the
  *    user's OWN reactions, stored locally, locked at kick-off;
  *  - at full time the pick is checked against the REAL final score and
  *    the personal accuracy line counts only resolved picks;
- *  - community percentage bars need a backend â until one exists the
+ *  - community percentage bars need a backend — until one exists the
  *    honest placeholder line stays, exactly as in the vote panel.
  */
 @Composable
@@ -861,7 +861,7 @@ private fun VotingCard(match: Match) {
                 )
             }
 
-            // Reaction chips (spec Â§2.3) â before kick-off only.
+            // Reaction chips (spec §2.3) — before kick-off only.
             if (!locked) {
                 Spacer(Modifier.height(10.dp))
                 Row(
@@ -926,7 +926,7 @@ private fun VotingCard(match: Match) {
 }
 
 /**
- * Spec Â§3.1 match info â ONLY what the free model actually carries:
+ * Spec §3.1 match info — ONLY what the free model actually carries:
  * the competition and the local kick-off. Venue and referee are not in
  * the football-data.org free payload; rendering them would mean
  * inventing them, so they stay out until a provider supplies them.
@@ -998,7 +998,7 @@ private fun HeadToHeadCard(match: Match, meetings: List<Match>) {
                     "${hw}",
                     Modifier.weight(1f)
                 )
-                StatCell("â", "${draws}", Modifier.weight(1f))
+                StatCell("—", "${draws}", Modifier.weight(1f))
                 StatCell(
                     (match.awayTeam.shortName ?: match.awayTeam.name),
                     "${aw}",
@@ -1100,7 +1100,7 @@ private fun EventsCard(match: Match, ds: MatchStats) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(8.dp))
-            // v1.9.0 (spec Â§4.1): the separate dot timeline is GONE â the
+            // v1.9.0 (spec §4.1): the separate dot timeline is GONE — the
             // unified pitch in the lineups card carries the visual story
             // (badges with minutes above the players themselves). This list
             // stays as the accessible, full-detail record of the match.
@@ -1159,7 +1159,7 @@ private fun EventRow(match: Match, e: StatsEvent) {
             }
             e.other?.let {
                 Text(
-                    if (e.kind == "sub") "â $it" else "($it)",
+                    if (e.kind == "sub") "→ $it" else "($it)",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -1193,8 +1193,8 @@ private fun CardChip(color: Color) {
 
 @Composable
 private fun StatsBarsCard(match: Match, ds: MatchStats) {
-    // v1.9.0 (spec Â§5): crest + name comparison header above the bars, and
-    // stat NUMBERS lifted to WCAG-readable tones â a dark kit on a dark
+    // v1.9.0 (spec §5): crest + name comparison header above the bars, and
+    // stat NUMBERS lifted to WCAG-readable tones — a dark kit on a dark
     // theme (or a white kit on light) would be unreadable otherwise.
     // Bars keep the raw kit colors.
     val dark = isSystemInDarkTheme()
@@ -1214,7 +1214,7 @@ private fun StatsBarsCard(match: Match, ds: MatchStats) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(10.dp))
-            // Spec Â§5: Home crest + short name | score/status | Away.
+            // Spec §5: Home crest + short name | score/status | Away.
             Row(
                 Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -1336,9 +1336,9 @@ private data class PlayerSpot(
     val events: List<StatsEvent>
 )
 
-// v1.10.2 pitch slot geometry â the pitch is the PURE lineup: every
+// v1.10.2 pitch slot geometry — the pitch is the PURE lineup: every
 // player draws inside a FIXED-size slot centered on the formation anchor
-// (jersey + surname), and NOTHING else renders on the pitch â the owner
+// (jersey + surname), and NOTHING else renders on the pitch — the owner
 // reported event badges as interference twice, so v1.10.2 removes them
 // from the pitch entirely: no badge can collide with a player that does
 // not exist. The whole event record lives in the Match events card below.
@@ -1348,10 +1348,10 @@ private val JERSEY_CENTER_Y = 11.dp
 
 @Composable
 private fun LineupsSection(match: Match, ds: MatchStats) {
-    // v1.9.0 (spec Â§4): ONE unified pitch â home top half, away bottom half,
+    // v1.9.0 (spec §4): ONE unified pitch — home top half, away bottom half,
     // badges in each player's reserved zone, subs on their own card, tap any
     // player for the max-info sheet. Rendered ONLY when both XIs are complete
-    // (11 starters each, formation rows sum to 10 outfield players) â
+    // (11 starters each, formation rows sum to 10 outfield players) —
     // anything less falls back to the text list; positions are NEVER invented
     // (no-fake rule).
     val pitchable = ds.lineups.size == 2 && ds.lineups.all { lu ->
@@ -1366,8 +1366,8 @@ private fun LineupsSection(match: Match, ds: MatchStats) {
         )
         Spacer(Modifier.height(12.dp))
         if (pitchable) {
-            // v1.10.1 (owner fix): the pitch stands ALONE â full tab width,
-            // no card chrome stealing 32dp of it â so the lineups genuinely
+            // v1.10.1 (owner fix): the pitch stands ALONE — full tab width,
+            // no card chrome stealing 32dp of it — so the lineups genuinely
             // occupy the page. The match events get their own card below.
             UnifiedPitch(
                 match = match,
@@ -1408,7 +1408,7 @@ private fun TeamAnchor(team: Team, lu: StatsLineup) {
         )
         Spacer(Modifier.width(8.dp))
         Text(
-            listOfNotNull(lu.formation, lu.coach).joinToString("  â¢  "),
+            listOfNotNull(lu.formation, lu.coach).joinToString("  •  "),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
@@ -1418,16 +1418,16 @@ private fun TeamAnchor(team: Team, lu: StatsLineup) {
 }
 
 /**
- * The all-in-one pitch (spec Â§4.1): vertical, home occupying the TOP half
+ * The all-in-one pitch (spec §4.1): vertical, home occupying the TOP half
  * and away the BOTTOM half so both teams face each other across the
  * halfway line. Positions come from the formation rows mapped onto the
- * provider's GK-first starter order â the same verified mapping as v1.8.0.
+ * provider's GK-first starter order — the same verified mapping as v1.8.0.
  * The pitch is forced LTR: a mirrored pitch would lie about the game.
  *
  * v1.10.1 (owner fix): the pitch is the spec's full-height 620dp surface
  * (it scrolls with the tab instead of squeezing both XIs into ~400dp), it
- * stands alone without card chrome, and it carries real pitch MARKINGS â
- * halfway line, center circle, penalty and goal boxes â which are drawing,
+ * stands alone without card chrome, and it carries real pitch MARKINGS —
+ * halfway line, center circle, penalty and goal boxes — which are drawing,
  * not data, so the no-fake rule is untouched.
  */
 @Composable
@@ -1512,7 +1512,7 @@ private fun UnifiedPitch(
     BenchStrip(match, ds)
 }
 
-/** One team's players on the pitch, placed by formation rows (pure lineup â
+/** One team's players on the pitch, placed by formation rows (pure lineup —
  *  the `events` feed only enriches the tap-sheet, nothing renders here). */
 @Composable
 private fun BoxScope.PitchTeam(
@@ -1549,7 +1549,7 @@ private fun BoxScope.PitchTeam(
                 posKey = positionLabel(rows, idx),
                 events = mine
             )
-            // v1.10.2: the player node is the whole story on the pitch â
+            // v1.10.2: the player node is the whole story on the pitch —
             // jersey, number, surname. Events live in their own section.
             PlayerNode(
                 p = p,
@@ -1565,9 +1565,9 @@ private fun BoxScope.PitchTeam(
 }
 
 /**
- * One player slot (v1.10.2): FIXED 64Ã40dp so every jersey in a row sits
+ * One player slot (v1.10.2): FIXED 64×40dp so every jersey in a row sits
  * at the same height and the same spacing. Inside: the jersey circle with
- * the shirt number and the surname below. Nothing else â no badges, no
+ * the shirt number and the surname below. Nothing else — no badges, no
  * pills (owner decision: the lineup must be independent of the match
  * events). Tap opens the max-info sheet.
  */
@@ -1591,7 +1591,7 @@ private fun PlayerNode(
         ) {
             Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
                 Text(
-                    p.number ?: "Â·",
+                    p.number ?: "·",
                     color = Color.White,
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = 10.sp,
@@ -1614,12 +1614,12 @@ private fun PlayerNode(
 }
 
 /**
- * Substitutions card (spec Â§4.2) â v1.10.2 owner fix: "no substitutes for
+ * Substitutions card (spec §4.2) — v1.10.2 owner fix: "no substitutes for
  * the upper team". The old bench strip rendered two UNLABELED columns fed
  * only by substitution events, so the upper team's players read as part
  * of the lower team's block (and vanished entirely when the provider sent
- * no sub events). Now each team gets its own LABELLED column â crest +
- * short name â listing the ANNOUNCED BENCH (real names from the provider
+ * no sub events). Now each team gets its own LABELLED column — crest +
+ * short name — listing the ANNOUNCED BENCH (real names from the provider
  * roster), and a player who actually came on carries the minute of their
  * entry. The card shows when at least one bench exists; nothing invented.
  */
@@ -1676,7 +1676,7 @@ private fun BenchTeamHeader(team: Team) {
 private fun BenchRow(row: Pair<StatsPlayer, String?>) {
     val (p, minute) = row
     Text(
-        if (minute != null) "â¬ ${minute}'  ${p.name}" else p.name,
+        if (minute != null) "⬆ ${minute}'  ${p.name}" else p.name,
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 1,
@@ -1686,7 +1686,7 @@ private fun BenchRow(row: Pair<StatsPlayer, String?>) {
 }
 
 /**
- * Player max-info sheet (spec Â§4.3) â every field we ACTUALLY have from
+ * Player max-info sheet (spec §4.3) — every field we ACTUALLY have from
  * the free providers: identity (number, name, team, formation-derived
  * position group) and this match's real events. Photos, ages and career
  * bios are premium-API fields; when a richer plan is connected they
@@ -1708,12 +1708,12 @@ private fun PlayerSheet(spot: PlayerSpot, match: Match, onDismiss: () -> Unit) {
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(
-                        "#${spot.player.number ?: "Â·"}  ${spot.player.name}",
+                        "#${spot.player.number ?: "·"}  ${spot.player.name}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "${team.shortName ?: team.name}  â¢  " +
+                        "${team.shortName ?: team.name}  •  " +
                             stringResource(positionString(spot.posKey)),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1786,7 +1786,7 @@ private fun SheetEventRow(e: StatsEvent) {
             }
             e.other?.let {
                 Text(
-                    if (e.kind == "sub") "â $it" else "($it)",
+                    if (e.kind == "sub") "→ $it" else "($it)",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -1829,7 +1829,7 @@ private fun LineupTextColumn(lu: StatsLineup, modifier: Modifier = Modifier) {
         lu.starters.forEach { p ->
             Row(Modifier.padding(vertical = 2.dp)) {
                 Text(
-                    p.number ?: "Â·",
+                    p.number ?: "·",
                     Modifier.width(20.dp),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
