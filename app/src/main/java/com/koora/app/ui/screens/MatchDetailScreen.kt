@@ -195,7 +195,7 @@ class MatchDetailViewModel : ViewModel() {
 fun MatchDetailScreen(
     matchId: Long,
     onBack: () -> Unit,
-    onWatchHighlights: (home: String, away: String) -> Unit,
+    onWatchHighlights: (match: Match) -> Unit,
     vm: MatchDetailViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -449,7 +449,7 @@ fun MatchDetailScreen(
 private fun OverviewTab(
     match: Match,
     state: StatsUiState,
-    onWatchHighlights: (home: String, away: String) -> Unit
+    onWatchHighlights: (match: Match) -> Unit
 ) {
     Column(
         Modifier
@@ -472,7 +472,7 @@ private fun OverviewTab(
         if (match.status == "FINISHED") {
             Spacer(Modifier.height(14.dp))
             Button(
-                onClick = { onWatchHighlights(match.homeTeam.name, match.awayTeam.name) }
+                onClick = { onWatchHighlights(match) }
             ) {
                 Icon(Icons.Filled.PlayCircle, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
