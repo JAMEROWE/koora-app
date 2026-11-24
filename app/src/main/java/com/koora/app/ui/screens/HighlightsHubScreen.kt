@@ -1,6 +1,7 @@
 package com.koora.app.ui.screens
 
 import android.text.format.DateUtils
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,6 +36,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.koora.app.R
 import com.koora.app.ads.AdBanner
 import com.koora.app.data.MatchRepository
@@ -55,13 +60,13 @@ import java.util.Locale
 import java.util.TimeZone
 
 /*
- * HIGHLIGHTS TAB (v1.8.0) — the independent entry point the owner asked
+ * HIGHLIGHTS TAB (v1.8.0) â the independent entry point the owner asked
  * for: official released highlight videos, discoverable without opening
  * any match page. The list contains ONLY matches whose official video is
  * actually out (paired from the verified league channels' own feeds by
- * HighlightsHub) — a fixture without a release never appears, and a
+ * HighlightsHub) â a fixture without a release never appears, and a
  * release without a known fixture never appears either. Empty tab =
- * nothing released yet, with a retry — never a placeholder.
+ * nothing released yet, with a retry â never a placeholder.
  *
  * Data cost: the fixture list reuses the SAME shared window cache as the
  * Live and Results tabs (identical keys = zero extra football-data.org
@@ -79,7 +84,7 @@ class HighlightsHubViewModel : ViewModel() {
         viewModelScope.launch {
             try {
                 val now = System.currentTimeMillis()
-                // Exactly the Live/Results window (v1.9.0: ..day after) —
+                // Exactly the Live/Results window (v1.9.0: ..day after) â
                 // shared per-league cache, zero duplicate calls.
                 val fixtures = MatchRepository.matchesWindow(
                     localDayKeyAt(now, -6), localDayKeyAt(now, 2)
@@ -87,7 +92,7 @@ class HighlightsHubViewModel : ViewModel() {
                 rows = HighlightsHub.resolve(context, fixtures)
             } catch (_: Exception) {
                 // Offline/failure: keep the previous rows (they are already
-                // verified real data); an empty list stays empty — never
+                // verified real data); an empty list stays empty â never
                 // fake rows, per the no-fake rule.
             }
             loading = false
@@ -113,7 +118,7 @@ fun HighlightsHubScreen(
         TopAppBar(
             title = { Text(stringResource(R.string.tab_highlights)) },
             actions = {
-                // v1.9.0 (spec §1.1): Settings gear top-right.
+                // v1.9.0 (spec Â§1.1): Settings gear top-right.
                 IconButton(onClick = onOpenSettings) {
                     Icon(
                         Icons.Filled.Settings,
@@ -129,7 +134,7 @@ fun HighlightsHubScreen(
             }
         )
 
-        // Permanent attribution under the title (roadmap §3.4, EN/FR/AR).
+        // Permanent attribution under the title (roadmap Â§3.4, EN/FR/AR).
         Text(
             stringResource(R.string.highlights_attribution),
             Modifier.padding(horizontal = 16.dp),
@@ -172,35 +177,50 @@ fun HighlightsHubScreen(
 @Composable
 private fun HubRow(row: HighlightsHub.Row, onWatch: (String, String) -> Unit) {
     val m = row.match
-    Column(
+    // Thumbnail card: the video's own YouTube thumbnail (no media cached,
+    // image only), the match line, then its source badges.
+    Row(
         Modifier
             .fillMaxWidth()
             .clickable { onWatch(m.homeTeam.name, m.awayTeam.name) }
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            "${m.homeTeam.name}  ${scoreLabel(m)}  ${m.awayTeam.name}",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+        AsyncImage(
+            model = "https://i.ytimg.com/vi/${row.video.videoId}/hqdefault.jpg",
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(width = 112.dp, height = 63.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         )
-        Spacer(Modifier.height(6.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            m.competition?.name?.takeIf { it.isNotBlank() }?.let {
-                HubBadge(it)
-                Spacer(Modifier.width(6.dp))
-            }
-            row.video.channel.takeIf { it.isNotBlank() }?.let {
-                HubBadge(it, soft = true)
-                Spacer(Modifier.width(8.dp))
-            }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
             Text(
-                relativeReleaseTime(row.video.published),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
+                "${m.homeTeam.name}  ${scoreLabel(m)}  ${m.awayTeam.name}",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                m.competition?.name?.takeIf { it.isNotBlank() }?.let {
+                    HubBadge(it)
+                    Spacer(Modifier.width(6.dp))
+                }
+                row.video.channel.takeIf { it.isNotBlank() }?.let {
+                    HubBadge(it, soft = true)
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(
+                    relativeReleaseTime(row.video.published),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
         }
     }
 }
