@@ -215,24 +215,30 @@ internal fun MatchRow(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TeamBadge(
-            m.homeTeam.name,
-            m.homeTeam.tla,
-            26.dp,
-            modifier = Modifier.clickable(onClick = { onTeam(m.homeTeam) })
-        )
-        Spacer(Modifier.width(8.dp))
+        // 48dp touch target around the 26dp badge (Android accessibility
+        // minimum) — the visible badge size is unchanged.
+        Box(
+            Modifier
+                .size(48.dp)
+                .clickable(onClick = { onTeam(m.homeTeam) }),
+            contentAlignment = Alignment.Center
+        ) {
+            TeamBadge(m.homeTeam.name, m.homeTeam.tla, 26.dp)
+        }
+        Spacer(Modifier.width(4.dp))
         Text(
             m.homeTeam.name,
             Modifier.weight(1.1f),
             textAlign = TextAlign.End,
-            maxLines = 1,
+            // Whole-word wrap onto two lines: full team names stay readable
+            // instead of being ellipsized against the center column.
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyMedium
         )
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.width(88.dp)
+            modifier = Modifier.width(76.dp)
         ) {
             Text(
                 scoreLabel(m),
@@ -254,17 +260,19 @@ internal fun MatchRow(
         Text(
             m.awayTeam.name,
             Modifier.weight(1.1f),
-            maxLines = 1,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyMedium
         )
-        Spacer(Modifier.width(8.dp))
-        TeamBadge(
-            m.awayTeam.name,
-            m.awayTeam.tla,
-            26.dp,
-            modifier = Modifier.clickable(onClick = { onTeam(m.awayTeam) })
-        )
+        Spacer(Modifier.width(4.dp))
+        Box(
+            Modifier
+                .size(48.dp)
+                .clickable(onClick = { onTeam(m.awayTeam) }),
+            contentAlignment = Alignment.Center
+        ) {
+            TeamBadge(m.awayTeam.name, m.awayTeam.tla, 26.dp)
+        }
         if (showStar) {
             IconToggleButton(
                 checked = isFavorite,
