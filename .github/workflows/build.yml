@@ -5,7 +5,7 @@ name: Build Koora APK
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [ main, master, develop, "feat/matches-first-home" ]
   workflow_dispatch:
 
 jobs:
@@ -100,6 +100,16 @@ jobs:
         with:
           name: Koora-APK
           path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+
+      - name: Record rendered UI screenshots (Roborazzi)
+        run: ./gradlew recordRoborazziDebug --no-daemon --stacktrace
+
+      - name: Upload rendered UI screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: Koora-UI-Screenshots
+          path: app/build/outputs/roborazzi
           retention-days: 30
 
       # Every push to MAIN publishes/refreshes the APK on the public
