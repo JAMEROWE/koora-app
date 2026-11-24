@@ -312,15 +312,17 @@ fun HomeScreen(
                     onClick = { dayFilter = 2 },
                     label = { Text(stringResource(R.string.day_after), maxLines = 1) }
                 )
-                // Results: one tap to recent finished matches, no date
-                // picking (owner request, replaces the calendar button).
-                FilterChip(
-                    selected = dayFilter == 4,
-                    onClick = { dayFilter = 4 },
-                    label = { Text(stringResource(R.string.day_results), maxLines = 1) },
-                    modifier = Modifier.testTag("results_chip")
-                )
             }
+            // Results: one tap to recent finished matches, no date
+            // picking (owner request, replaces the calendar button).
+            // Pinned AFTER the scrollable day chips so it never scrolls
+            // out of reach, same pattern as the old pinned calendar slot.
+            FilterChip(
+                selected = dayFilter == 4,
+                onClick = { dayFilter = 4 },
+                label = { Text(stringResource(R.string.day_results), maxLines = 1) },
+                modifier = Modifier.testTag("results_chip")
+            )
             }
         }
 
