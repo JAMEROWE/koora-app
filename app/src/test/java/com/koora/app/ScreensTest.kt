@@ -20,7 +20,7 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 /**
- * v1.5.0 SCREEN TESTS â boots the new surfaces headlessly (Robolectric):
+ * v1.5.0 SCREEN TESTS — boots the new surfaces headlessly (Robolectric):
  *  - the in-app article reader (news tap must stay INSIDE the app),
  *  - the in-app highlights player,
  *  - the match detail deep-stats cards (events / bars / lineups).
@@ -90,7 +90,7 @@ class ScreensTest {
                 )
             }
         }
-        // v1.10.0 (spec Â§3): the detail screen opens on OVERVIEW (voting,
+        // v1.10.0 (spec §3): the detail screen opens on OVERVIEW (voting,
         // match info, H2H); v1.10.3 (owner decision): the lineup tab is
         // PURELY the lineup, the match record has its OWN events tab, and
         // the kit-colored bars live on the STATS tab.
@@ -99,7 +99,7 @@ class ScreensTest {
                 .fetchSemanticsNodes().isNotEmpty()
         }
         rule.onNodeWithText(activityString(R.string.detail_lineup)).performClick()
-        // v1.10.3: the LINEUP tab is purely the lineup â the pitch renders
+        // v1.10.3: the LINEUP tab is purely the lineup — the pitch renders
         // surnames ("Sbai"); the full-name rows moved with the record to
         // the EVENTS tab, so wait for the formation instead.
         rule.waitUntil(timeoutMillis = 10_000) {
@@ -110,7 +110,7 @@ class ScreensTest {
         // pitch, so assert presence via onAllNodesWithText, not uniqueness.)
         rule.onAllNodesWithText("Sbai", substring = true)[0].assertExists()
         // v1.9.0: the formation renders inside the team anchor together
-        // with the coach ("4-3-3  â¢  J. Sektioui"), so match by substring.
+        // with the coach ("4-3-3  •  J. Sektioui"), so match by substring.
         rule.onAllNodesWithText("4-3-3", substring = true)[0].assertExists()
         // v1.10.3: the full match record lives on the EVENTS tab.
         rule.onNodeWithText(activityString(R.string.detail_events)).performClick()
