@@ -629,7 +629,8 @@ private fun LazyListScope.dayBlock(
                 count = sec.matches.size,
                 live = live,
                 expanded = expanded,
-                onToggle = { sectionExpanded[key] = !expanded }
+                onToggle = { sectionExpanded[key] = !expanded },
+                code = sec.code
             )
         }
         if (expanded) {
