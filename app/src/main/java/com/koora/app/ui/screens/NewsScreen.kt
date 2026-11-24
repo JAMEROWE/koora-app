@@ -152,7 +152,7 @@ fun NewsScreen(
 }
 
 @Composable
-private fun NewsRow(item: NewsItem, onClick: () -> Unit) {
+internal fun NewsRow(item: NewsItem, onClick: () -> Unit) {
     // Distinct story cards (owner review: stories looked alike): a tonal
     // card per story with a colored accent bar keyed to its source.
     val accents = listOf(
