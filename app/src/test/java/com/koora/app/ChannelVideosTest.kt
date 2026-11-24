@@ -117,9 +117,11 @@ class ChannelVideosTest {
         val now = 1_800_000_000_000L
         val html = page(lockupWithAge("AbCdEf12345", "A 2-1 B | HIGHLIGHTS", "3d ago", "3 days ago"))
         val e = extractChannelVideos(html, nowMs = now).single()
-        // label wins; latest plausible publish = now minus the minimum age
+        // label wins; latest plausible publish = now minus the minimum age,
+        // earliest plausible = now minus the maximum age ("3 days" floors to < 4)
         assertEquals("3 days ago", e.published)
         assertEquals(now - 3 * 86_400_000L, e.publishedAtMs)
+        assertEquals(now - 4 * 86_400_000L, e.publishedAtEarliestMs)
     }
 
     @Test
@@ -129,6 +131,7 @@ class ChannelVideosTest {
         val e = extractChannelVideos(html, nowMs = now).single()
         assertEquals("8h ago", e.published)
         assertEquals(now - 8 * 3_600_000L, e.publishedAtMs)
+        assertEquals(now - 9 * 3_600_000L, e.publishedAtEarliestMs)
     }
 
     @Test
@@ -138,6 +141,7 @@ class ChannelVideosTest {
         val e = extractChannelVideos(html, nowMs = now).single()
         assertEquals("", e.published)
         assertEquals(0L, e.publishedAtMs)
+        assertEquals(0L, e.publishedAtEarliestMs)
     }
 
     @Test
