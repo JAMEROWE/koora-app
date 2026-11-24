@@ -28,7 +28,7 @@ android {
             "FOOTBALL_DATA_TOKEN",
             "\"${localProps.getProperty("FOOTBALL_DATA_TOKEN") ?: ""}\""
         )
-        // v1.6.1: API-Football free key (api-football.com) — adds the cups the
+        // v1.6.1: API-Football free key (api-football.com) â adds the cups the
         // football-data.org free tier gates (Copa del Rey, FA Cup, Coppa Italia,
         // DFB-Pokal, Coupe de France, Europa/Conference League) plus Botola Pro,
         // and powers the deep match stats (events + lineups).
@@ -38,9 +38,9 @@ android {
             "API_FOOTBALL_KEY",
             "\"${localProps.getProperty("API_FOOTBALL_KEY") ?: ""}\""
         )
-        // v1.7.0: PitchAPI free key (pitchapi.dev) — adds the attractive
+        // v1.7.0: PitchAPI free key (pitchapi.dev) â adds the attractive
         // leagues football-data.org does not cover (Europa/Conference
-        // League, Saudi Pro League, Süper Lig, Argentina, Liga MX, MLS,
+        // League, Saudi Pro League, SÃ¼per Lig, Argentina, Liga MX, MLS,
         // Scotland, Belgium, J1, K1). Empty = the feature sleeps silently.
         buildConfigField(
             "String",
@@ -48,7 +48,7 @@ android {
             "\"${localProps.getProperty("PITCH_API_KEY") ?: ""}\""
         )
         // Ad unit IDs default to Google's PUBLIC TEST units. Set real ones in
-        // local.properties (or a GitHub secret -> local.properties) later — zero code change.
+        // local.properties (or a GitHub secret -> local.properties) later â zero code change.
         buildConfigField(
             "String",
             "AD_UNIT_BANNER",
@@ -77,7 +77,7 @@ android {
         create("release") {
             // Stable self-signed key, kept OUT of git: untracked locally and
             // restored in CI from the encrypted KOORA_KEYSTORE secret, so
-            // EVERY build signs with the SAME signature — new versions
+            // EVERY build signs with the SAME signature â new versions
             // install over old ones without uninstalling.
             val ks = rootProject.file("keystore/koora-release.keystore")
             if (ks.exists()) {
@@ -104,7 +104,7 @@ android {
 
     buildTypes {
         release {
-            // R8/minify stays OFF for now — it needs ProGuard rules for
+            // R8/minify stays OFF for now â it needs ProGuard rules for
             // Retrofit/Gson/ads. Re-enable together with those rules before
             // the Play Store release.
             isMinifyEnabled = false
@@ -130,7 +130,7 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
-    // v1.10.1: androidx.browser (Chrome Custom Tabs) REMOVED — the owner
+    // v1.10.1: androidx.browser (Chrome Custom Tabs) REMOVED â the owner
     // report showed the in-app tab still lands on youtube.com (cookie
     // walls, sign-in prompts; external browser when no provider exists).
     // The official embed is the only player; the YouTube-website escape
@@ -149,12 +149,13 @@ dependencies {
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp.logging)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.coil.compose)
     implementation(libs.play.services.ads)
     implementation(libs.user.messaging.platform)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     // Internal testing: Robolectric boots the REAL app (Activity + Compose UI)
-    // on the JVM in CI — if startup ever crashes, the build fails.
+    // on the JVM in CI â if startup ever crashes, the build fails.
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
