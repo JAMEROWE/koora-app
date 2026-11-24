@@ -13,6 +13,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.text.Normalizer
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 import java.util.concurrent.ConcurrentHashMap
 
 /*
@@ -179,7 +182,15 @@ data class YtEntry(
     val title: String,
     val videoId: String,
     val published: String,
-    val channel: String = ""
+    val channel: String = "",
+    /**
+     * Latest plausible publish instant (epoch ms), 0 = unknown. Channel
+     * grid entries carry a fuzzy relative text ("3 days ago"), so this is
+     * the LATEST time the text still allows (now minus the minimum age);
+     * Data API entries carry the exact ISO publish stamp. Pairing treats
+     * 0 as unverifiable and refuses the match.
+     */
+    val publishedAtMs: Long = 0L
 )
 
 /**
@@ -320,13 +331,36 @@ object HighlightsHub {
 
     /**
      * Pure pairing rule: the feed entry must name BOTH teams of one
-     * fixture (token match, same as the per-fixture tier). [fixtures] are
-     * sorted newest-first, so a rematch window pairs with the latest.
+     * fixture (token match, same as the per-fixture tier) AND be grounded
+     * in time and score (owner report 2026-11-24: a Liverpool 4-0 row
+     * surfaced with the thumbnail of an OLDER 1-2 meeting — a recently
+     * re-released classic paired by name alone):
+     *
+     *  - PUBLISH WINDOW: an entry pairs only when its publish instant is
+     *    demonstrably compatible with the fixture's kick-off — not before
+     *    the meeting existed (throwbacks, previews) and not long after
+     *    (post-match shows). Unknown publish time is NOT a verified
+     *    match and never pairs: the no-fake rule cuts both ways;
+     *  - SCORE DISAGREEMENT: when the title itself carries a scoreline
+     *    that contradicts the fixture's recorded score, the entry is
+     *    another meeting's video and is rejected. A title without a
+     *    scoreline proves nothing either way, so it falls back to the
+     *    publish window alone.
+     *
+     * [fixtures] are sorted newest-first, so between two compatible
+     * meetings the latest still wins — but a video released before the
+     * REMATCH existed now pairs with the meeting it actually documents.
      */
     internal fun pairWithFixture(entry: YtEntry, fixtures: List<Match>): Pair<YtEntry, Match>? {
         if (entry.videoId.isBlank()) return null
         val m = fixtures.firstOrNull { f ->
-            titleMatches(entry.title, f.homeTeam.name) && titleMatches(entry.title, f.awayTeam.name)
+            titleMatches(entry.title, f.homeTeam.name) &&
+                titleMatches(entry.title, f.awayTeam.name) &&
+                publishWindowAllows(entry.publishedAtMs, f.utcDate) &&
+                !titleScoreDisagrees(
+                    entry.title, f.homeTeam.name, f.awayTeam.name,
+                    f.score.fullTime?.home, f.score.fullTime?.away
+                )
         } ?: return null
         return entry to m
     }
@@ -364,7 +398,11 @@ private fun viaDataApi(home: String, away: String): List<YtEntry>? {
         "?part=snippet,status,contentDetails&id=${ids.joinToString(",")}" +
         "&key=${BuildConfig.YOUTUBE_API_KEY}"
     val detailText = httpGet(detailUrl) ?: return null
-    data class Snip(val channelId: String? = null, val channelTitle: String? = null)
+    data class Snip(
+        val channelId: String? = null,
+        val channelTitle: String? = null,
+        val publishedAt: String? = null
+    )
     data class St(
         val uploadStatus: String? = null,
         val privacyStatus: String? = null,
@@ -400,8 +438,9 @@ private fun viaDataApi(home: String, away: String): List<YtEntry>? {
             YtEntry(
                 title = "$home vs $away — highlights",
                 videoId = v.id ?: "",
-                published = "",
-                channel = v.snippet?.channelTitle ?: ""
+                published = v.snippet?.publishedAt ?: "",
+                channel = v.snippet?.channelTitle ?: "",
+                publishedAtMs = isoUtcMs(v.snippet?.publishedAt) ?: 0L
             )
         }
         ?.filter { it.videoId.isNotBlank() && it.title.isNotBlank() }
@@ -568,7 +607,7 @@ private val VIDEO_ID_SHAPE = Regex("^[A-Za-z0-9_-]{11}$")
  * playlists) carry contentIds that do not match the 11-char video shape
  * and are skipped. Pure, tested.
  */
-internal fun extractChannelVideos(html: String): List<YtEntry> {
+internal fun extractChannelVideos(html: String, nowMs: Long = System.currentTimeMillis()): List<YtEntry> {
     val json = ytInitialDataPatterns.firstNotNullOfOrNull { it.find(html)?.groupValues?.get(1) }
         ?: return emptyList()
     val root = runCatching { Gson().fromJson(json, Map::class.java) }.getOrNull()
@@ -586,9 +625,162 @@ internal fun extractChannelVideos(html: String): List<YtEntry> {
             ?.get("title") as? Map<*, *>)
             ?.get("content") as? String
         if (title.isNullOrBlank()) continue
-        out += YtEntry(title.trim(), id, "")
+        val (agoText, ageMs) = lockupPublishAge(lk)
+        out += YtEntry(
+            title.trim(), id, agoText ?: "",
+            publishedAtMs = ageMs?.let { nowMs - it } ?: 0L
+        )
     }
     return out
+}
+
+/**
+ * The grid's metadata row carries view counts and a relative publish
+ * text; the accessibility label ("3 days ago") disambiguates the compact
+ * content ("3d ago"), so it wins when both exist. Verified against the
+ * live lockupViewModel shape on 2026-11-24.
+ */
+private fun lockupPublishAge(lk: Map<*, *>): Pair<String?, Long?> {
+    val metadata = (((lk["metadata"] as? Map<*, *>)
+        ?.get("lockupMetadataViewModel") as? Map<*, *>)
+        ?.get("metadata") as? Map<*, *>)
+        ?.get("contentMetadataViewModel") as? Map<*, *> ?: return null to null
+    val metadataRows = metadata["metadataRows"] as? List<*> ?: return null to null
+    var label: String? = null
+    var content: String? = null
+    for (row in metadataRows) {
+        val parts = (row as? Map<*, *>)?.get("metadataParts") as? List<*> ?: continue
+        for (part in parts) {
+            val p = part as? Map<*, *> ?: continue
+            val c = (p["text"] as? Map<*, *>)?.get("content") as? String
+            val a = p["accessibilityLabel"] as? String
+            if (label == null && a != null && relativeAgeMs(a) != null) label = a
+            if (content == null && c != null && relativeAgeMs(c) != null) content = c
+        }
+    }
+    val raw = label ?: content ?: return null to null
+    return raw to relativeAgeMs(raw)
+}
+
+// ---------------------------------------------------------------------------
+// Publish-time grounding + title score cross-check (pairing gates)
+// ---------------------------------------------------------------------------
+
+/** One shared UTC parser for ISO kick-offs/publish stamps (minSdk 24). */
+private val isoUtcParser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+    timeZone = TimeZone.getTimeZone("UTC")
+}
+
+internal fun isoUtcMs(iso: String?): Long? {
+    if (iso.isNullOrBlank()) return null
+    return runCatching { synchronized(isoUtcParser) { isoUtcParser.parse(iso)?.time } }.getOrNull()
+}
+
+private val AGO_WORD_MS = mapOf(
+    "second" to 1_000L,
+    "minute" to 60_000L,
+    "hour" to 3_600_000L,
+    "day" to 86_400_000L,
+    "week" to 7 * 86_400_000L,
+    "month" to 30 * 86_400_000L,
+    "year" to 365 * 86_400_000L
+)
+private val AGO_FULL = Regex("""(\d+)\s+(second|minute|hour|day|week|month|year)s?\s+ago""")
+private val AGO_COMPACT = Regex("""^(\d+)\s*(mo|s|m|h|d|w|y)\s+ago$""")
+private val AGO_COMPACT_MS = mapOf(
+    "s" to 1_000L,
+    "m" to 60_000L,
+    "h" to 3_600_000L,
+    "d" to 86_400_000L,
+    "w" to 7 * 86_400_000L,
+    "mo" to 30 * 86_400_000L,
+    "y" to 365 * 86_400_000L
+)
+
+/**
+ * Relative "ago" texts from YouTube's channel grid, e.g. the
+ * accessibility label "3 days ago", a "Streamed 5 hours ago" variant,
+ * or the compact content "3d ago". Returns the MINIMUM age the text
+ * guarantees ("3 days ago" means at least 3 full days), so
+ * now-minus-age is the LATEST publish instant the text still allows —
+ * the conservative bound for rejecting stale videos. Months/years use
+ * their shortest real length, keeping the bound permissive rather than
+ * falsely rejecting.
+ */
+internal fun relativeAgeMs(text: String): Long? {
+    AGO_FULL.find(text)?.let { m ->
+        val n = m.groupValues[1].toLongOrNull() ?: return null
+        return AGO_WORD_MS[m.groupValues[2]]?.let { it * n }
+    }
+    AGO_COMPACT.find(text.trim())?.let { m ->
+        val n = m.groupValues[1].toLongOrNull() ?: return null
+        return AGO_COMPACT_MS[m.groupValues[2].lowercase()]?.let { it * n }
+    }
+    return null
+}
+
+/**
+ * Official highlights appear within hours of the final whistle — never
+ * before the meeting exists (throwbacks, previews), and not days later
+ * (magazine clips that merely NAME the teams). Unknown publish time (0)
+ * or an unreadable kick-off is NOT a verified pairing and is refused.
+ */
+internal const val PUBLISH_EARLIEST_BEFORE_KICKOFF_MS = 12L * 3_600_000L
+internal const val PUBLISH_LATEST_AFTER_KICKOFF_MS = 5L * 86_400_000L
+
+internal fun publishWindowAllows(publishedAtMs: Long, fixtureUtc: String): Boolean {
+    if (publishedAtMs <= 0L) return false
+    val ko = isoUtcMs(fixtureUtc) ?: return false
+    return publishedAtMs >= ko - PUBLISH_EARLIEST_BEFORE_KICKOFF_MS &&
+        publishedAtMs <= ko + PUBLISH_LATEST_AFTER_KICKOFF_MS
+}
+
+/**
+ * First plausible scoreline in a video title ("4-0", "1 - 2"). Guards:
+ * scores above 15 are not football scores ("2025-26" season labels), and
+ * a run glued to more digits or dashes is a date fragment, not a score.
+ */
+private val SCORE_IN_TITLE =
+    Regex("""(?<![\d-])(\d{1,2})\s*[-–]\s*(\d{1,2})(?![\d-])""")
+
+internal fun titleScoreline(title: String): Pair<Int, Int>? =
+    SCORE_IN_TITLE.findAll(title)
+        .firstOrNull {
+            val a = it.groupValues[1].toIntOrNull() ?: 99
+            val b = it.groupValues[2].toIntOrNull() ?: 99
+            a <= 15 && b <= 15
+        }
+        ?.let { it.groupValues[1].toInt() to it.groupValues[2].toInt() }
+
+/**
+ * Reliable REJECTION only: true when the title carries a scoreline that
+ * contradicts the fixture's recorded score. The teams' order in the
+ * title sets the score's orientation when both are found; when it cannot
+ * be read, only the score SET can disagree. Unknown fixture scores and
+ * scoreless titles never disagree.
+ */
+internal fun titleScoreDisagrees(
+    title: String,
+    homeTeam: String,
+    awayTeam: String,
+    homeGoals: Int?,
+    awayGoals: Int?
+): Boolean {
+    if (homeGoals == null || awayGoals == null) return false
+    val (a, b) = titleScoreline(title) ?: return false
+    val lower = title.lowercase()
+    val homeIdx = tokens(homeTeam)
+        .mapNotNull { lower.indexOf(it).takeIf { i -> i >= 0 } }
+        .minOrNull() ?: -1
+    val awayIdx = tokens(awayTeam)
+        .mapNotNull { lower.indexOf(it).takeIf { i -> i >= 0 } }
+        .minOrNull() ?: -1
+    return if (homeIdx >= 0 && awayIdx >= 0 && homeIdx != awayIdx) {
+        val (th, ta) = if (homeIdx < awayIdx) a to b else b to a
+        th != homeGoals || ta != awayGoals
+    } else {
+        !((a == homeGoals && b == awayGoals) || (a == awayGoals && b == homeGoals))
+    }
 }
 
 private fun collectLockups(node: Any?, out: MutableList<Any>) {
