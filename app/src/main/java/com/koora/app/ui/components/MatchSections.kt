@@ -288,7 +288,7 @@ private fun VersusContent(m: Match, modifier: Modifier = Modifier, onTeam: (Team
         )
         Column(
             Modifier
-                .widthIn(min = 60.dp)
+                .widthIn(min = 52.dp)
                 .padding(horizontal = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -357,19 +357,29 @@ internal fun conventionalShort(name: String): String? {
 /**
  * Leading-word fallbacks built from the club's own name: the conventional
  * short (or the full name when nothing is safe to drop) minus trailing words,
- * one at a time - "Raja Club Athletic" -> "Raja", "Wydad AC" -> "Wydad",
+ * one at a time, and generic leading prefixes dropped - "Raja Club
+ * Athletic" -> "Raja", "Wydad AC" -> "Wydad", "MC Oujda" -> "Oujda",
  * "AS FAR Rabat" -> "AS FAR". Single tokens shorter than 3 letters are
  * skipped (they read as generic prefixes, not club identity), and nothing is
  * invented or appended. The TLA stays the last resort behind these, so a
  * narrow row keeps a recognizable word instead of repeating badge initials.
  */
 internal fun leadingShorts(name: String): List<String> {
+    val genericLead = setOf("MC", "AC", "AS", "FC", "CF", "SC", "RC", "UD", "US")
     val base = conventionalShort(name) ?: name
     val words = base.split(' ').filter { it.isNotBlank() }
     if (words.size < 2) return emptyList()
-    return (words.size - 1 downTo 1)
-        .map { words.take(it).joinToString(" ") }
-        .filter { it.length >= 3 }
+    val out = LinkedHashSet<String>()
+    // Drop trailing words first: "Raja Athletic" -> "Raja".
+    for (n in words.size - 1 downTo 1) out += words.take(n).joinToString(" ")
+    // Then generic leading prefixes: "MC Oujda" -> "Oujda" (and its own
+    // trailing drops, so "AS FAR Rabat" -> "FAR Rabat" -> "FAR").
+    val leadStripped = words.dropWhile { it in genericLead }
+    if (leadStripped.isNotEmpty() && leadStripped.size < words.size) {
+        out += leadStripped.joinToString(" ")
+        for (n in leadStripped.size - 1 downTo 1) out += leadStripped.take(n).joinToString(" ")
+    }
+    return out.filter { it.length >= 3 && it != base && it != name }
 }
 
 /**
