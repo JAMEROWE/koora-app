@@ -272,7 +272,12 @@ fun HomeScreen(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+            Row(
+                Modifier
+                    .weight(1f)
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
             ) {
@@ -291,7 +296,9 @@ fun HomeScreen(
                     onClick = { dayFilter = 2 },
                     label = { Text(stringResource(R.string.day_after), maxLines = 1) }
                 )
-                // Calendar: constrained to the fetched window (-6..+2 days).
+                // Calendar: pinned after the scrollable chips so large font
+                // scales never push it off screen. Constrained to the fetched
+                // window (-6..+2 days).
                 IconButton(onClick = { showDatePicker = true }) {
                     Icon(
                         Icons.Filled.CalendarMonth,
@@ -299,6 +306,7 @@ fun HomeScreen(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
             }
         }
 
