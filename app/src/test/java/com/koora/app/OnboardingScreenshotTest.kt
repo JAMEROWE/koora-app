@@ -56,6 +56,12 @@ class OnboardingScreenshotTest {
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodesWithTag("onboarding_dialog").fetchSemanticsNodes().isNotEmpty()
         }
+        // Completion and dismiss controls are pinned below the scrollable
+        // picks: both must be visible without any scrolling.
+        rule.onAllNodesWithTag("onboarding_save").fetchSemanticsNodes()
+            .also { assert(it.isNotEmpty()) { "Save button not composed" } }
+        rule.onAllNodesWithTag("onboarding_skip").fetchSemanticsNodes()
+            .also { assert(it.isNotEmpty()) { "Skip button not composed" } }
         rule.onRoot().captureRoboImage("build/outputs/roborazzi/onboarding_first_launch.png")
     }
 
