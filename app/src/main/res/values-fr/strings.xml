@@ -141,6 +141,7 @@
     <string name="onboarding_skip">Ignorer pour l\'instant</string>
     <string name="share_match">Partager le résultat</string>
     <string name="share_chooser_title">Partager via</string>
+    <string name="share_card_brand">Scores en direct, actus et résumés sur Koora</string>
     <string name="settings_fav_teams">Ligues et équipes préférées</string>
     <string name="day_results">Résultats</string>
     <string name="empty_results">Aucun match terminé au cours des 6 derniers jours.</string>
