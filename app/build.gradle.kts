@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.roborazzi)
 }
 
 // API key lives in local.properties (never committed to git)
@@ -160,5 +161,8 @@ dependencies {
     testImplementation(libs.androidx.test.junit)
     testImplementation(libs.espresso.core)
     testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.rules)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
