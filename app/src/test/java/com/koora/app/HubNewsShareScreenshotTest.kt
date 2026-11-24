@@ -1,6 +1,7 @@
 package com.koora.app
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Surface
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onRoot
@@ -69,8 +70,13 @@ class HubNewsShareScreenshotTest {
         }
         rule.setContent {
             KooraTheme(themeMode = ThemeController.DARK) {
-                Column {
-                    rows.forEach { HubRow(it) { _, _ -> } }
+                // Surface supplies the dark background + content color, as
+                // the real screen's Scaffold does; a bare Column leaves
+                // LocalContentColor black and the capture background light.
+                Surface {
+                    Column {
+                        rows.forEach { HubRow(it) { _, _ -> } }
+                    }
                 }
             }
         }
@@ -94,8 +100,10 @@ class HubNewsShareScreenshotTest {
         )
         rule.setContent {
             KooraTheme(themeMode = ThemeController.DARK) {
-                Column {
-                    items.forEach { NewsRow(it) {} }
+                Surface {
+                    Column {
+                        items.forEach { NewsRow(it) {} }
+                    }
                 }
             }
         }
