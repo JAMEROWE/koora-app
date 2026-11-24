@@ -48,8 +48,13 @@ class LabelShortenTest {
     fun leadingShortsKeepRecognizableWords() {
         assertEquals(listOf("Raja"), leadingShorts("Raja Club Athletic"))
         assertEquals(listOf("Wydad"), leadingShorts("Wydad AC"))
-        assertEquals(listOf("AS FAR"), leadingShorts("AS FAR Rabat"))
+        assertEquals(listOf("AS FAR", "FAR Rabat", "FAR"), leadingShorts("AS FAR Rabat"))
         assertEquals(listOf("Real"), leadingShorts("Real Madrid"))
+    }
+
+    @Test
+    fun leadingShortsDropGenericLeadingPrefix() {
+        assertEquals(listOf("Oujda"), leadingShorts("MC Oujda"))
     }
 
     @Test
