@@ -215,16 +215,11 @@ fun HomeScreen(
             showOnboarding = true
         }
     }
-    if (showOnboarding) {
-        OnboardingDialog(window = vm.window, onDone = {
-            showOnboarding = false
-            vm.bumpFavorites()
-        })
-    }
     // Favorite leagues/teams, re-read whenever any favorite changes.
     val favLeagueCodes = remember(vm.favsTick) { FavoriteTeamsStore.leagues(context) }
     val favTeamNames = remember(vm.favsTick) { FavoriteTeamsStore.teams(context) }
 
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize()) {
         // Slim identity banner; Settings gear + Search top-right.
         Box {
@@ -521,6 +516,14 @@ fun HomeScreen(
                 voteFor = m
             }
         )
+    }
+    // Modal overlay LAST so it draws above the feed, banners and panels.
+    if (showOnboarding) {
+        OnboardingDialog(window = vm.window, onDone = {
+            showOnboarding = false
+            vm.bumpFavorites()
+        })
+    }
     }
 }
 
