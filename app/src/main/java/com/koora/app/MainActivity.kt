@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.OndemandVideo
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material3.Icon
@@ -33,9 +32,8 @@ import com.google.android.ump.UserMessagingPlatform
 import com.koora.app.ui.screens.ArticleReader
 import com.koora.app.ui.screens.HighlightsHubScreen
 import com.koora.app.ui.screens.HighlightsScreen
-import com.koora.app.ui.screens.LiveScreen
+import com.koora.app.ui.screens.HomeScreen
 import com.koora.app.ui.screens.MatchDetailScreen
-import com.koora.app.ui.screens.MatchesScreen
 import com.koora.app.ui.screens.NewsScreen
 import com.koora.app.ui.screens.SettingsScreen
 import com.koora.app.ui.screens.StandingsScreen
@@ -82,8 +80,10 @@ private fun KooraRoot() {
     val nav = rememberNavController()
     // v1.9.0 (master spec §1): Settings LEFT the bottom bar — it is now the
     // gear icon in every top-level screen's app bar. Five single-line tabs:
+    // Matches-first home (owner-approved 24 Nov): ONE Matches tab merges the
+    // old Live and Results tabs — Today carries the live matches, past days
+    // stay reachable through the calendar. Four single-line tabs:
     val tabs = listOf(
-        TabItem("live", Icons.Filled.FiberManualRecord, R.string.tab_live),
         TabItem("matches", Icons.Filled.SportsSoccer, R.string.tab_matches),
         TabItem("standings", Icons.Filled.EmojiEvents, R.string.tab_standings),
         TabItem("highlights", Icons.Filled.OndemandVideo, R.string.tab_highlights),
@@ -133,17 +133,11 @@ private fun KooraRoot() {
     ) { padding ->
         NavHost(
             navController = nav,
-            startDestination = "live",
+            startDestination = "matches",
             modifier = Modifier.padding(padding)
         ) {
             composable("matches") {
-                MatchesScreen(
-                    onMatchClick = { id -> nav.navigate("match/$id") },
-                    onOpenSettings = openSettings
-                )
-            }
-            composable("live") {
-                LiveScreen(
+                HomeScreen(
                     onMatchClick = { id -> nav.navigate("match/$id") },
                     onOpenSettings = openSettings
                 )
