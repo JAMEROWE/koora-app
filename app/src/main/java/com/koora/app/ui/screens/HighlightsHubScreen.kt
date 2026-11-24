@@ -218,7 +218,10 @@ internal fun HubRow(row: HighlightsHub.Row, onWatch: (String, String) -> Unit) {
                     relativeReleaseTime(row.video.published),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
