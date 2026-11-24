@@ -29,7 +29,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * RENDERED UI EVIDENCE â the REAL-data rendering path (window override,
+ * RENDERED UI EVIDENCE — the REAL-data rendering path (window override,
  * no demo flag), shaped like the mix on the owner's phone: CL (9),
  * MLS (1), Scottish Premiership (2), Championship (8), Brasileiro (1).
  * Regression guard for "expanded sections show no match rows" and for
@@ -81,7 +81,7 @@ class RealDataScreenshotTest {
                 out += m(id++, "Leeds United", "Norwich City", "ELC", "Championship",
                     "TIMED", iso(0, 18))
             }
-            out += m(id++, "Flamengo", "Palmeiras", "BSA", "Campeonato Brasileiro SÃ©rie A",
+            out += m(id++, "Flamengo", "Palmeiras", "BSA", "Campeonato Brasileiro Série A",
                 "TIMED", iso(0, 21))
             // yesterday's finished matches for Results mode
             out += m(id++, "Arsenal", "Chelsea", "CL", "UEFA Champions League",
