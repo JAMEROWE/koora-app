@@ -79,7 +79,7 @@ class ShareCardScreenshotTest {
                 MatchDetailScreen(
                     matchId = match.id,
                     onBack = {},
-                    onWatchHighlights = { _, _ -> }
+                    onWatchHighlights = { }
                 )
             }
         }
