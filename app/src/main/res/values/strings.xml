@@ -130,4 +130,7 @@
     <string name="team_next">Next matches</string>
     <string name="team_recent">Recent results</string>
     <string name="team_fixtures_unavailable">Team fixtures not available.</string>
+    <string name="search_label">Search</string>
+    <string name="search_hint">Team or league</string>
+    <string name="search_none">Nothing in the loaded days matches "%1$s".</string>
 </resources>
