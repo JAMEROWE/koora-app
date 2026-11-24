@@ -1,6 +1,7 @@
 package com.koora.app
 
 import com.koora.app.ui.components.conventionalShort
+import com.koora.app.ui.components.leadingShorts
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -41,5 +42,20 @@ class LabelShortenTest {
                 assert(name.split(' ').contains(word)) { "$word is not part of $name" }
             }
         }
+    }
+
+    @Test
+    fun leadingShortsKeepRecognizableWords() {
+        assertEquals(listOf("Raja"), leadingShorts("Raja Club Athletic"))
+        assertEquals(listOf("Wydad"), leadingShorts("Wydad AC"))
+        assertEquals(listOf("AS FAR"), leadingShorts("AS FAR Rabat"))
+        assertEquals(listOf("Real"), leadingShorts("Real Madrid"))
+    }
+
+    @Test
+    fun leadingShortsSkipGenericShortPrefixes() {
+        // A lone two-letter prefix ("AS") is generic, never a club identity.
+        org.junit.Assert.assertFalse(leadingShorts("AS FAR Rabat").contains("AS"))
+        org.junit.Assert.assertTrue(leadingShorts("Wydad").isEmpty())
     }
 }
