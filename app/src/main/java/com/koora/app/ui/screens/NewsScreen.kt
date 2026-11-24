@@ -1,12 +1,15 @@
 package com.koora.app.ui.screens
 
 import android.text.format.DateUtils
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -46,9 +49,10 @@ import com.koora.app.ui.components.SkeletonList
 import com.koora.app.data.NewsItem
 import com.koora.app.data.NewsRepository
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /*
- * Football news tab — trilingual (EN / FR / AR) via the source registry.
+ * Football news tab â trilingual (EN / FR / AR) via the source registry.
  * Headlines only: title + source + region + relative time. Since v1.4.2
  * tapping opens the IN-APP ArticleReader (stays in Koora, banner keeps
  * running) instead of the browser. One failing feed never breaks the tab.
@@ -108,7 +112,7 @@ fun NewsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Spacer(Modifier.weight(1f))
-            // v1.9.0 (spec §1.1): Settings gear top-right on every top screen.
+            // v1.9.0 (spec Â§1.1): Settings gear top-right on every top screen.
             IconButton(onClick = onOpenSettings) {
                 Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.tab_settings))
             }
@@ -138,9 +142,6 @@ fun NewsScreen(
                         NewsRow(item) {
                             if (item.link.isNotBlank()) onArticleClick(item)
                         }
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                        )
                     }
                 }
             }
@@ -152,36 +153,65 @@ fun NewsScreen(
 
 @Composable
 private fun NewsRow(item: NewsItem, onClick: () -> Unit) {
-    Column(
-        Modifier
+    // Distinct story cards (owner review: stories looked alike): a tonal
+    // card per story with a colored accent bar keyed to its source.
+    val accents = listOf(
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.tertiary,
+        MaterialTheme.colorScheme.secondary,
+        MaterialTheme.colorScheme.error
+    )
+    val accent = accents[abs(item.source.hashCode()) % accents.size]
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+        modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 5.dp)
     ) {
-        Text(
-            item.title,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(Modifier.height(6.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            SourceBadge(item.source)
-            Spacer(Modifier.width(6.dp))
-            SourceBadge(item.region, soft = true)
-            Spacer(Modifier.width(8.dp))
-            Text(
-                if (item.date > 0L) {
-                    DateUtils.getRelativeTimeSpanString(
-                        item.date,
-                        System.currentTimeMillis(),
-                        DateUtils.MINUTE_IN_MILLIS
-                    ).toString()
-                } else "",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+                .clickable(onClick = onClick)
+        ) {
+            Box(
+                Modifier
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .background(accent)
             )
+            Column(
+                Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp, vertical = 12.dp)
+            ) {
+                Text(
+                    item.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SourceBadge(item.source)
+                    Spacer(Modifier.width(6.dp))
+                    SourceBadge(item.region, soft = true)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (item.date > 0L) {
+                            DateUtils.getRelativeTimeSpanString(
+                                item.date,
+                                System.currentTimeMillis(),
+                                DateUtils.MINUTE_IN_MILLIS
+                            ).toString()
+                        } else "",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+            }
         }
     }
 }
