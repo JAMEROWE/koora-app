@@ -108,7 +108,7 @@ class ChannelVideosTest {
                         {"text":{"content":"62K"},"accessibilityLabel":"62 thousand views"},
                         {"text":{"content":"$content"}$labelPart}
                     ]}
-                ]}}}}}
+                ]}}}}}}
         """
     }
 
