@@ -8,7 +8,11 @@ import com.koora.app.ui.screens.HighlightsHub
 import com.koora.app.ui.screens.YtEntry
 import com.koora.app.ui.screens.entryGroundedInFixture
 import com.koora.app.ui.screens.fixtureSeasonStart
+import com.koora.app.ui.screens.PublishTimeGrounding
+import com.koora.app.ui.screens.parseRssPublishTimes
+import com.koora.app.ui.screens.publishTimeGrounding
 import com.koora.app.ui.screens.publishWindowAllows
+import com.koora.app.ui.screens.relativeAgeIntervalMs
 import com.koora.app.ui.screens.titleScoreline
 import com.koora.app.ui.screens.titleSeasonStart
 import org.junit.Assert.assertEquals
@@ -54,7 +58,7 @@ class HighlightsHubTest {
             title = "Crystal Palace 1-0 Brentford | Premier League Highlights",
             videoId = "mV123",
             published = "2026-11-08T18:02:00Z",
-            publishedAtMs = ms("2026-11-08T18:02:00Z")
+            publishedAtMs = ms("2026-11-08T18:02:00Z"), publishedAtEarliestMs = ms("2026-11-08T18:02:00Z")
         )
         val paired = HighlightsHub.pairWithFixture(entry, listOf(palaceBrentford, arsenalChelsea))
         assertNotNull(paired)
@@ -89,7 +93,7 @@ class HighlightsHubTest {
         val older = fixture(4, "Arsenal", "Chelsea", "2026-11-08T12:00:00Z")
         val newer = fixture(5, "Chelsea", "Arsenal", "2026-11-09T20:00:00Z")
         val entry = YtEntry("Arsenal v Chelsea | Highlights", "mV126", "",
-            publishedAtMs = ms("2026-11-09T23:00:00Z"))
+            publishedAtMs = ms("2026-11-09T23:00:00Z"), publishedAtEarliestMs = ms("2026-11-09T23:00:00Z"))
         assertNull(HighlightsHub.pairWithFixture(entry, listOf(newer, older)))
     }
 
@@ -102,7 +106,7 @@ class HighlightsHubTest {
         val newer = fixture(5, "Chelsea", "Arsenal", "2026-11-09T20:00:00Z",
             Score(fullTime = ScoreDetail(home = 2, away = 2)))
         val entry = YtEntry("Chelsea 2-2 Arsenal | Highlights", "mV127", "",
-            publishedAtMs = ms("2026-11-09T23:00:00Z"))
+            publishedAtMs = ms("2026-11-09T23:00:00Z"), publishedAtEarliestMs = ms("2026-11-09T23:00:00Z"))
         val paired = HighlightsHub.pairWithFixture(entry, listOf(newer, older))
         assertEquals(5L, paired!!.second.id)
     }
@@ -116,7 +120,7 @@ class HighlightsHubTest {
         val newer = fixture(5, "Chelsea", "Arsenal", "2026-11-09T20:00:00Z",
             Score(fullTime = ScoreDetail(home = 2, away = 2)))
         val entry = YtEntry("Chelsea 2-2 Arsenal | Highlights", "mV128", "",
-            publishedAtMs = ms("2026-11-09T23:00:00Z"))
+            publishedAtMs = ms("2026-11-09T23:00:00Z"), publishedAtEarliestMs = ms("2026-11-09T23:00:00Z"))
         assertNull(HighlightsHub.pairWithFixture(entry, listOf(newer, older)))
     }
 
@@ -131,7 +135,7 @@ class HighlightsHubTest {
             "Manchester United training before Liverpool",
             "Liverpool star interview: facing Manchester United"
         ).forEachIndexed { i, title ->
-            val entry = YtEntry(title, "mV40$i", "1d ago", publishedAtMs = fresh)
+            val entry = YtEntry(title, "mV40$i", "1d ago", publishedAtMs = fresh, publishedAtEarliestMs = fresh)
             assertNull(title, HighlightsHub.pairWithFixture(entry, listOf(liverpoolManUtd)))
         }
     }
@@ -141,7 +145,7 @@ class HighlightsHubTest {
         // A genuine highlights title mentioning none of the genres passes.
         val entry = YtEntry(
             "Liverpool 4-0 Manchester United | Premier League Highlights", "mV410", "1d ago",
-            publishedAtMs = ms("2026-11-22T19:00:00Z")
+            publishedAtMs = ms("2026-11-22T19:00:00Z"), publishedAtEarliestMs = ms("2026-11-22T19:00:00Z")
         )
         assertNotNull(HighlightsHub.pairWithFixture(entry, listOf(liverpoolManUtd)))
     }
@@ -152,7 +156,7 @@ class HighlightsHubTest {
         // vs "Man City"-style titles must still pair on distinctive tokens.
         val city = fixture(6, "Manchester City", "Sunderland", "2026-11-08T17:30:00Z")
         val entry = YtEntry("Manchester City 4-0 Sunderland | Highlights", "mV127", "",
-            publishedAtMs = ms("2026-11-08T19:00:00Z"))
+            publishedAtMs = ms("2026-11-08T19:00:00Z"), publishedAtEarliestMs = ms("2026-11-08T19:00:00Z"))
         assertNotNull(HighlightsHub.pairWithFixture(entry, listOf(city)))
     }
 
@@ -170,7 +174,7 @@ class HighlightsHubTest {
         // 2025/26 meeting the day BEFORE this season's 4-0 was played.
         val entry = YtEntry(
             "Maguire's Late Heroics! | Liverpool v Manchester United 2025/26", "mV300", "1d ago",
-            publishedAtMs = ms("2026-11-21T12:00:00Z")
+            publishedAtMs = ms("2026-11-21T12:00:00Z"), publishedAtEarliestMs = ms("2026-11-21T12:00:00Z")
         )
         assertNull(HighlightsHub.pairWithFixture(entry, listOf(liverpoolManUtd)))
     }
@@ -187,7 +191,7 @@ class HighlightsHubTest {
         // A clip released ten days later is a magazine piece, not highlights.
         val entry = YtEntry(
             "Liverpool v Manchester United | The Story", "mV302", "1w ago",
-            publishedAtMs = ms("2026-12-02T16:30:00Z")
+            publishedAtMs = ms("2026-12-02T16:30:00Z"), publishedAtEarliestMs = ms("2026-12-02T16:30:00Z")
         )
         assertNull(HighlightsHub.pairWithFixture(entry, listOf(liverpoolManUtd)))
     }
@@ -198,7 +202,7 @@ class HighlightsHubTest {
         // betrays it as another meeting's video.
         val entry = YtEntry(
             "Liverpool 1-2 Manchester United | Premier League Highlights", "mV303", "1d ago",
-            publishedAtMs = ms("2026-11-22T19:00:00Z")
+            publishedAtMs = ms("2026-11-22T19:00:00Z"), publishedAtEarliestMs = ms("2026-11-22T19:00:00Z")
         )
         assertNull(HighlightsHub.pairWithFixture(entry, listOf(liverpoolManUtd)))
     }
@@ -207,7 +211,7 @@ class HighlightsHubTest {
     fun scoreAgreeingTitle_pairs() {
         val entry = YtEntry(
             "Liverpool 4-0 Manchester United | Premier League Highlights", "mV304", "1d ago",
-            publishedAtMs = ms("2026-11-22T19:00:00Z")
+            publishedAtMs = ms("2026-11-22T19:00:00Z"), publishedAtEarliestMs = ms("2026-11-22T19:00:00Z")
         )
         assertEquals(20L, HighlightsHub.pairWithFixture(entry, listOf(liverpoolManUtd))!!.second.id)
     }
@@ -218,12 +222,12 @@ class HighlightsHubTest {
         // matches, and rejected when the unswapped reading would be wrong.
         val agreeing = YtEntry(
             "Manchester United 0-4 Liverpool | Highlights", "mV305", "1d ago",
-            publishedAtMs = ms("2026-11-22T19:00:00Z")
+            publishedAtMs = ms("2026-11-22T19:00:00Z"), publishedAtEarliestMs = ms("2026-11-22T19:00:00Z")
         )
         assertNotNull(HighlightsHub.pairWithFixture(agreeing, listOf(liverpoolManUtd)))
         val disagreeing = YtEntry(
             "Manchester United 4-0 Liverpool | Highlights", "mV306", "1d ago",
-            publishedAtMs = ms("2026-11-22T19:00:00Z")
+            publishedAtMs = ms("2026-11-22T19:00:00Z"), publishedAtEarliestMs = ms("2026-11-22T19:00:00Z")
         )
         assertNull(HighlightsHub.pairWithFixture(disagreeing, listOf(liverpoolManUtd)))
     }
@@ -236,7 +240,7 @@ class HighlightsHubTest {
         // A CURRENT-season label must not false-reject the real highlights.
         val entry = YtEntry(
             "Liverpool v Manchester United 2026-27 | Extended Highlights", "mV307", "1d ago",
-            publishedAtMs = ms("2026-11-22T19:00:00Z")
+            publishedAtMs = ms("2026-11-22T19:00:00Z"), publishedAtEarliestMs = ms("2026-11-22T19:00:00Z")
         )
         assertNotNull(HighlightsHub.pairWithFixture(entry, listOf(liverpoolManUtd)))
     }
@@ -247,7 +251,7 @@ class HighlightsHubTest {
         // after the new meeting. Its own season declaration betrays it.
         val entry = YtEntry(
             "Liverpool v Manchester United 2025/26 | Classics", "mV309", "1d ago",
-            publishedAtMs = ms("2026-11-23T12:00:00Z")
+            publishedAtMs = ms("2026-11-23T12:00:00Z"), publishedAtEarliestMs = ms("2026-11-23T12:00:00Z")
         )
         assertNull(HighlightsHub.pairWithFixture(entry, listOf(liverpoolManUtd)))
     }
@@ -272,7 +276,7 @@ class HighlightsHubTest {
         val newer = fixture(31, "Chelsea", "Arsenal", "2026-11-09T20:00:00Z")
         val entry = YtEntry(
             "Arsenal v Chelsea | Highlights", "mV308", "1d ago",
-            publishedAtMs = ms("2026-11-08T18:00:00Z")
+            publishedAtMs = ms("2026-11-08T18:00:00Z"), publishedAtEarliestMs = ms("2026-11-08T18:00:00Z")
         )
         val paired = HighlightsHub.pairWithFixture(entry, listOf(newer, older))
         assertEquals(30L, paired!!.second.id)
@@ -284,11 +288,11 @@ class HighlightsHubTest {
         // fails, the verified highlight passes — same rule as the hub.
         val stale = YtEntry(
             "Maguire's Late Heroics! | Liverpool v Manchester United 2025/26", "mV420", "3d ago",
-            publishedAtMs = ms("2026-11-21T12:00:00Z")
+            publishedAtMs = ms("2026-11-21T12:00:00Z"), publishedAtEarliestMs = ms("2026-11-21T12:00:00Z")
         )
         val real = YtEntry(
             "Liverpool 4-0 Manchester United | Highlights", "mV421", "1d ago",
-            publishedAtMs = ms("2026-11-22T19:00:00Z")
+            publishedAtMs = ms("2026-11-22T19:00:00Z"), publishedAtEarliestMs = ms("2026-11-22T19:00:00Z")
         )
         val grounded = listOf(stale, real).filter {
             entryGroundedInFixture(it, "Liverpool", "Manchester United", "2026-11-22T16:30:00Z", 4, 0)
@@ -303,7 +307,113 @@ class HighlightsHubTest {
         assertTrue(publishWindowAllows(ms("2026-11-23T10:00:00Z"), ko))   // next morning
         assertTrue(!publishWindowAllows(0L, ko))                          // unknown publish
         assertTrue(!publishWindowAllows(ms("2026-11-21T12:00:00Z"), ko))  // before the meeting
+        // The old 12h pre-kickoff band is gone: a video published 90
+        // minutes BEFORE kick-off cannot contain the meeting.
+        assertTrue(!publishWindowAllows(ms("2026-11-22T15:00:00Z"), ko))
         assertTrue(!publishWindowAllows(ms("2026-11-22T19:00:00Z"), "not a date"))
+    }
+
+    // ---- fail-closed publish-time grounding (owner directive 2026-11-24) ----
+
+    private fun fuzzy(title: String, id: String, earliest: Long, latest: Long) =
+        YtEntry(title, id, "1d ago", publishedAtMs = latest, publishedAtEarliestMs = earliest)
+
+    private fun exact(title: String, id: String, at: Long) =
+        YtEntry(title, id, "", publishedAtMs = at, publishedAtEarliestMs = at)
+
+    @Test
+    fun publishTimeGrounding_intervals() {
+        val ko = "2026-11-22T16:30:00Z"
+        // exact stamps
+        assertEquals(PublishTimeGrounding.ACCEPT,
+            publishTimeGrounding(exact("t", "a", ms("2026-11-22T19:00:00Z")), ko))
+        assertEquals(PublishTimeGrounding.REJECT,
+            publishTimeGrounding(exact("t", "b", ms("2026-11-22T14:30:00Z")), ko)) // 2h pre-kickoff
+        assertEquals(PublishTimeGrounding.REJECT,
+            publishTimeGrounding(exact("t", "c", ms("2026-12-02T19:00:00Z")), ko)) // 10d after
+        // fuzzy interval fully inside the window passes without any upgrade
+        assertEquals(PublishTimeGrounding.ACCEPT,
+            publishTimeGrounding(fuzzy("t", "d", ms("2026-11-22T20:00:00Z"), ms("2026-11-22T23:00:00Z")), ko))
+        // fuzzy interval fully outside rejects
+        assertEquals(PublishTimeGrounding.REJECT,
+            publishTimeGrounding(fuzzy("t", "e", ms("2026-11-20T20:00:00Z"), ms("2026-11-21T23:00:00Z")), ko))
+        // fuzzy interval STRADDLING kick-off is uncertain: latest-plausible
+        // alone must never pass a video that could predate the meeting
+        assertEquals(PublishTimeGrounding.UNCERTAIN,
+            publishTimeGrounding(fuzzy("t", "f", ms("2026-11-22T10:00:00Z"), ms("2026-11-22T20:00:00Z")), ko))
+        // fuzzy interval straddling the window's far edge is uncertain too
+        assertEquals(PublishTimeGrounding.UNCERTAIN,
+            publishTimeGrounding(fuzzy("t", "g", ms("2026-11-27T10:00:00Z"), ms("2026-11-28T10:00:00Z")), ko))
+        // unknown earliest bound (legacy cache entry) cannot prove anything
+        assertEquals(PublishTimeGrounding.UNCERTAIN,
+            publishTimeGrounding(YtEntry("t", "h", "1d ago", publishedAtMs = ms("2026-11-22T20:00:00Z")), ko))
+        // unknown publish rejects outright
+        assertEquals(PublishTimeGrounding.REJECT,
+            publishTimeGrounding(YtEntry("t", "i", ""), ko))
+    }
+
+    @Test
+    fun straddlingFuzzyAge_neverPairs() {
+        // "1 day ago" for a match played yesterday evening: the video may
+        // be up to almost 2 days old, i.e. possibly PRE-match. Without an
+        // exact stamp the association is omitted, never guessed.
+        val straddler = fuzzy(
+            "Liverpool v Manchester United | Premier League",
+            "mV500",
+            earliest = ms("2026-11-21T18:00:00Z"),
+            latest = ms("2026-11-22T18:00:00Z")
+        )
+        assertNull(HighlightsHub.pairWithFixture(straddler, listOf(liverpoolManUtd)))
+    }
+
+    @Test
+    fun exactStamp_resolvesTheStraddle() {
+        // The SAME video upgraded by the channel RSS feed: exact stamp
+        // after kick-off pairs, exact stamp before kick-off rejects.
+        val postKickoff = exact(
+            "Liverpool v Manchester United | Premier League",
+            "mV501", ms("2026-11-22T18:12:00Z"))
+        assertNotNull(HighlightsHub.pairWithFixture(postKickoff, listOf(liverpoolManUtd)))
+        val preKickoff = exact(
+            "Liverpool v Manchester United | Premier League",
+            "mV502", ms("2026-11-22T09:00:00Z"))
+        assertNull(HighlightsHub.pairWithFixture(preKickoff, listOf(liverpoolManUtd)))
+    }
+
+    @Test
+    fun rssPublishTimes_parsed() {
+        val xml = """<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015">
+  <entry>
+    <yt:videoId>abc123def45</yt:videoId>
+    <yt:channelId>UC123</yt:channelId>
+    <title>Liverpool v Manchester United</title>
+    <published>2026-11-22T18:12:44+00:00</published>
+    <updated>2026-11-22T18:13:00+00:00</updated>
+  </entry>
+  <entry>
+    <yt:videoId>Zyx987wvu65</yt:videoId>
+    <yt:channelId>UC123</yt:channelId>
+    <title>Older upload</title>
+    <published>2026-11-20T09:00:01Z</published>
+  </entry>
+  <entry>
+    <yt:videoId>broken00000</yt:videoId>
+    <published>not a timestamp</published>
+  </entry>
+</feed>"""
+        val times = parseRssPublishTimes(xml)
+        assertEquals(2, times.size)
+        assertEquals(ms("2026-11-22T18:12:44Z"), times["abc123def45"])
+        assertEquals(ms("2026-11-20T09:00:01Z"), times["Zyx987wvu65"])
+    }
+
+    @Test
+    fun relativeAgeInterval_bounds() {
+        assertEquals(3 * 86_400_000L to 4 * 86_400_000L, relativeAgeIntervalMs("3 days ago"))
+        assertEquals(45 * 60_000L to 46 * 60_000L, relativeAgeIntervalMs("45 minutes ago"))
+        assertEquals(8 * 3_600_000L to 9 * 3_600_000L, relativeAgeIntervalMs("8h ago"))
+        assertEquals(null, relativeAgeIntervalMs("Premier League"))
     }
 
     // ---- one row per fixture (user-reported duplicate highlight) ----
