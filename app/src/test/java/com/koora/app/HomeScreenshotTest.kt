@@ -19,10 +19,10 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * RENDERED UI EVIDENCE â Roborazzi screenshots of the REAL app (MainActivity,
+ * RENDERED UI EVIDENCE — Roborazzi screenshots of the REAL app (MainActivity,
  * demo data) at phone widths, large text and Arabic RTL. The PNGs land in
  * app/build/outputs/roborazzi and are uploaded as CI artifacts, so every
- * reviewer sees exactly what a phone shows â not a hand-drawn mockup.
+ * reviewer sees exactly what a phone shows — not a hand-drawn mockup.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -86,7 +86,7 @@ class HomeScreenshotTest {
         rule.onRoot().captureRoboImage("build/outputs/roborazzi/home_today_ar_rtl.png")
     }
 
-    /** Owner's rule: Tomorrow selected shows ONLY tomorrow â no Today block. */
+    /** Owner's rule: Tomorrow selected shows ONLY tomorrow — no Today block. */
     @Test
     @Config(qualifiers = "w360dp-h800dp-night")
     fun shot05_tomorrowOnly_dark() {
