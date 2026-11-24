@@ -16,18 +16,18 @@ import java.text.Normalizer
 import java.util.concurrent.ConcurrentHashMap
 
 /*
- * OFFICIAL-HIGHLIGHT RESOLUTION â v1.10.3.
+ * OFFICIAL-HIGHLIGHT RESOLUTION — v1.10.3.
  *
  * Extracted from HighlightsScreen so the MATCH DETAIL screen can gate the
  * "Watch highlights" button on VERIFIED availability (roadmap P0):
  * the button is rendered only when a video has been confirmed, and the
- * whole section stays out of the UI tree otherwise â never a disabled
+ * whole section stays out of the UI tree otherwise — never a disabled
  * state, placeholder box or "not published yet" notice.
  *
  * THE v1.10.3 DISCOVERY REBUILD (owner report, 5th occurrence: "no
  * highlights are published yet" for matches whose videos are demonstrably
  * on YouTube). ROOT CAUSE, verified live 2026-11-13: YouTube has
- * DISCONTINUED the RSS feeds endpoint â
+ * DISCONTINUED the RSS feeds endpoint —
  * https://www.youtube.com/feeds/videos.xml?channel_id=... returns HTTP 404
  * for EVERY channel (verified: all six allowlisted league channels AND a
  * control channel), while the channel pages themselves still serve. Every
@@ -36,13 +36,13 @@ import java.util.concurrent.ConcurrentHashMap
  * process. The discovery tier now reads each OFFICIAL channel's own public
  * /videos page and extracts the video grid metadata (videoId + title) that
  * YouTube embeds in that page's ytInitialData payload. NOTE: this payload
- * is only present on the DESKTOP web shell â a mobile user-agent receives
+ * is only present on the DESKTOP web shell — a mobile user-agent receives
  * a shell without the video list, so the fetcher must send a desktop UA.
  *
- * ALLOWLIST COMPLIANCE (roadmap Â§3.2). A video is surfaced ONLY when ALL
- * of these pass â enforced by [verifyDataApiVideo] for the Data API tier:
+ * ALLOWLIST COMPLIANCE (roadmap §3.2). A video is surfaced ONLY when ALL
+ * of these pass — enforced by [verifyDataApiVideo] for the Data API tier:
  *   1. the channel is in OFFICIAL_CHANNELS or CLUB_CHANNELS (verified
- *      rights-holders â league channels and official club channels,
+ *      rights-holders — league channels and official club channels,
  *      each resolved live from its own public page on 2026-11-13)
  *   2. status.uploadStatus == "processed"
  *   3. status.privacyStatus == "public"
@@ -70,15 +70,15 @@ internal val OFFICIAL_CHANNELS: List<Pair<String, String>> = listOf(
 )
 
 /**
- * v1.10.3 â official CLUB channels, every one resolved live from its own
+ * v1.10.3 — official CLUB channels, every one resolved live from its own
  * public page and verified (title contains the club, videos page serves
  * the video grid) on 2026-11-13. Clubs not verified live are NOT listed
- * here â their fixtures still resolve through the league channel above;
+ * here — their fixtures still resolve through the league channel above;
  * we never guess a channel.
  *
  * [tokens] are the ASCII, diacritic-free fragments that identify the club
- * inside provider team names ("ACF Fiorentina", "AtlÃ©tico Madrid",
- * "1. FC KÃ¶ln"). [clubChannelsFor] requires EVERY token to appear in the
+ * inside provider team names ("ACF Fiorentina", "Atlético Madrid",
+ * "1. FC Köln"). [clubChannelsFor] requires EVERY token to appear in the
  * normalized team name, so "Manchester City FC" can never select
  * Manchester United's channel and vice versa.
  */
@@ -104,7 +104,7 @@ internal val CLUB_CHANNELS: List<ClubChannel> = listOf(
     ClubChannel("Nottingham Forest", listOf("nottingham", "forest"), "UCyAxjuAr8f_BFDGCO3Htbxw"),
     ClubChannel("Tottenham Hotspur", listOf("tottenham", "hotspur"), "UCEg25rdRZXg32iwai6N6l0w"),
     // LaLiga
-    ClubChannel("AtlÃ©tico de Madrid", listOf("atletico"), "UCuzKFwdh7z2GHcIOX_tXgxA"),
+    ClubChannel("Atlético de Madrid", listOf("atletico"), "UCuzKFwdh7z2GHcIOX_tXgxA"),
     ClubChannel("FC Barcelona", listOf("barcelona"), "UC14UlmYlSNiQCBe9Eookf_A"),
     ClubChannel("CA Osasuna", listOf("osasuna"), "UC1iCMq31GZ6Sv3qIIRhQ3Tg"),
     ClubChannel("RCD Mallorca", listOf("mallorca"), "UCpBP0bYboEZVhHvQNIw-0XA"),
@@ -139,7 +139,7 @@ internal val CLUB_CHANNELS: List<ClubChannel> = listOf(
     ClubChannel("SV Werder Bremen", listOf("bremen", "werder"), "UCdjedrfgyFQEkqbkq1DJf3w"),
     ClubChannel("Borussia Dortmund", listOf("dortmund"), "UCK8rTVgp3-MebXkmeJcQb1Q"),
     ClubChannel("SC Freiburg", listOf("freiburg"), "UC_atVJpGbIdjIa9OC6E3yJA"),
-    ClubChannel("1. FC KÃ¶ln", listOf("koln"), "UCQZhvmm636X6I5rrnLFBp1w"),
+    ClubChannel("1. FC Köln", listOf("koln"), "UCQZhvmm636X6I5rrnLFBp1w"),
     ClubChannel("RB Leipzig", listOf("leipzig"), "UCkZwB4IGoNBvRmVT2gaO4XA"),
     ClubChannel("FC St. Pauli", listOf("pauli"), "UCmjYwKDykQSA9VtqaT-OVdA"),
     ClubChannel("1. FSV Mainz 05", listOf("mainz"), "UCMT1hwsDgOEMhS2dIfD3e6A"),
@@ -183,7 +183,7 @@ data class YtEntry(
 )
 
 /**
- * Single entry point. Resolves at most once per fixture â VideoCache
+ * Single entry point. Resolves at most once per fixture — VideoCache
  * serves found videos for 24h and a fresh "nothing yet" for 45 minutes.
  */
 object HighlightsSource {
@@ -214,7 +214,7 @@ object HighlightsSource {
 }
 
 // ---------------------------------------------------------------------------
-// Tier 3 â HIGHLIGHTS HUB (v1.8.0): released videos for known fixtures
+// Tier 3 — HIGHLIGHTS HUB (v1.8.0): released videos for known fixtures
 // ---------------------------------------------------------------------------
 
 /**
@@ -223,7 +223,7 @@ object HighlightsSource {
  * app knows, by team-name matching.
  *
  * Compliance is identical to the per-fixture tier: metadata comes from the
- * allowlisted channels' own public pages, so provenance is exact â no
+ * allowlisted channels' own public pages, so provenance is exact — no
  * search results are ever opened. The Data API is deliberately NOT used
  * here (one search per fixture would burn quota; pages are 6 cached GETs).
  *
@@ -237,7 +237,7 @@ object HighlightsHub {
 
     data class Row(val match: Match, val video: YtEntry)
 
-    /** Page scan is cheap but not free â serve the list for 15 minutes. */
+    /** Page scan is cheap but not free — serve the list for 15 minutes. */
     private const val TTL_MS = 15L * 60 * 1000
 
     @Volatile private var cachedAt: Long = 0L
@@ -263,7 +263,7 @@ object HighlightsHub {
                 .flatten()
                 // page order on the videos tab is newest-release-first
                 .mapNotNull { e -> pairWithFixture(e, finished)?.let { Row(it.second, e) } }
-                // v1.10.2: hub rows are oembed-verified too â a video whose
+                // v1.10.2: hub rows are oembed-verified too — a video whose
                 // embedding YouTube refuses never seeds the player, so the
                 // detail screen's cascade starts on playable ground.
                 .let { rows ->
@@ -277,7 +277,7 @@ object HighlightsHub {
             rows.forEach { r ->
                 runCatching {
                     // Seed only when the per-fixture cache has nothing or a
-                    // fresh miss â never clobber a richer resolved list.
+                    // fresh miss — never clobber a richer resolved list.
                     val existing = VideoCache.get(context, r.match.homeTeam.name, r.match.awayTeam.name)
                     if (existing.isNullOrEmpty()) {
                         VideoCache.putFound(context, r.match.homeTeam.name, r.match.awayTeam.name, listOf(r.video))
@@ -291,13 +291,13 @@ object HighlightsHub {
     }
 
     /**
-     * One hub row per FIXTURE â fixes the user-reported duplicate where
+     * One hub row per FIXTURE — fixes the user-reported duplicate where
      * the same final surfaced twice because an official channel released
      * more than one video of it. Careful by design:
      *  - fixture identity is the provider match id, so a rematch or any
      *    different fixture between the same clubs keeps its own row;
      *    when the id is unset (0, demo/odd feeds) the fallback key is
-     *    kick-off + both team names â two different days never merge;
+     *    kick-off + both team names — two different days never merge;
      *  - every incoming row is already oembed-verified playable and the
      *    list is ordered official-channels-first, newest-release-first,
      *    so the surviving row stays a supported official source;
@@ -339,7 +339,7 @@ object HighlightsHub {
 }
 
 // ---------------------------------------------------------------------------
-// Tier 1 â YouTube Data API v3 (optional, needs the free YOUTUBE_API_KEY)
+// Tier 1 — YouTube Data API v3 (optional, needs the free YOUTUBE_API_KEY)
 // ---------------------------------------------------------------------------
 
 /**
@@ -398,7 +398,7 @@ private fun viaDataApi(home: String, away: String): List<YtEntry>? {
         .takeIf { it.isNotEmpty() }
         ?.map { v ->
             YtEntry(
-                title = "$home vs $away â highlights",
+                title = "$home vs $away — highlights",
                 videoId = v.id ?: "",
                 published = "",
                 channel = v.snippet?.channelTitle ?: ""
@@ -408,8 +408,8 @@ private fun viaDataApi(home: String, away: String): List<YtEntry>? {
 }
 
 /**
- * Pure roadmap Â§3.2 checklist. Unknown device country cannot be checked
- * against region lists â YouTube's own embed player still enforces its
+ * Pure roadmap §3.2 checklist. Unknown device country cannot be checked
+ * against region lists — YouTube's own embed player still enforces its
  * regional blocks at playback, so we err on surfacing (step 5 needs a
  * country to have meaning).
  */
@@ -446,7 +446,7 @@ internal fun deviceCountry(): String = runCatching {
 }.getOrDefault("")
 
 // ---------------------------------------------------------------------------
-// Tier 2 â allowlisted channels' own video pages (no key, provenance exact)
+// Tier 2 — allowlisted channels' own video pages (no key, provenance exact)
 // ---------------------------------------------------------------------------
 
 private suspend fun viaOfficialChannels(home: String, away: String): List<YtEntry> =
@@ -467,7 +467,7 @@ private suspend fun viaOfficialChannels(home: String, away: String): List<YtEntr
             .distinctBy { it.videoId }
             // v1.10.2 (owner report: error 152-4 at playback): every
             // candidate is verified against YouTube's public oEmbed
-            // endpoint BEFORE it reaches the player â a video whose
+            // endpoint BEFORE it reaches the player — a video whose
             // embedding YouTube refuses never becomes a candidate at all.
             // Zero quota, no key, fail-open on network errors.
             .take(EMBED_CHECK_CAP)
@@ -478,19 +478,19 @@ private suspend fun viaOfficialChannels(home: String, away: String): List<YtEntr
             }
     }
 
-/** Bound on oembed checks per resolve â title matches are few, but never
+/** Bound on oembed checks per resolve — title matches are few, but never
  *  more than this many network probes per fixture. */
 private const val EMBED_CHECK_CAP = 8
 
 /**
- * v1.10.2 â YouTube's public oEmbed endpoint as the free embeddability
+ * v1.10.2 — YouTube's public oEmbed endpoint as the free embeddability
  * oracle: it serves metadata (HTTP 200) for videos that may be embedded
  * and refuses (HTTP 401/403/404) exactly when the owner disabled
  * embedding or the video is gone. Catching those candidates here means
  * the player only ever sees videos YouTube is WILLING to embed.
  *
  * Network failure returns TRUE (fail-open): a temporary oembed outage
- * must not hide playable highlights â and if the video really is blocked,
+ * must not hide playable highlights — and if the video really is blocked,
  * the player's own error bridge + candidate cascade handle it honestly.
  * Pure decision logic: [oembedStatusAllows]. Tested.
  */
@@ -517,10 +517,10 @@ private fun oembedAllows(videoId: String): Boolean {
 }
 
 /**
- * v1.10.3 â the channel-page cache. A channel's /videos page is
+ * v1.10.3 — the channel-page cache. A channel's /videos page is
  * fixture-INDEPENDENT, so every fetch is memoized app-wide for 15 minutes:
  * the Hub scan, a match-detail resolve and a player retry all share one
- * copy. Only non-empty lists are cached â an empty result means the fetch
+ * copy. Only non-empty lists are cached — an empty result means the fetch
  * or extraction failed this round, and the next resolve must retry rather
  * than inherit a 15-minute hole.
  */
@@ -625,7 +625,7 @@ internal fun titleMatches(title: String, team: String): Boolean {
 
 /**
  * Desktop user-agent REQUIRED (v1.10.3): YouTube serves the mobile web
- * shell without the ytInitialData video list to mobile UAs â the page
+ * shell without the ytInitialData video list to mobile UAs — the page
  * arrives ~500 KB with zero video metadata. A desktop UA receives the
  * full payload (~1.2 MB with the grid). googleapis endpoints ignore the
  * UA; oembedAllows keeps its own identity header.
