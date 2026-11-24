@@ -199,17 +199,37 @@ data class YtEntry(
  */
 object HighlightsSource {
 
-    /** All matching official videos, newest first. Empty = none available. */
-    suspend fun resolve(context: Context?, home: String, away: String): List<YtEntry> =
+    /**
+     * All official videos GROUNDED in the fixture, newest first. Empty =
+     * none verified. The hub's gates apply here too (owner directive
+     * 2026-11-24): publish window, declared season, non-highlight genre
+     * rejection and title-score disagreement — a video that cannot be
+     * grounded in THIS fixture never plays as its highlights, and cached
+     * entries are re-checked against the fixture before use (a stale
+     * name-only cache entry degrades to an honest miss, never to a wrong
+     * video).
+     */
+    suspend fun resolve(
+        context: Context?,
+        home: String,
+        away: String,
+        fixtureUtc: String,
+        homeGoals: Int?,
+        awayGoals: Int?
+    ): List<YtEntry> =
         withContext(Dispatchers.IO) {
             if (context != null) {
-                VideoCache.get(context, home, away)?.let { return@withContext it }
+                VideoCache.get(context, home, away)
+                    ?.filter { entryGroundedInFixture(it, home, away, fixtureUtc, homeGoals, awayGoals) }
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { return@withContext it }
             }
             val found = runCatching {
                 if (BuildConfig.YOUTUBE_API_KEY.isNotBlank()) {
-                    viaDataApi(home, away) ?: viaOfficialChannels(home, away)
+                    viaDataApi(home, away, fixtureUtc, homeGoals, awayGoals)
+                        ?: viaOfficialChannels(home, away, fixtureUtc, homeGoals, awayGoals)
                 } else {
-                    viaOfficialChannels(home, away)
+                    viaOfficialChannels(home, away, fixtureUtc, homeGoals, awayGoals)
                 }
             }.getOrDefault(emptyList())
             if (context != null) {
@@ -220,8 +240,14 @@ object HighlightsSource {
         }
 
     /** Roadmap P0 gate: is a VERIFIED official video available right now? */
-    suspend fun hasVideo(context: Context?, home: String, away: String): Boolean =
-        resolve(context, home, away).isNotEmpty()
+    suspend fun hasVideo(
+        context: Context?,
+        home: String,
+        away: String,
+        fixtureUtc: String,
+        homeGoals: Int?,
+        awayGoals: Int?
+    ): Boolean = resolve(context, home, away, fixtureUtc, homeGoals, awayGoals).isNotEmpty()
 }
 
 // ---------------------------------------------------------------------------
@@ -353,17 +379,26 @@ object HighlightsHub {
      */
     internal fun pairWithFixture(entry: YtEntry, fixtures: List<Match>): Pair<YtEntry, Match>? {
         if (entry.videoId.isBlank()) return null
-        val m = fixtures.firstOrNull { f ->
-            titleMatches(entry.title, f.homeTeam.name) &&
-                titleMatches(entry.title, f.awayTeam.name) &&
-                publishWindowAllows(entry.publishedAtMs, f.utcDate) &&
-                !seasonDeclaresOtherMeeting(entry.title, f.utcDate) &&
-                !titleScoreDisagrees(
-                    entry.title, f.homeTeam.name, f.awayTeam.name,
-                    f.score.fullTime?.home, f.score.fullTime?.away
-                )
-        } ?: return null
-        return entry to m
+        val compatible = fixtures.filter { f ->
+            entryGroundedInFixture(
+                entry, f.homeTeam.name, f.awayTeam.name, f.utcDate,
+                f.score.fullTime?.home, f.score.fullTime?.away
+            )
+        }
+        if (compatible.size == 1) return entry to compatible[0]
+        // Two plausible meetings: recency alone is NOT evidence. Only an
+        // explicit title scoreline agreeing with exactly ONE fixture's
+        // recorded score disambiguates; otherwise the association is
+        // omitted — an honest smaller set over a knowingly wrong match
+        // (owner directive 2026-11-24).
+        val byScore = compatible.filter { f ->
+            titleScoreMatchesFixture(
+                entry.title, f.homeTeam.name, f.awayTeam.name,
+                f.score.fullTime?.home, f.score.fullTime?.away
+            )
+        }
+        if (byScore.size == 1) return entry to byScore[0]
+        return null
     }
 
     /** Test hook + manual refresh: forget the in-memory list. */
@@ -382,7 +417,13 @@ object HighlightsHub {
  * before surfacing it. Returns null when nothing passes (the caller
  * falls back to the inherently-compliant channel-page tier).
  */
-private fun viaDataApi(home: String, away: String): List<YtEntry>? {
+private fun viaDataApi(
+    home: String,
+    away: String,
+    fixtureUtc: String,
+    homeGoals: Int?,
+    awayGoals: Int?
+): List<YtEntry>? {
     val q = URLEncoder.encode("$home vs $away highlights", "UTF-8")
     val searchUrl = "https://www.googleapis.com/youtube/v3/search" +
         "?part=snippet&type=video&maxResults=5&q=$q&key=${BuildConfig.YOUTUBE_API_KEY}"
@@ -445,6 +486,7 @@ private fun viaDataApi(home: String, away: String): List<YtEntry>? {
             )
         }
         ?.filter { it.videoId.isNotBlank() && it.title.isNotBlank() }
+        ?.filter { entryGroundedInFixture(it, home, away, fixtureUtc, homeGoals, awayGoals) }
 }
 
 /**
@@ -489,7 +531,13 @@ internal fun deviceCountry(): String = runCatching {
 // Tier 2 — allowlisted channels' own video pages (no key, provenance exact)
 // ---------------------------------------------------------------------------
 
-private suspend fun viaOfficialChannels(home: String, away: String): List<YtEntry> =
+private suspend fun viaOfficialChannels(
+    home: String,
+    away: String,
+    fixtureUtc: String,
+    homeGoals: Int?,
+    awayGoals: Int?
+): List<YtEntry> =
     coroutineScope {
         val league = OFFICIAL_CHANNELS.map { (id, name) ->
             async { ChannelVideosStore.videos(id, name) }
@@ -501,9 +549,11 @@ private suspend fun viaOfficialChannels(home: String, away: String): List<YtEntr
         }.awaitAll().flatten()
         // League releases first (the canonical extended-highlights product),
         // then the two clubs' own channels; every source stays in page order,
-        // which on YouTube's videos tab is newest-release-first.
+        // which on YouTube's videos tab is newest-release-first. Every
+        // candidate is grounded in THIS fixture before a single oembed
+        // probe runs.
         (league + clubVideos)
-            .filter { titleMatches(it.title, home) && titleMatches(it.title, away) }
+            .filter { entryGroundedInFixture(it, home, away, fixtureUtc, homeGoals, awayGoals) }
             .distinctBy { it.videoId }
             // v1.10.2 (owner report: error 152-4 at playback): every
             // candidate is verified against YouTube's public oEmbed
@@ -754,6 +804,41 @@ internal fun titleScoreline(title: String): Pair<Int, Int>? =
         ?.let { it.groupValues[1].toInt() to it.groupValues[2].toInt() }
 
 /**
+ * The single grounding rule every video must pass for ONE fixture,
+ * shared by the hub pairing and the detail resolver (owner directive
+ * 2026-11-24): both team names, no non-highlight genre, publish window,
+ * declared season, no contradicting title score. Unknown or ambiguous
+ * metadata fails the check — never presented as a verified match.
+ */
+internal fun entryGroundedInFixture(
+    e: YtEntry,
+    home: String,
+    away: String,
+    fixtureUtc: String,
+    homeGoals: Int?,
+    awayGoals: Int?
+): Boolean =
+    titleMatches(e.title, home) && titleMatches(e.title, away) &&
+        !titleDeclaresNonHighlightGenre(e.title) &&
+        publishWindowAllows(e.publishedAtMs, fixtureUtc) &&
+        !seasonDeclaresOtherMeeting(e.title, fixtureUtc) &&
+        !titleScoreDisagrees(e.title, home, away, homeGoals, awayGoals)
+
+/**
+ * Known non-highlight genres (owner directive 2026-11-24): previews,
+ * press conferences, training clips and interviews name both teams
+ * without BEING the match's highlights and pass every metadata gate —
+ * only their declared genre betrays them.
+ */
+private val NON_HIGHLIGHT_GENRE = Regex(
+    """\b(previews?|pressers?|press conference|trainings?|interviews?)\b""",
+    RegexOption.IGNORE_CASE
+)
+
+internal fun titleDeclaresNonHighlightGenre(title: String): Boolean =
+    NON_HIGHLIGHT_GENRE.containsMatchIn(title)
+
+/**
  * Season labels in a title ("2025/26") are fixture grounding too: a
  * video that DECLARES a different season documents another meeting —
  * throwback re-releases of classics, the exact owner-reported genre.
@@ -787,6 +872,27 @@ internal fun seasonDeclaresOtherMeeting(title: String, fixtureUtc: String): Bool
 }
 
 /**
+ * The title's scoreline read in FIXTURE orientation: (home, away) with
+ * oriented=true when the teams' order in the title is readable; raw
+ * title order with oriented=false otherwise. Null = no scoreline.
+ */
+private fun titleScoreOriented(title: String, homeTeam: String, awayTeam: String): Triple<Int, Int, Boolean>? {
+    val (a, b) = titleScoreline(title) ?: return null
+    val lower = title.lowercase()
+    val homeIdx = tokens(homeTeam)
+        .mapNotNull { lower.indexOf(it).takeIf { i -> i >= 0 } }
+        .minOrNull() ?: -1
+    val awayIdx = tokens(awayTeam)
+        .mapNotNull { lower.indexOf(it).takeIf { i -> i >= 0 } }
+        .minOrNull() ?: -1
+    return if (homeIdx >= 0 && awayIdx >= 0 && homeIdx != awayIdx) {
+        if (homeIdx < awayIdx) Triple(a, b, true) else Triple(b, a, true)
+    } else {
+        Triple(a, b, false)
+    }
+}
+
+/**
  * Reliable REJECTION only: true when the title carries a scoreline that
  * contradicts the fixture's recorded score. The teams' order in the
  * title sets the score's orientation when both are found; when it cannot
@@ -801,19 +907,35 @@ internal fun titleScoreDisagrees(
     awayGoals: Int?
 ): Boolean {
     if (homeGoals == null || awayGoals == null) return false
-    val (a, b) = titleScoreline(title) ?: return false
-    val lower = title.lowercase()
-    val homeIdx = tokens(homeTeam)
-        .mapNotNull { lower.indexOf(it).takeIf { i -> i >= 0 } }
-        .minOrNull() ?: -1
-    val awayIdx = tokens(awayTeam)
-        .mapNotNull { lower.indexOf(it).takeIf { i -> i >= 0 } }
-        .minOrNull() ?: -1
-    return if (homeIdx >= 0 && awayIdx >= 0 && homeIdx != awayIdx) {
-        val (th, ta) = if (homeIdx < awayIdx) a to b else b to a
-        th != homeGoals || ta != awayGoals
+    val s = titleScoreOriented(title, homeTeam, awayTeam) ?: return false
+    return if (s.third) {
+        s.first != homeGoals || s.second != awayGoals
     } else {
-        !((a == homeGoals && b == awayGoals) || (a == awayGoals && b == homeGoals))
+        !((s.first == homeGoals && s.second == awayGoals) ||
+            (s.first == awayGoals && s.second == homeGoals))
+    }
+}
+
+/**
+ * POSITIVE score grounding, used ONLY to disambiguate between two
+ * otherwise-compatible meetings: the title must carry a scoreline and it
+ * must equal the fixture's recorded score. Stronger metadata than
+ * recency — the one case an uncertain association is still assigned.
+ */
+internal fun titleScoreMatchesFixture(
+    title: String,
+    homeTeam: String,
+    awayTeam: String,
+    homeGoals: Int?,
+    awayGoals: Int?
+): Boolean {
+    if (homeGoals == null || awayGoals == null) return false
+    val s = titleScoreOriented(title, homeTeam, awayTeam) ?: return false
+    return if (s.third) {
+        s.first == homeGoals && s.second == awayGoals
+    } else {
+        (s.first == homeGoals && s.second == awayGoals) ||
+            (s.first == awayGoals && s.second == homeGoals)
     }
 }
 
