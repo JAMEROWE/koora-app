@@ -187,10 +187,22 @@ data class YtEntry(
      * Latest plausible publish instant (epoch ms), 0 = unknown. Channel
      * grid entries carry a fuzzy relative text ("3 days ago"), so this is
      * the LATEST time the text still allows (now minus the minimum age);
-     * Data API entries carry the exact ISO publish stamp. Pairing treats
-     * 0 as unverifiable and refuses the match.
+     * Data API and RSS-upgraded entries carry the exact publish stamp.
+     * Pairing treats 0 as unverifiable and refuses the match.
      */
-    val publishedAtMs: Long = 0L
+    val publishedAtMs: Long = 0L,
+    /**
+     * EARLIEST plausible publish instant (epoch ms), 0 = unknown. For an
+     * exact stamp this equals [publishedAtMs]; for fuzzy relative text it
+     * is now minus the MAXIMUM age the text allows ("3 days ago" can be
+     * almost 4 days old). The pairing window must hold for the WHOLE
+     * interval [earliest, latest]: a video whose possible publication
+     * interval straddles the fixture's kick-off is UNCERTAIN and pairs
+     * only after an exact stamp replaces it (owner directive 2026-11-24:
+     * the latest plausible instant alone must never pass a video whose
+     * real publish time could predate the meeting).
+     */
+    val publishedAtEarliestMs: Long = 0L
 )
 
 /**
@@ -362,11 +374,13 @@ object HighlightsHub {
      * surfaced with the thumbnail of an OLDER 1-2 meeting — a recently
      * re-released classic paired by name alone):
      *
-     *  - PUBLISH WINDOW: an entry pairs only when its publish instant is
-     *    demonstrably compatible with the fixture's kick-off — not before
-     *    the meeting existed (throwbacks, previews) and not long after
-     *    (post-match shows). Unknown publish time is NOT a verified
-     *    match and never pairs: the no-fake rule cuts both ways;
+     *  - PUBLISH WINDOW: an entry pairs only when its publish time is
+     *    PROVEN compatible with the fixture's kick-off — the whole
+     *    plausible interval must sit at/after kick-off and within five
+     *    days of it. Fuzzy ages that straddle the edge and unknown
+     *    publish times are NOT verified matches and never pair (the
+     *    channel RSS feed upgrades the newest ~15 videos to exact
+     *    stamps at fetch time): the no-fake rule cuts both ways;
      *  - SCORE DISAGREEMENT: when the title itself carries a scoreline
      *    that contradicts the fixture's recorded score, the entry is
      *    another meeting's video and is rejected. A title without a
@@ -482,7 +496,8 @@ private fun viaDataApi(
                 videoId = v.id ?: "",
                 published = v.snippet?.publishedAt ?: "",
                 channel = v.snippet?.channelTitle ?: "",
-                publishedAtMs = isoUtcMs(v.snippet?.publishedAt) ?: 0L
+                publishedAtMs = isoUtcMs(v.snippet?.publishedAt) ?: 0L,
+                publishedAtEarliestMs = isoUtcMs(v.snippet?.publishedAt) ?: 0L
             )
         }
         ?.filter { it.videoId.isNotBlank() && it.title.isNotBlank() }
@@ -640,7 +655,50 @@ object ChannelVideosStore {
 
 private fun fetchChannelVideos(channelId: String, channelName: String): List<YtEntry> {
     val html = httpGet("https://www.youtube.com/channel/$channelId/videos") ?: return emptyList()
-    return extractChannelVideos(html).map { it.copy(channel = channelName) }
+    val entries = extractChannelVideos(html).map { it.copy(channel = channelName) }
+    if (entries.isEmpty()) return entries
+    // Exact-publish upgrade (owner directive 2026-11-24): the channel's
+    // public RSS feed carries an exact RFC3339 publish stamp for the ~15
+    // newest videos — precisely the candidates for recent fixtures. One
+    // extra request per channel fetch, cached with the same 15-minute
+    // TTL. Entries older than the feed window keep their fuzzy interval
+    // and fail closed when it straddles the fixture.
+    val exact = runCatching { fetchExactPublishTimes(channelId) }.getOrDefault(emptyMap())
+    if (exact.isEmpty()) return entries
+    return entries.map { e ->
+        exact[e.videoId]?.let { e.copy(publishedAtMs = it, publishedAtEarliestMs = it) } ?: e
+    }
+}
+
+private fun fetchExactPublishTimes(channelId: String): Map<String, Long> {
+    val xml = httpGet("https://www.youtube.com/feeds/videos.xml?channel_id=$channelId")
+        ?: return emptyMap()
+    return parseRssPublishTimes(xml)
+}
+
+private val RSS_ENTRY = Regex("<entry>(.*?)</entry>", RegexOption.DOT_MATCHES_ALL)
+private val RSS_VIDEO_ID = Regex("<yt:videoId>([^<]+)</yt:videoId>")
+private val RSS_PUBLISHED = Regex("<published>([^<]+)</published>")
+
+/**
+ * Exact publish stamps from a channel's public RSS feed (no key, no
+ * quota). YouTube emits "+00:00" offsets; they are normalized to the
+ * shared UTC parser's "Z". Unparseable entries are skipped, never
+ * guessed. Pure, tested.
+ */
+internal fun parseRssPublishTimes(xml: String): Map<String, Long> {
+    val out = LinkedHashMap<String, Long>()
+    for (m in RSS_ENTRY.findAll(xml)) {
+        val body = m.groupValues[1]
+        val id = RSS_VIDEO_ID.find(body)?.groupValues?.get(1)?.trim() ?: continue
+        val raw = RSS_PUBLISHED.find(body)?.groupValues?.get(1)?.trim() ?: continue
+        // YouTube emits UTC as "+00:00"; the shared parser wants "Z".
+        // Any other offset is NOT converted by hand — skipped, never guessed.
+        val iso = raw.replace(Regex("[+-]00:?00$"), "Z")
+        val ms = isoUtcMs(iso) ?: continue
+        out[id] = ms
+    }
+    return out
 }
 
 private val ytInitialDataPatterns = listOf(
@@ -679,7 +737,8 @@ internal fun extractChannelVideos(html: String, nowMs: Long = System.currentTime
         val (agoText, ageMs) = lockupPublishAge(lk)
         out += YtEntry(
             title.trim(), id, agoText ?: "",
-            publishedAtMs = ageMs?.let { nowMs - it } ?: 0L
+            publishedAtMs = ageMs?.let { nowMs - it.first } ?: 0L,
+            publishedAtEarliestMs = ageMs?.let { nowMs - it.second } ?: 0L
         )
     }
     return out
@@ -691,7 +750,7 @@ internal fun extractChannelVideos(html: String, nowMs: Long = System.currentTime
  * content ("3d ago"), so it wins when both exist. Verified against the
  * live lockupViewModel shape on 2026-11-24.
  */
-private fun lockupPublishAge(lk: Map<*, *>): Pair<String?, Long?> {
+private fun lockupPublishAge(lk: Map<*, *>): Pair<String?, Pair<Long, Long>?> {
     val metadata = (((lk["metadata"] as? Map<*, *>)
         ?.get("lockupMetadataViewModel") as? Map<*, *>)
         ?.get("metadata") as? Map<*, *>)
@@ -710,7 +769,27 @@ private fun lockupPublishAge(lk: Map<*, *>): Pair<String?, Long?> {
         }
     }
     val raw = label ?: content ?: return null to null
-    return raw to relativeAgeMs(raw)
+    return raw to relativeAgeIntervalMs(raw)
+}
+
+/**
+ * "3 days ago" is an INTERVAL: YouTube floors the age to the largest
+ * unit, so the video is at least 3 and less than 4 days old. Returns
+ * (minimum, maximum) age in ms — the pairing gate must hold for the
+ * whole interval before a fuzzy stamp may verify a fixture.
+ */
+internal fun relativeAgeIntervalMs(text: String): Pair<Long, Long>? {
+    AGO_FULL.find(text)?.let { m ->
+        val n = m.groupValues[1].toLongOrNull() ?: return null
+        val unit = AGO_WORD_MS[m.groupValues[2]] ?: return null
+        return (unit * n) to (unit * (n + 1))
+    }
+    AGO_COMPACT.find(text.trim())?.let { m ->
+        val n = m.groupValues[1].toLongOrNull() ?: return null
+        val unit = AGO_COMPACT_MS[m.groupValues[2].lowercase()] ?: return null
+        return (unit * n) to (unit * (n + 1))
+    }
+    return null
 }
 
 // ---------------------------------------------------------------------------
@@ -772,18 +851,43 @@ internal fun relativeAgeMs(text: String): Long? {
 
 /**
  * Official highlights appear within hours of the final whistle — never
- * before the meeting exists (throwbacks, previews), and not days later
- * (magazine clips that merely NAME the teams). Unknown publish time (0)
- * or an unreadable kick-off is NOT a verified pairing and is refused.
+ * before the meeting exists (throwbacks, previews) and not days later
+ * (magazine clips that merely NAME the teams). A video published BEFORE
+ * kick-off cannot contain the meeting, so the window starts AT kick-off
+ * (owner directive 2026-11-24: the old 12h pre-kickoff allowance let
+ * previews pass). Unknown publish time (0) or an unreadable kick-off is
+ * NOT a verified pairing and is refused.
  */
-internal const val PUBLISH_EARLIEST_BEFORE_KICKOFF_MS = 12L * 3_600_000L
 internal const val PUBLISH_LATEST_AFTER_KICKOFF_MS = 5L * 86_400_000L
 
+/** Window check for an EXACT publish instant (API/RSS stamp). */
 internal fun publishWindowAllows(publishedAtMs: Long, fixtureUtc: String): Boolean {
     if (publishedAtMs <= 0L) return false
     val ko = isoUtcMs(fixtureUtc) ?: return false
-    return publishedAtMs >= ko - PUBLISH_EARLIEST_BEFORE_KICKOFF_MS &&
-        publishedAtMs <= ko + PUBLISH_LATEST_AFTER_KICKOFF_MS
+    return publishedAtMs >= ko && publishedAtMs <= ko + PUBLISH_LATEST_AFTER_KICKOFF_MS
+}
+
+/**
+ * The three-valued publish-time verdict. UNCERTAIN is the fail-closed
+ * center: a fuzzy interval that straddles the window edge proves nothing
+ * either way, so the entry is omitted unless an exact stamp (RSS/Data
+ * API) replaces it first. The latest plausible instant ALONE never
+ * passes (owner directive 2026-11-24).
+ */
+enum class PublishTimeGrounding { ACCEPT, REJECT, UNCERTAIN }
+
+internal fun publishTimeGrounding(e: YtEntry, fixtureUtc: String): PublishTimeGrounding {
+    val ko = isoUtcMs(fixtureUtc) ?: return PublishTimeGrounding.REJECT
+    val latest = e.publishedAtMs
+    if (latest <= 0L) return PublishTimeGrounding.REJECT
+    val earliest = e.publishedAtEarliestMs
+    if (earliest <= 0L || earliest > latest) return PublishTimeGrounding.UNCERTAIN
+    val end = ko + PUBLISH_LATEST_AFTER_KICKOFF_MS
+    return when {
+        earliest >= ko && latest <= end -> PublishTimeGrounding.ACCEPT
+        latest < ko || earliest > end -> PublishTimeGrounding.REJECT
+        else -> PublishTimeGrounding.UNCERTAIN
+    }
 }
 
 /**
@@ -806,9 +910,12 @@ internal fun titleScoreline(title: String): Pair<Int, Int>? =
 /**
  * The single grounding rule every video must pass for ONE fixture,
  * shared by the hub pairing and the detail resolver (owner directive
- * 2026-11-24): both team names, no non-highlight genre, publish window,
- * declared season, no contradicting title score. Unknown or ambiguous
- * metadata fails the check — never presented as a verified match.
+ * 2026-11-24): both team names, no non-highlight genre, publish time
+ * PROVEN compatible (the whole plausible interval inside the window —
+ * fuzzy straddlers fail closed unless an exact RSS/API stamp upgraded
+ * them at fetch time), declared season, no contradicting title score.
+ * Unknown or ambiguous metadata fails the check — never presented as a
+ * verified match.
  */
 internal fun entryGroundedInFixture(
     e: YtEntry,
@@ -820,7 +927,7 @@ internal fun entryGroundedInFixture(
 ): Boolean =
     titleMatches(e.title, home) && titleMatches(e.title, away) &&
         !titleDeclaresNonHighlightGenre(e.title) &&
-        publishWindowAllows(e.publishedAtMs, fixtureUtc) &&
+        publishTimeGrounding(e, fixtureUtc) == PublishTimeGrounding.ACCEPT &&
         !seasonDeclaresOtherMeeting(e.title, fixtureUtc) &&
         !titleScoreDisagrees(e.title, home, away, homeGoals, awayGoals)
 
