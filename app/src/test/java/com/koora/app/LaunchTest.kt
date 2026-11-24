@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.semantics.getOrNull
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -24,18 +25,12 @@ import org.robolectric.annotation.Config
  * (Robolectric — no device, no emulator needed) and fails the build if
  * startup ever crashes.
  *
- * v1.6.0 IA: the app opens on LIVE (Today + Tomorrow league sections,
- * poll per match); MATCHES is the Results screen (finished matches).
- * Demo mode stamps the sample matches with competitions, so the Live
- * screen renders: Botola Pro (Raja-Wydad finished, FAR-MCO finished),
- * Ligue 1 (PSG-OM live, OL-Lille) and Champions League (Real-City).
- *
- * Robolectric quirk handled here: the framework focuses the first
- * focusable node (the first match row) when the window gains focus, and
- * the LazyColumn auto-scrolls to reveal it — on the small test screen
- * that hides the day titles. The test scrolls the LIST back up (swipe
- * down ON a row) before asserting anything above the fold. Real devices
- * do not auto-focus anything at launch, so the screen opens at the top.
+ * Matches-first IA (owner-approved 24 Nov): the app opens on the MATCHES
+ * home — Today by default, live matches inside Today, one day at a time,
+ * favorites of the selected day pinned on top, team/league search in the
+ * top bar. Demo mode stamps the sample matches on Today: Botola Pro
+ * (Raja-Wydad, FAR-MCO finished), Ligue 1 (PSG-OM live, OL-Lille) and
+ * Champions League (Real-City).
  */
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [34], application = LaunchTest.NoAdsApp::class)
@@ -65,43 +60,27 @@ class LaunchTest {
     }
 
     @Test
-    fun appLaunches_liveTabShowsLeagueSections() {
+    fun appLaunches_homeShowsTodayByDefault() {
         rule.waitForIdle()
 
-        // The bottom navigation rendered (activity + Scaffold + tabs all alive)
-        rule.onNodeWithText(rule.activity.getString(R.string.tab_matches)).assertExists()
-        // v1.9.0: Settings LEFT the bottom bar (master spec §1.1) — it is the
-        // gear icon in the top-right now, labeled with its content description.
+        // The bottom navigation rendered (activity + Scaffold + tabs alive)
+        rule.onNodeWithText(rule.activity.getString(R.string.tab_standings)).assertExists()
+        // Settings is the gear icon in the top-right, labeled by description.
         rule.onNodeWithContentDescription(rule.activity.getString(R.string.tab_settings)).assertExists()
+        // No "All days" chip anymore: exactly one day at a time.
+        rule.onNodeWithText(rule.activity.getString(R.string.chip_all)).assertDoesNotExist()
 
-        // v1.9.0 (spec §2.1): the date-strip chips sit above the feed.
-        rule.onNodeWithText(rule.activity.getString(R.string.chip_all)).assertExists()
-
-        // The window loads in a coroutine — waiting is mandatory. In demo
-        // mode the WHOLE window lands on "Today", and the word "Today"
-        // appears TWICE once the feed composed: the chip AND the list's day
-        // title. Two nodes = the live feed rendered its first section.
-        // (On Robolectric's 470px screen the match rows themselves sit below
-        // the fold; the rows are fully asserted on the Matches tab below —
-        // same MatchRow/LeagueSection code, real data instead of scroll
-        // gymnastics.)
+        // Default = Today: the word appears TWICE once the feed composed —
+        // the chip AND the list's day title.
         rule.waitUntil(timeoutMillis = 10_000) {
             rule.onAllNodesWithText(rule.activity.getString(R.string.day_today))
                 .fetchSemanticsNodes().size >= 2
         }
 
-        // The new Day-After filter (spec §2.1): tapping the chip narrows the
-        // feed to the day-after block, which honestly reports empty in demo
-        // mode (never a fake fixture).
+        // Day-after chip narrows the feed to the day-after block, which
+        // honestly reports empty in demo mode (never a fake fixture).
         rule.onNodeWithText(rule.activity.getString(R.string.day_after)).performClick()
-        // v1.10.0: the Expand/Collapse row now sits first in the feed, and on
-        // Robolectric's 470px window the Live list composes only ~2 items —
-        // the empty-state line fell below the fold. Scroll the LIST (tagged
-        // live_feed; the v1.9.0 lesson: never swipe the chip row) before
-        // waiting for the line.
-        rule.onNodeWithTag("live_feed")
-            // Canonical scroll: drives the LazyColumn's own ScrollToNode
-            // semantics action — no touch-simulation quirks.
+        rule.onNodeWithTag("home_feed")
             .performScrollToNode(hasText(rule.activity.getString(R.string.empty_day_after)))
         try {
             rule.waitUntil(timeoutMillis = 10_000) {
@@ -109,11 +88,8 @@ class LaunchTest {
                     .fetchSemanticsNodes().isNotEmpty()
             }
         } catch (e: Throwable) {
-            // v1.10.0 diagnostics: on timeout, dump every text node the
-            // screen holds so the CI log shows what the day-after view
-            // ACTUALLY rendered. The message lands in the test XML and the
-            // workflow prints it. (Throwable: the compose timeout type is
-            // not reliably an Exception subclass on every version.)
+            // On timeout, dump every text node the screen holds so the CI
+            // log shows what the day-after view ACTUALLY rendered.
             val dump = runCatching {
                 val sb = StringBuilder("KOORA-DEBUG texts: ")
                 rule.onAllNodesWithText("", substring = true)
@@ -130,33 +106,52 @@ class LaunchTest {
     }
 
     @Test
-    fun matchesTab_showsResultsUnderLeague() {
+    fun home_selectedDayShowsOnlyThatDay() {
         rule.waitForIdle()
-
-        rule.onNodeWithText(rule.activity.getString(R.string.tab_matches)).performClick()
-
-        // Results screen: finished demo matches (Raja-Wydad, FAR-MCO) under
-        // their Botola Pro section.
+        // Wait for the feed: Today chip + Today day title.
         rule.waitUntil(timeoutMillis = 10_000) {
-            rule.onAllNodesWithText("Raja Club Athletic").fetchSemanticsNodes().isNotEmpty()
+            rule.onAllNodesWithText(rule.activity.getString(R.string.day_today))
+                .fetchSemanticsNodes().size >= 2
         }
-        rule.onAllNodesWithText("Raja Club Athletic")[0].assertExists()
+
+        // Owner's rule (24 Nov): picking Tomorrow must not render a Today
+        // or other-day section — "Today" drops back to just its chip.
+        rule.onNodeWithText(rule.activity.getString(R.string.day_tomorrow)).performClick()
         rule.waitUntil(timeoutMillis = 10_000) {
-            rule.onAllNodesWithText("AS FAR Rabat").fetchSemanticsNodes().isNotEmpty()
+            rule.onAllNodesWithText(rule.activity.getString(R.string.day_tomorrow))
+                .fetchSemanticsNodes().size >= 2
         }
-        rule.onAllNodesWithText("AS FAR Rabat")[0].assertExists()
+        rule.waitForIdle()
+        val todayNodes = rule.onAllNodesWithText(rule.activity.getString(R.string.day_today))
+            .fetchSemanticsNodes()
+        assert(todayNodes.size == 1) {
+            "Expected only the Today chip while Tomorrow is selected, found ${todayNodes.size} Today nodes"
+        }
     }
 
     @Test
-    fun standingsTabRenders_table() {
+    fun home_searchFindsTeamAndLeague() {
         rule.waitForIdle()
-
-        rule.onNodeWithText(rule.activity.getString(R.string.tab_standings)).performClick()
-
-        // Same anti-flake rule: wait for the table coroutine, don't guess.
         rule.waitUntil(timeoutMillis = 10_000) {
-            rule.onAllNodesWithText("Paris Saint-Germain").fetchSemanticsNodes().isNotEmpty()
+            rule.onAllNodesWithText(rule.activity.getString(R.string.day_today))
+                .fetchSemanticsNodes().size >= 2
         }
-        rule.onAllNodesWithText("Paris Saint-Germain")[0].assertExists()
+
+        // Team search: "Raja" finds the demo Botola Pro fixture.
+        rule.onNodeWithTag("home_search_toggle").performClick()
+        rule.onNodeWithTag("home_search_field").performTextInput("Raja")
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithText("Raja", substring = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // League search: "champions" finds the Champions League fixture.
+        rule.onNodeWithTag("home_search_toggle").performClick()
+        rule.onNodeWithTag("home_search_toggle").performClick()
+        rule.onNodeWithTag("home_search_field").performTextInput("champions")
+        rule.waitUntil(timeoutMillis = 10_000) {
+            rule.onAllNodesWithText("Real", substring = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
     }
 }
