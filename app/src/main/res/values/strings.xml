@@ -2,7 +2,7 @@
     <string name="app_name">Koora</string>
     <string name="tab_matches">Matches</string>
     <string name="tab_standings">Standings</string>
-    <string name="demo_notice">Demo mode: get a free key at football-data.org and add this line to local.properties: FOOTBALL_DATA_TOKEN=your_key</string>
+    <string name="demo_notice">Demo mode: showing sample matches</string>
     <string name="retry">Retry</string>
     <string name="error_generic">Couldn\'t load data.</string>
     <string name="no_matches">No matches to show for this competition yet.</string>
