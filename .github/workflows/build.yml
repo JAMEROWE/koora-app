@@ -112,6 +112,20 @@ jobs:
           path: app/build/outputs/roborazzi
           retention-days: 30
 
+      # Branch-only: publish the rendered PNGs as plain files under
+      # docs/roborazzi so reviewers can see real pixels without artifact
+      # download access. Main never runs this.
+      - name: Commit rendered UI screenshots to the branch
+        if: github.ref == 'refs/heads/feat/matches-first-home'
+        run: |
+          git config user.name "koora-ci"
+          git config user.email "actions@github.com"
+          mkdir -p docs/roborazzi
+          cp app/build/outputs/roborazzi/*.png docs/roborazzi/ 2>/dev/null || true
+          git add docs/roborazzi
+          git commit -m "CI: rendered UI screenshots (roborazzi) [skip ci]" || echo "no changes"
+          git push origin HEAD:feat/matches-first-home
+
       # Every push to MAIN publishes/refreshes the APK on the public
       # Releases page: https://github.com/JAMEROWE/koora-app/releases —
       # a stable link that always serves the newest built version, no
