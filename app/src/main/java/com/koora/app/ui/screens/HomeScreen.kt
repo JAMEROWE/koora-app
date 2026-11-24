@@ -90,13 +90,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /*
- * HOME â the matches-first screen (post-review direction, approved by the
+ * HOME — the matches-first screen (post-review direction, approved by the
  * owner on 24 Nov):
  *   - ONE Matches home. There is no separate Live tab and no separate
  *     Live filter chip: TODAY already contains today's live matches,
  *     sorted first with their LIVE badge.
  *   - Day chips (Today / Tomorrow / Day after) plus the calendar: the
- *     selected day shows ONLY that day â picking Today never renders a
+ *     selected day shows ONLY that day — picking Today never renders a
  *     Tomorrow section underneath it. The calendar still covers the
  *     honest -6..+2 window, so recent results stay reachable by day.
  *   - Favorite matches of the SELECTED day pin to the top; favorites of
@@ -289,7 +289,7 @@ fun HomeScreen(
             }
 
             // Day chips: exactly one day at a time. Today already carries
-            // the live matches â there is deliberately no Live chip.
+            // the live matches — there is deliberately no Live chip.
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -601,7 +601,7 @@ private fun prettyDayKey(key: String): String = runCatching {
 
 // ---- LazyColumn blocks ------------------------------------------------------
 
-/** Favorites of the SELECTED day only â other days stay on their own day. */
+/** Favorites of the SELECTED day only — other days stay on their own day. */
 private fun LazyListScope.favoritesBlock(
     vm: HomeViewModel,
     context: android.content.Context,
