@@ -52,7 +52,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 /*
- * Football news tab â trilingual (EN / FR / AR) via the source registry.
+ * Football news tab — trilingual (EN / FR / AR) via the source registry.
  * Headlines only: title + source + region + relative time. Since v1.4.2
  * tapping opens the IN-APP ArticleReader (stays in Koora, banner keeps
  * running) instead of the browser. One failing feed never breaks the tab.
@@ -112,7 +112,7 @@ fun NewsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Spacer(Modifier.weight(1f))
-            // v1.9.0 (spec Â§1.1): Settings gear top-right on every top screen.
+            // v1.9.0 (spec §1.1): Settings gear top-right on every top screen.
             IconButton(onClick = onOpenSettings) {
                 Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.tab_settings))
             }
