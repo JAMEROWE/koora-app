@@ -1,7 +1,6 @@
 package com.koora.app.ui.components
 
 import android.os.Build
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -35,7 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -134,10 +132,6 @@ internal fun LeagueHeaderCard(
     onToggle: () -> Unit,
     code: String? = null
 ) {
-    val rotation by animateFloatAsState(
-        targetValue = if (expanded) 0f else 180f,
-        label = "chevron"
-    )
     Row(
         Modifier
             .fillMaxWidth()
@@ -200,11 +194,13 @@ internal fun LeagueHeaderCard(
             )
         }
         Spacer(Modifier.width(4.dp))
+        // No rotation: the icon swap alone carries the state. A 180-degree
+        // rotation made the collapsed ExpandMore glyph look identical to the
+        // expanded ExpandLess glyph - sections looked open but showed no rows.
         Icon(
             if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.graphicsLayer { rotationZ = rotation }
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
