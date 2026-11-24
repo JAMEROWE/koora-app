@@ -26,17 +26,17 @@ import java.util.concurrent.TimeUnit
  *  - every successful response is cached in MEMORY (60s TTL) and written
  *    to a DISK file in cacheDir;
  *  - on ANY network failure (429 rate limit, timeout, no connection...),
- *    the last cached value â memory first, then disk â is served instead
+ *    the last cached value — memory first, then disk — is served instead
  *    of throwing, and the key is flagged stale so the UI can show
  *    "saved data, updated X min ago".
  */
 object MatchRepository {
 
-    // v1.5.6: 5-minute TTL ("comfortable" doc) â pull-to-refresh bypasses it.
+    // v1.5.6: 5-minute TTL ("comfortable" doc) — pull-to-refresh bypasses it.
     private const val TTL_MS = 300_000L
 
     /*
-     * WINDOW LOADING (v1.6.0) â WHY PER-COMPETITION CALLS:
+     * WINDOW LOADING (v1.6.0) — WHY PER-COMPETITION CALLS:
      * the free tier proved NOT to serve the all-competitions /v4/matches
      * endpoint (real installs got an empty screen), so the window is
      * assembled from the resource that always worked:
@@ -47,13 +47,13 @@ object MatchRepository {
      *    rate-limited league can never blank out the other leagues;
      *  - forced refreshes (pull-to-refresh / 60s live auto-refresh) fetch
      *    at most FETCHES_PER_ROUND leagues, and only leagues not updated
-     *    in the last 60s â successive rounds naturally rotate through all
+     *    in the last 60s — successive rounds naturally rotate through all
      *    leagues while never exceeding the quota;
      *  - 429 -> one retry after RETRY_429_DELAY_MS;
      *  - 403/404 (plan/season) -> remembered as empty so we never hammer
      *    a rejected endpoint again this window;
      *  - any other failure -> last saved copy for that league, else skip.
-     * Botola Pro (BOT) has no football-data.org resource yet â it joins
+     * Botola Pro (BOT) has no football-data.org resource yet — it joins
      * with the API-Football upgrade, demo mode stamps it locally.
      */
     private val WINDOW_LEAGUES = listOf(
@@ -205,7 +205,7 @@ object MatchRepository {
     /**
      * v1.6.0 THE WINDOW: every competition merged over a local date range
      * ("yyyy-MM-dd".."yyyy-MM-dd"). ONE shared fetch feeds the Live tab
-     * (today + tomorrow sections) AND the Results tab (finished matches) â
+     * (today + tomorrow sections) AND the Results tab (finished matches) —
      * zero duplicate calls between screens thanks to the per-league cache.
      */
     suspend fun matchesWindow(fromDay: String, toDay: String, force: Boolean = false): List<Match> {
@@ -236,7 +236,7 @@ object MatchRepository {
         }
         // v1.6.1: cups + Botola Pro via API-Football (free plan, ONE request
         // per window day). Each date is cached on its own TTL (past: until
-        // local midnight â results never change; today: 10 min; future: 30
+        // local midnight — results never change; today: 10 min; future: 30
         // min). Fully asleep without the API_FOOTBALL_KEY build value.
         if (AfFixtures.available) {
             for (day in daysBetween(fromDay, toDay)) {
@@ -247,7 +247,7 @@ object MatchRepository {
         // v1.7.0: Europa/Conference League + Saudi/Turkey/Argentina/Mexico/
         // MLS/Scotland/Belgium/Japan/Korea via PitchAPI (free key). Same
         // rules as the API-Football layer: sleeps without its key, per-day
-        // TTL cache, whitelist-only import â and the whitelist contains ONLY
+        // TTL cache, whitelist-only import — and the whitelist contains ONLY
         // leagues football-data.org does not cover, so no double import.
         if (PitchFixtures.available) {
             for (day in daysBetween(fromDay, toDay)) {
@@ -268,7 +268,7 @@ object MatchRepository {
         return result
     }
 
-    /** One league of the window â never throws; failures degrade to cache/skip. */
+    /** One league of the window — never throws; failures degrade to cache/skip. */
     private suspend fun fetchLeagueWindow(
         code: String,
         leagueKey: String,
@@ -306,7 +306,7 @@ object MatchRepository {
     /**
      * One API-Football date with its own cache TTL. Never throws upward:
      * any failure degrades to the last cached copy ("stale" flag) or to an
-     * empty list â a cups outage can never blank the other leagues.
+     * empty list — a cups outage can never blank the other leagues.
      */
     private suspend fun afDay(day: String, type: Type): List<Match> {
         val key = "af:$day"
@@ -335,7 +335,7 @@ object MatchRepository {
     /**
      * One PitchAPI date with its own cache TTL. Never throws upward:
      * any failure degrades to the last cached copy ("stale" flag) or to
-     * an empty list â a PitchAPI outage can never blank the other leagues.
+     * an empty list — a PitchAPI outage can never blank the other leagues.
      */
     private suspend fun pitchDay(day: String, type: Type): List<Match> {
         val key = "pitch:$day"
@@ -399,7 +399,7 @@ object MatchRepository {
      * 6h cache (doc). Free-plan/403/429 failures fall back to the cache;
      * with nothing cached the exception reaches the panel, which shows the
      * honest "team fixtures not available" state. Demo mode derives from
-     * the sample data locally â no network.
+     * the sample data locally — no network.
      */
     suspend fun teamFixtures(teamId: Long): List<Match> {
         if (!hasKey) {
@@ -461,7 +461,7 @@ object MatchRepository {
 
     /**
      * Recent results for a team, as 'W'/'D'/'L' (most recent first, up to [count]).
-     * Computed locally from the competition matches already in [matches] â no extra API call.
+     * Computed locally from the competition matches already in [matches] — no extra API call.
      */
     fun teamForm(matches: List<Match>, teamId: Long, count: Int = 5): List<Char> {
         return matches
